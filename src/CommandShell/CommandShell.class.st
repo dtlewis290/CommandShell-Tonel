@@ -411,7 +411,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'3.0.2'
+	^'3.0.3'
 ]
 
 { #category : #accessing }

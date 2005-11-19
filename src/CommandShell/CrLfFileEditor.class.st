@@ -379,6 +379,7 @@ CrLfFileEditor >> openAsMorphLabel: aLabelString [
 
 	| window |
 	window _ (SystemWindow labelled: aLabelString) model: self.
+	window setWindowColor: (Color lightOrange paler).
 	window
 		addMorph: (PluggableTextMorph
 		on: self
@@ -386,7 +387,6 @@ CrLfFileEditor >> openAsMorphLabel: aLabelString [
 		accept: #put:
 		readSelection: #contentsSelection menu: #fileContentsMenu:shifted:)
 		frame: (0@0 corner: 1@1).
-	window submorphsDo: [:m | m color: Color lightMagenta].
 	^ window
 ]
 
