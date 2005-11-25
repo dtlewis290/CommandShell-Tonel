@@ -64,6 +64,17 @@ CrLfFileEditor class >> fileNamed: pathName [
 
 ]
 
+{ #category : #'class initialization' }
+CrLfFileEditor class >> initialize [
+
+	"CrLfFileEditor initialize"
+
+	Preferences 
+		setWindowColorFor: #CrLfFileEditor 
+		to: (Color colorFrom: self windowColorSpecification pastelColor)
+
+]
+
 { #category : #private }
 CrLfFileEditor class >> openForFileNamed: pathName [
 
@@ -87,6 +98,19 @@ CrLfFileEditor class >> openOn: aString withLabel: aLabelString inDirectory: aDi
 	model directory: aDirectory.
 	model fileName: nameString.
 	^ model openLabel: aLabelString
+
+]
+
+{ #category : #'window color' }
+CrLfFileEditor class >> windowColorSpecification [
+	"Answer a WindowColorSpec object that declares my preference"
+
+	^ WindowColorSpec
+		classSymbol: self name
+		wording: 'Squeak Shell File Editor'
+		brightColor: Color lightOrange
+		pastelColor: Color lightOrange paler paler
+		helpMessage: 'CrLfFileEditor window for CommandShell ''edit'' comand'
 
 ]
 
@@ -379,7 +403,6 @@ CrLfFileEditor >> openAsMorphLabel: aLabelString [
 
 	| window |
 	window _ (SystemWindow labelled: aLabelString) model: self.
-	window setWindowColor: (Color lightOrange paler).
 	window
 		addMorph: (PluggableTextMorph
 		on: self

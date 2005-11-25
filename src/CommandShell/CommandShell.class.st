@@ -303,7 +303,11 @@ CommandShell class >> initialize [
 
 	"CommandShell initialize"
 
-	Smalltalk addToStartUpList: self after: ImageSegment
+	Smalltalk addToStartUpList: self after: ImageSegment.
+	Preferences 
+		setWindowColorFor: #CommandShell 
+		to: (Color colorFrom: self windowColorSpecification pastelColor)
+
 
 ]
 
@@ -411,7 +415,19 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'3.0.3'
+	^'3.0.4'
+]
+
+{ #category : #'window color' }
+CommandShell class >> windowColorSpecification [
+	"Answer a WindowColorSpec object that declares my preference"
+
+	^ WindowColorSpec
+		classSymbol: self name
+		wording: 'Squeak Shell'
+		brightColor: (Color lightGray lighter paler)
+		pastelColor: (Color lightGray lighter lighter paler paler)
+		helpMessage: 'CommandShell window for evaluating Smalltalk and OS commands'
 ]
 
 { #category : #accessing }
