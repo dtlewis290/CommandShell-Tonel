@@ -6,10 +6,23 @@ A builtin command consists of:
  helpString - a String to describe the function of the command.
  procedure - a BlockContext with parameters to be passed by the CommandShell.
 
-Commands are implemented in class methods. To create a new command, write a new
-command implementation method and a corresponding instance creation method patterned
-after one of the existing commands, and install the instance creation method in an
-instance of CommandShell with CommandShell>>installCommand:.
+Commands are implemented in instance methods. To create a new command, write a
+new command implementation method and a new help method for the command. Write
+a new class side instance creation method patterned after one of the existing commands
+and install the instance creation method in an instance of CommandShell with
+CommandShell>>installCommand:.
+
+A command implementation is a method which receives six paramaters. The parameters are
+to be interpreted as follows:
+	- First parameter: The EvaluatorProxy which is evaluating the command. If a command fails,
+	  send #fail to this object.
+	- Second parameter: The CommandShell from which the command was evaluated. Use this
+	  for any additional parsing which may be required in the command implementation.
+	- Third parameter: The input stream for the command.
+	- Forth parameter: The output stream for the command.
+	- Fifth parameter: The error stream for the command.
+	- Sixth parameter: An array of optional command arguments.
+
 "
 Class {
 	#name : #ShellBuiltin,
@@ -23,20 +36,236 @@ Class {
 	#category : #CommandShell
 }
 
-{ #category : #'command definition' }
+{ #category : #'instance creation' }
 ShellBuiltin class >> cd: commandShell [
 	"Define command to set the current working directory. Answer an empty string
 	or #invalidCommand."
 
 	^ self name: 'cd'
 		help: #cdHelp
-		procedure: #cdCommand:input:output:error:arguments:
+		procedure: #cdCommand:shell:input:output:error:arguments:
 		needsPrompt: true
 
 ]
 
+{ #category : #'instance creation' }
+ShellBuiltin class >> clear: commandShell [
+	"Define command to clear the terminal display screen. Answer a string or an invalid
+	command message."
+
+	^ self name: 'clear'
+		help: #clearHelp
+		procedure: #clearCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'command dictionary creation' }
+ShellBuiltin class >> commandDictionaryFor: aCommandShell commands: commandNameArray [
+	"Answer a Dictionary of ShellBuiltin instances suitable for use by a CommandShell"
+
+	"ShellBuiltin commandDictionaryFor: CommandShell new commands: #(cd: clear: copyToError: copyToOutput: edit: exit: fc: help: history: inspect: pwd: sls: sqsh: type:)"
+
+	^ commandNameArray
+		inject: Dictionary new
+		into:
+			[:d :cmd | | b |
+			b _ self perform: cmd with: aCommandShell.
+			d at: b name put: b; yourself]
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> copyToError: commandShell [
+	"Define command to copy the contents of (argArray at: 1) or stdin onto
+	stderr. This command exists only for purposes of testing stdin and pipelines
+	for PipeableEvaluator proxies."
+
+	^ self name: 'copyToError'
+		help: nil
+		procedure: #copyToErrorCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> copyToOutput: commandShell [
+	"Define command to  copy the contents of (argArray at: 1) or stdin onto
+	stdout. This command exists only for purposes of testing stdin and pipelines
+	for PipeableEvaluator proxies."
+
+	^ self name: 'copyToOutput'
+		help: nil
+		procedure: #copyToOutputCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> edit: commandShell [
+	"Define command to open an editor on each of the named files."
+
+	^ self name: 'edit'
+		help: #editHelp
+		procedure: #editCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> exit: commandShell [
+	"Define command to exit the shell window. Answer a string or an invalid
+	command message."
+
+	^ self name: 'exit'
+		help: #exitHelp
+		procedure: #exitCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> fc: commandShell [
+	"Define 'fix command' command. If argArray is emply, answer the last
+	command in the history list. If there is one argument, interpret it as an
+	integer index into the history list. Otherwise answer an invalid command
+	message."
+
+	^ self name: 'fc'
+		help: #fcHelp
+		procedure: #fcCommand:shell:input:output:error:arguments:
+		needsPrompt: false
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> help: commandShell [
+	"Define command to display help messages."
+
+	^ self name: 'help'
+		help: #helpHelp
+		procedure: #helpCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> history: commandShell [
+	"Define command to display the command history list."
+
+	^ self name: 'history'
+		help: #historyHelp
+		procedure: #historyCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> inspect: commandShell [
+	"Define command to open a Smalltalk inspector on the contents of stdin, or the
+	file(s) named on the command line."
+
+	^ self name: 'inspect'
+		help: #inspectHelp
+		procedure: #inspectCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #private }
+ShellBuiltin class >> name: aString help: helpSelector procedure: procedureSelector needsPrompt: trueOrFalse [
+	"Command definition methods use this method to create instances representing
+	shell builtin commands. The commands are installed in a CommandShell, and
+	later evaluated in the context of a PipeableEvaluator."
+
+	^ self new
+		name: aString;
+		helpSelector: helpSelector;
+		procedureSelector: procedureSelector;
+		needsPrompt: trueOrFalse
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> pwd: commandShell [
+	"Define command to answer the current working directory (a string) or an
+	invalid command message."
+
+	^ self name: 'pwd'
+		help: #pwdHelp
+		procedure: #pwdCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> sls: commandShell [
+	"Define command to for a simple directory contents lister"
+
+	^ self name: 'sls'
+		help: #slsHelp
+		procedure: #slsCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> snapshot: commandShell [
+	"Define command to save the Squeak image."
+
+	^ self name: 'snapshot'
+		help: #snapshotHelp
+		procedure: #snapshotCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> sqsh: commandShell [
+	"Define command to open a new shell window."
+
+	^ self name: 'sqsh'
+		help: #sqshHelp
+		procedure: #sqshCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> ttyExit: commandShell [
+	"Define command to exit the Squeak shell and quit Squeak without saving the image."
+
+	^ self name: 'exit'
+		help: #ttyExitHelp
+		procedure: #ttyExitCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #'instance creation' }
+ShellBuiltin class >> type: commandShell [
+	"Define command to answer how each name would be interpreted if used as a
+	command name."
+
+	^ self name: 'type'
+		help: #typeHelp
+		procedure: #typeCommand:shell:input:output:error:arguments:
+		needsPrompt: true
+
+]
+
+{ #category : #private }
+ShellBuiltin >> canAccessOSProcess [
+	"True if OSProcess is in the image and if the OSProcess plugin is functioning properly"
+
+	"self canAccessOSProcess"
+
+	| osp |
+	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
+
+]
+
 { #category : #implementations }
-ShellBuiltin class >> cdCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> cdCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Set the current working directory. Answer an empty string or #invalidCommand."
 
 	| newPath path arg pathCwd p |
@@ -55,23 +284,25 @@ ShellBuiltin class >> cdCommand: commandShell input: stdin output: stdout error:
 							arg _ (path = FileDirectory slash)
 								ifTrue: [path]
 								ifFalse: [commandShell shellSyntax
-												expandArgument: path
+												firstExpandedArgument: path
 												inDirectoryPath: pathCwd].
 							newPath _ arg isEmpty
 								ifTrue: [arg]
 								ifFalse:
-									[p _ commandShell newDirPath: arg from: pathCwd.
+									[p _ commandShell shellSyntax newDirPath: arg from: pathCwd.
 									p ifNotNil: [FileDirectory default fullNameFor: p]]]]
 				ifFalse:
-					[^ commandShell invalidCommandMessage]].
+					[myProxy fail.
+					^ commandShell invalidCommandMessage]].
 	newPath isNil
 		ifTrue:
 			["No directory found with this name"
-			stderr nextPutAll: argArray first, ': no such file or directory'; nextPut: Character lf]
+			myProxy fail.
+			stderr nextPutAll: argArray first, ': No such file or directory'; nextPut: Character lf]
 		ifFalse:
 			[(commandShell workingDirectory ~= newPath)
 				ifTrue:
-					[(newPath isEmpty or: [commandShell isADirectory: newPath])
+					[(newPath isEmpty or: [commandShell shellSyntax isDirectoryPath: newPath])
 						ifTrue:
 							[commandShell workingDirectory: newPath.
 							commandShell changed: #relabel.
@@ -79,176 +310,127 @@ ShellBuiltin class >> cdCommand: commandShell input: stdin output: stdout error:
 								[commandShell environment at: #PWD put: commandShell workingDirectory]]
 						ifFalse:
 							["File of this name exists, but is not a directory"
+							myProxy fail.
 							stderr nextPutAll: newPath, ': not a directory'; nextPut: Character lf]]]
 
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> cdHelp [
+ShellBuiltin >> cdHelp [
 
 	^ 'cd [path] - change default directory'
 ]
 
-{ #category : #'command definition' }
-ShellBuiltin class >> clear: commandShell [
-	"Define command to clear the terminal display screen. Answer a string or an invalid
-	command message."
-
-	^ self name: 'clear'
-		help: #clearHelp
-		procedure: #clearCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
 { #category : #implementations }
-ShellBuiltin class >> clearCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> clearCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Clear the terminal display screen. Answer a string or an invalid command message."
 
-	argArray size == 0 ifFalse: [^ commandShell invalidCommandMessage].
-	commandShell terminateStProcesses. "Terminate any running Smalltalk processes"
-	commandShell terminateCommandLineProcesses. "Terminate any running Smalltalk processes"
+	argArray size == 0 ifFalse:
+		[myProxy fail.
+		^ commandShell invalidCommandMessage].
+	commandShell startUpInNewSession.
 	commandShell changed: #clearText
 
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> clearHelp [
+ShellBuiltin >> clearHelp [
 
 	^ 'clear - clear screen'
 
 ]
 
-{ #category : #private }
-ShellBuiltin class >> copyAllFrom: aPipe to: aStream [
-	"Copy the contents of aPipe to aStream, where aPipe is the output of a
-	process proxy. Do the copy in chunks, and between chunks force an
-	update to the run status of external child processes. Answer aStream
-	when done.
-
-	This method is intended to be used by internal commands which need to
-	read input from an external OSPipe, and which could deadlock if the
-	pipe is set to blocking mode.
-
-	This method synchronizes the evaluation of process proxies by forcing
-	a wait for the first available character on aPipe. All pipes will supply
-	at least one character, or a nil when empty. It is safe to block waiting
-	for the first character as long as the pipe is being written by a proxy
-	which will close the pipe when it exits."
-
-	| d chunkSize s |
-	d _ Delay forMilliseconds: 200.
-	chunkSize _ 100000.
-	"FIXME: The following delay is required only for Squeak 3.7 and 3.8. Squeak 3.6
-	(and earlier) and Squeak 3.9 (and later) do not need it."
-	(Delay forMilliseconds: 100) wait. "Wait to allow sync with external processes"
-	aPipe peek. "Force a wait for the first character prior to setting nonblocking mode"
-	[aPipe setNonBlocking] on: Error do: []. "Set nonblocking mode if input is a pipe"
-	[aPipe atEnd] whileFalse:
-		[s _ aPipe next: chunkSize.
-		s isNil
-			ifTrue:
-				[(Smalltalk hasClassNamed: #OSProcess)
-					ifTrue: [(Smalltalk at: #OSProcess) thisOSProcess updateActiveChildren]]
-			ifFalse:
-				[aStream nextPutAll: s].
-		d wait].
-	^ aStream
-
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> copyToError: commandShell [
-	"Define command to copy the contents of (argArray at: 1) or stdin onto
-	stderr. This command exists only for purposes of testing stdin and pipelines
-	for PipeableEvaluator proxies."
-
-	^ self name: 'copyToError'
-		help: nil
-		procedure: #copyToErrorCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
 { #category : #implementations }
-ShellBuiltin class >> copyToErrorCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> copyToErrorCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Copy the contents of (argArray at: 1) or stdin onto stderr. This
 	command exists only for purposes of testing stdin and pipelines
 	for PipeableEvaluator proxies."
 
-	| anyOutput fs |
+	| fs |
 	(argArray isNil or: [argArray size == 0])
 		ifTrue:
-			[stdin ifNotNil: [self copyAllFrom: stdin to: stderr]]
+			[stdin ifNotNil: [self copyUntilDoneFrom: stdin to: stderr]]
 		ifFalse:
-			[anyOutput _ false.
-			(self expandArguments: argArray commandShell: commandShell) do:
+			[argArray do:
 				[:file |
-					(FileDirectory default fileExists: file)
-						ifTrue:
-							[fs _ FileStream readOnlyFileNamed: file.
-							fs ifNotNil:
-								[anyOutput _ true.
-								self copyAllFrom: fs to: stderr.
-								fs close]].
-			anyOutput ifTrue: [stderr nextPut: Character lf]]]
-
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> copyToOutput: commandShell [
-	"Define command to  copy the contents of (argArray at: 1) or stdin onto
-	stdout. This command exists only for purposes of testing stdin and pipelines
-	for PipeableEvaluator proxies."
-
-	^ self name: 'copyToOutput'
-		help: nil
-		procedure: #copyToOutputCommand:input:output:error:arguments:
-		needsPrompt: true
+				(FileDirectory default fileExists: file)
+					ifTrue:
+						[fs _ FileStream readOnlyFileNamed: file.
+						fs ifNotNil:
+							[self copyUntilDoneFrom: fs to: stderr.
+							fs close]]]]
 
 ]
 
 { #category : #implementations }
-ShellBuiltin class >> copyToOutputCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> copyToOutputCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Copy the contents of (argArray at: 1) or stdin onto stdout. This
 	command exists only for purposes of testing stdin and pipelines
 	for PipeableEvaluator proxies."
 
-	| anyOutput fs |
+	| fs |
 	(argArray isNil or: [argArray size == 0])
 		ifTrue:
-			[stdin ifNotNil: [self copyAllFrom: stdin to: stdout]]
+			[stdin ifNotNil: [self copyUntilDoneFrom: stdin to: stdout]]
 		ifFalse:
-			[anyOutput _ false.
-			(self expandArguments: argArray commandShell: commandShell) do:
+			[argArray do:
 				[:file |
-					(FileDirectory default fileExists: file)
-						ifTrue:
-							[fs _ FileStream readOnlyFileNamed: file.
-							fs ifNotNil:
-								[anyOutput _ true.
-								self copyAllFrom: fs to: stdout.
-								fs close]].
-			anyOutput ifTrue: [stdout nextPut: Character lf]]]
+				(FileDirectory default fileExists: file)
+					ifTrue:
+						[fs _ FileStream readOnlyFileNamed: file.
+						fs ifNotNil:
+							[self copyUntilDoneFrom: fs to: stdout.
+							fs close]]]]
 
 ]
 
-{ #category : #'command definition' }
-ShellBuiltin class >> edit: commandShell [
-	"Define command to open an editor on each of the named files."
+{ #category : #private }
+ShellBuiltin >> copyUntilDoneFrom: aPipe to: aStream [
+	"Copy the contents of aPipe to aStream, where aPipe is the output of a process
+	proxy. Whenever new data is available, aPipe will trigger #dataReady. This
+	method responds to the #dataReady events until the end of the pipe is reached.
+	It is possible for the #atEnd check to give a false negative, so a timeout alarm
+	is used to prevent deadlock conditions."
 
-	^ self name: 'edit'
-		help: #editHelp
-		procedure: #editCommand:input:output:error:arguments:
-		needsPrompt: true
+	| sema s |
+	sema _ Semaphore new.
+	aPipe when: #dataReady send: #signal to: sema.
+	[aPipe atEndOfFile] whileFalse:
+		[self timeoutAfter: 200 notifying: sema.
+		sema wait. "Wait for data available"
+		[(s _ aPipe next: 10000) isEmpty] whileFalse:
+			[aStream nextPutAll: s; flush]].
+	aPipe release.
+	^ aStream
+
+]
+
+{ #category : #private }
+ShellBuiltin >> dirEntryString: aDirectoryEntry [
+	"Code lifted from Lex Spoon's FileList>>fileNameFormattedFrom:sizePad:"
+
+	"self new dirEntryString: FileDirectory default entries first"
+
+	| folderString nameStr dateStr sizeStr |
+	folderString _ ' [...]'.
+	nameStr _ (aDirectoryEntry at: 4)
+		ifTrue: [aDirectoryEntry first , folderString]
+		ifFalse: [aDirectoryEntry first].
+	dateStr _ ((Date fromSeconds: (aDirectoryEntry at: 3) )
+					printFormat: #(3 2 1 $. 1 1 2)) , ' ' ,
+				(String streamContents: [:s |
+					(Time fromSeconds: (aDirectoryEntry at: 3) \\ 86400)
+						print24: true on: s]).
+	sizeStr _ (aDirectoryEntry at: 5) asStringWithCommas.
+	^ nameStr , '    (' , dateStr , ' ' , sizeStr , ')'
 
 ]
 
 { #category : #implementations }
-ShellBuiltin class >> editCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Open an editor on each of the named files."
 
-	| controllers inputString |
+	| controllers inputString expandedName |
 	(argArray isNil or: [argArray size == 0])
 		ifTrue:
 			["When taking input from a command pipeline, the input must be
@@ -260,20 +442,24 @@ ShellBuiltin class >> editCommand: commandShell input: stdin output: stdout erro
 				ifTrue:
 					['']
 				ifFalse:
-					[(self copyAllFrom: stdin to: (WriteStream on: String new)) contents
+					[(self copyUntilDoneFrom: stdin to: (WriteStream on: String new)) contents
 						replaceAll: Character lf with: Character cr].
 			commandShell scheduleToEvaluate:
-				[(CrLfFileEditor
+				[CrLfFileEditor
 					openOn: inputString
 					withLabel: (commandShell commandHistory isEmpty
 									ifTrue: ['']
 									ifFalse: [commandShell commandHistory last])
 					inDirectory: (FileDirectory on: commandShell workingDirectory)
-					defaultFileName: 'buffer.txt') openInWorld] fixTemps]
+					defaultFileName: 'buffer.txt'] fixTemps]
 		ifFalse:
-			[controllers _ (self expandArguments: argArray commandShell: commandShell)
-								collect:
-									[:file | CrLfFileEditor fileNamed: file].
+			[controllers _ argArray collect:
+				[:arg |
+				"Expand arguments to convert them to full pathnames as expected by CrLfFileEditor"
+				expandedName _ commandShell shellSyntax
+									firstExpandedArgument: arg
+									inDirectoryPath: commandShell shellSyntax workingDirectory.
+				CrLfFileEditor fileNamed: expandedName withLabel: arg].
 			Smalltalk isMorphic
 				ifFalse:
 					[controllers
@@ -291,66 +477,31 @@ ShellBuiltin class >> editCommand: commandShell input: stdin output: stdout erro
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> editHelp [
+ShellBuiltin >> editHelp [
 
 	^ 'edit [files...] - edit the contents of stdin or the named files'
 
 ]
 
-{ #category : #'command definition' }
-ShellBuiltin class >> exit: commandShell [
-	"Define command to exit the shell window. Answer a string or an invalid
-	command message."
-
-	^ self name: 'exit'
-		help: #exitHelp
-		procedure: #exitCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
 { #category : #implementations }
-ShellBuiltin class >> exitCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> exitCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Exit the shell window. Answer a string or an invalid command message."
 
-	argArray size == 0 ifFalse: [^ commandShell invalidCommandMessage].
+	argArray size == 0 ifFalse:
+		[myProxy fail.
+		^ commandShell invalidCommandMessage].
 	commandShell changed: #exit
 
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> exitHelp [
+ShellBuiltin >> exitHelp [
 
 	^ 'exit - exit shell and close window'
 ]
 
-{ #category : #private }
-ShellBuiltin class >> expandArguments: argArray commandShell: aCommandShell [
-	"The builtin command is simulating an external command, and needs to expand
-	the argument list in the context of a file system. Answer the expanded list of
-	arguments."
-
-	^ aCommandShell shellSyntax
-		expandedFileNames: argArray
-		inDirectoryPath: aCommandShell workingDirectory
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> fc: commandShell [
-	"Define 'fix command' command. If argArray is emply, answer the last
-	command in the history list. If there is one argument, interpret it as an
-	integer index into the history list. Otherwise answer an invalid command
-	message."
-
-	^ self name: 'fc'
-		help: #fcHelp
-		procedure: #fcCommand:input:output:error:arguments:
-		needsPrompt: false
-
-]
-
 { #category : #implementations }
-ShellBuiltin class >> fcCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> fcCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Fix command. If argArray is emply, answer the last command in the
 	history list. If there is one argument, interpret it as an integer index
 	into the history list. Otherwise answer an invalid command message."
@@ -369,46 +520,39 @@ ShellBuiltin class >> fcCommand: commandShell input: stdin output: stdout error:
 							(index isNil
 								ifTrue: ['']
 								ifFalse: [commandShell historyAt: index])].
-					commandShell prompt.
+					commandShell notifyPrompt.
 					cmd isEmpty ifFalse:
-						[commandShell show: cmd; doCommandsInString: cmd]]]
+						[commandShell outputStream nextPutAll: cmd; cr; flush; processCommand: cmd]]]
 
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> fcHelp [
+ShellBuiltin >> fcHelp [
 
 	^ 'fc [i] - "fix command", command number i from history list, or -i, or the last command'
 
 ]
 
-{ #category : #'command definition' }
-ShellBuiltin class >> help: commandShell [
-	"Define command to display help messages."
-
-	^ self name: 'help'
-		help: #helpHelp
-		procedure: #helpCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
 { #category : #implementations }
-ShellBuiltin class >> helpCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> helpCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 
-	| topic command |
+	| topic command cacheStream |
 	argArray size == 0
 		ifTrue:
-			[(commandShell builtinCommands collect: [:c | c helpSelector] thenSelect: [:s | s notNil])
-				asSortedArray do:
-					[:sel | stdout nextPutAll: (self perform: sel); nextPut: Character lf].
-			stdout
+			[cacheStream _ WriteStream on: ''.
+			(commandShell builtinCommands
+				collect: [:c | c helpSelector] thenSelect: [:s | s notNil])
+					asSortedArray do:
+						[:sel | cacheStream nextPutAll: (self perform: sel);
+								nextPut: Character lf].
+			cacheStream
 				nextPutAll: 'simple Smalltalk expression! evaluates a simple expression as a doIt';
 				nextPut: Character lf;
 				nextPutAll: '<ctl-C> to interrupt a running program';
 				nextPut: Character lf;
 				nextPutAll: '<ctl-D> to end input to a running program';
-				nextPut: Character lf]
+				nextPut: Character lf.
+			stdout nextPutAll: cacheStream contents]
 		ifFalse:
 			[topic _ argArray at: 1.
 			command _ commandShell builtinCommands at: topic ifAbsent: [^ self].
@@ -418,65 +562,54 @@ ShellBuiltin class >> helpCommand: commandShell input: stdin output: stdout erro
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> helpHelp [
+ShellBuiltin >> helpHelp [
 
 	^ 'help - help on sqsh commands'
 
 ]
 
-{ #category : #'command definition' }
-ShellBuiltin class >> history: commandShell [
-	"Define command to display the command history list."
+{ #category : #accessing }
+ShellBuiltin >> helpSelector [
 
-	^ self name: 'history'
-		help: #historyHelp
-		procedure: #historyCommand:input:output:error:arguments:
-		needsPrompt: true
+	^ helpSelector
+]
 
+{ #category : #accessing }
+ShellBuiltin >> helpSelector: aSymbol [
+
+	helpSelector _ aSymbol
 ]
 
 { #category : #implementations }
-ShellBuiltin class >> historyCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> historyCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Display the command history list."
 
 	| ws rs |
-	ws _ WriteStream on: Character cr asString.
+	ws _ WriteStream on: Character lf asString.
 	rs _ ReadStream on: commandShell commandHistory.
 	[rs atEnd]
 		whileFalse: [ws nextPutAll: rs next.
 			ws nextPutAll: ' '.
 			ws nextPutAll: rs next.
 			rs atEnd
-				ifFalse: [ws cr]].
-	stdout nextPutAll: (ws contents, Character cr asString)
+				ifFalse: [ws nextPut: Character lf]].
+	stdout nextPutAll: (ws contents, Character lf asString)
 
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> historyHelp [
+ShellBuiltin >> historyHelp [
 
 	^ 'history - display command history list'
 
 ]
 
-{ #category : #'command definition' }
-ShellBuiltin class >> inspect: commandShell [
-	"Define command to open a Smalltalk inspector on the contents of stdin, or the
-	file(s) named on the command line."
-
-	^ self name: 'inspect'
-		help: #inspectHelp
-		procedure: #inspectCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
 { #category : #implementations }
-ShellBuiltin class >> inspectCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Open a Smalltalk inspector on the contents of stdin, or the file(s) named on the
 	command line."
 
-	| files fs inputString |
+	| fs inputString |
 	(argArray isNil or: [argArray size == 0])
 		ifTrue:
 			[stdin ifNotNil:
@@ -486,16 +619,15 @@ ShellBuiltin class >> inspectCommand: commandShell input: stdin output: stdout e
 				the caller of this method before the deferred block ever has a
 				chance to read it."
 				inputString _ stdin ifNotNil:
-					[(self copyAllFrom: stdin to: (WriteStream on: String new)) contents
+					[(self copyUntilDoneFrom: stdin to: (WriteStream on: String new)) contents
 						replaceAll: Character lf with: Character cr].
 				commandShell scheduleToEvaluate: [inputString inspect]]]
 		ifFalse:
-			[files _ self expandArguments: argArray commandShell: commandShell.
-			(files size == 0)
+			[argArray isEmpty
 				ifTrue:
 					[commandShell scheduleToEvaluate: [nil inspect]]
 				ifFalse:
-					[files do:
+					[argArray do:
 						[:e |
 						fs _ (FileDirectory default fileExists: e)
 							ifTrue: [FileStream readOnlyFileNamed: e]
@@ -513,204 +645,10 @@ ShellBuiltin class >> inspectCommand: commandShell input: stdin output: stdout e
 ]
 
 { #category : #'help messages' }
-ShellBuiltin class >> inspectHelp [
+ShellBuiltin >> inspectHelp [
 
 	^ 'inspect [files...] - open an inspector on the contents of stdin or the named files'
 
-]
-
-{ #category : #'instance creation' }
-ShellBuiltin class >> name: aString help: helpSelector procedure: procedureSelector needsPrompt: trueOrFalse [
-	"Command definition methods use this method to create instances representing
-	shell builtin commands. The commands are installed in a CommandShell, and
-	later evaluated in the context of a PipeableEvaluator."
-
-	^ self new
-		name: aString;
-		helpSelector: helpSelector;
-		procedureSelector: procedureSelector;
-		needsPrompt: trueOrFalse
-
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> pwd: commandShell [
-	"Define command to answer the current working directory (a string) or an
-	invalid command message."
-
-	^ self name: 'pwd'
-		help: #pwdHelp
-		procedure: #pwdCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
-{ #category : #implementations }
-ShellBuiltin class >> pwdCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
-	"Answer the current working directory (a string) or an invalid command message."
-
-	| directoryString |
-	directoryString _ commandShell workingDirectory.
-	directoryString isEmpty ifTrue: [directoryString _ commandShell nullDirectoryString].
-	argArray size == 0 ifFalse: [^ commandShell invalidCommandMessage].
-	stdout nextPutAll: directoryString; cr
-
-]
-
-{ #category : #'help messages' }
-ShellBuiltin class >> pwdHelp [
-
-	^ 'pwd - print current working directory'
-
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> sls: commandShell [
-	"Define command to for a simple directory contents lister"
-
-	^ self name: 'sls'
-		help: #slsHelp
-		procedure: #slsCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
-{ #category : #implementations }
-ShellBuiltin class >> slsCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
-	"Simple directory contents lister"
-
-	| filePatterns d entries names dirs files entry |
-	(argArray isNil or: [argArray size == 0])
-		ifTrue:
-			["Contents of current directory."
-			filePatterns _ Array with: '*']
-		ifFalse:
-			["List named files"
-			filePatterns _ argArray].
-	d _ FileDirectory on: commandShell workingDirectory.
-	entries _ d entries.
-	names _ Set new.
-	filePatterns do: [:pat | names addAll: (commandShell shellSyntax glob: pat inDirectory: d)].
-	dirs _ OrderedCollection new.
-	files _ OrderedCollection new.
-	names asSortedArray do:
-		[:n |
-		entry _ entries detect: [:e | e name = n].
-		entry isDirectory
-			ifTrue: [dirs add: entry]
-			ifFalse: [files add: entry]].
-	dirs do: [:e | stdout nextPutAll: (commandShell dirEntryString: e); nextPut: Character cr].
-	files do: [:e | stdout nextPutAll: (commandShell dirEntryString: e); nextPut: Character cr]
-
-]
-
-{ #category : #'help messages' }
-ShellBuiltin class >> slsHelp [
-
-	^ 'sls [filepatterns] - list current directory contents'
-
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> sqsh: commandShell [
-	"Define command to open a new shell window."
-
-	^ self name: 'sqsh'
-		help: #sqshHelp
-		procedure: #sqshCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
-{ #category : #implementations }
-ShellBuiltin class >> sqshCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
-	"Open a new shell window."
-
-	| ws |
-	argArray size == 0
-		ifTrue:
-			[commandShell scheduleToEvaluate: [commandShell class open]]
-		ifFalse:
-			[ws _ WriteStream on: String new.
-			argArray inject: true into:
-				[:first :each |
-				first ifFalse: [ws nextPut: Character space].
-				ws nextPutAll: each.
-				false].
-			commandShell scheduleToEvaluate: [commandShell class openLabel: ws contents] fixTemps]
-
-]
-
-{ #category : #'help messages' }
-ShellBuiltin class >> sqshHelp [
-
-	^ 'sqsh [title] - open new shell window'
-
-]
-
-{ #category : #'command definition' }
-ShellBuiltin class >> type: commandShell [
-	"Define command to answer how each name would be interpreted if used as a
-	command name."
-
-	^ self name: 'type'
-		help: #typeHelp
-		procedure: #typeCommand:input:output:error:arguments:
-		needsPrompt: true
-
-]
-
-{ #category : #implementations }
-ShellBuiltin class >> typeCommand: commandShell input: stdin output: stdout error: stderr arguments: argArray [
-	"Answer how each name would be interpreted if used as a command name."
-
-	| results exe |
-	argArray size == 0
-		ifTrue:
-			[^ '']
-		ifFalse:
-			[results _ WriteStream on: Array new.
-			argArray do:
-			[:arg |
-			(commandShell isBuiltInCommand: arg)
-				ifTrue:
-					[results nextPut: arg, ' is a shell builtin']
-				ifFalse:
-					[((Smalltalk hasClassNamed: #OSProcess)
-							and: [(Smalltalk at: #OSProcess) accessor canAccessSystem])
-					 	ifFalse:
-							[self inform: 
-								((Smalltalk hasClassNamed: #OSProcess)
-									ifTrue: [(Smalltalk at: #OSProcess) accessor class name]
-									ifFalse: [commandShell class name]), ' cannot access system'.
-							stdout nextPutAll: 'cannot access system'; cr.
-							^ self].
-					exe _ commandShell shellSyntax findExecutablePathFor: arg inDirectoryPath: commandShell workingDirectory.
-					(commandShell shellSyntax isExecutable: exe) ifFalse: [exe _ nil].
-					exe isNil
-						ifTrue: [results nextPut: arg, ': not found']
-								ifFalse: [results nextPut: arg, ' is ', exe]]].
-				results contents do: [:e | stdout nextPutAll: e; cr]]
-
-]
-
-{ #category : #'help messages' }
-ShellBuiltin class >> typeHelp [
-
-	^ 'type [names...] - indicate how each name would be interpreted if used as a command'
-
-]
-
-{ #category : #accessing }
-ShellBuiltin >> helpSelector [
-
-	^ helpSelector
-]
-
-{ #category : #accessing }
-ShellBuiltin >> helpSelector: aSymbol [
-
-	helpSelector _ aSymbol
 ]
 
 { #category : #accessing }
@@ -739,6 +677,29 @@ ShellBuiltin >> needsPrompt: trueOrFalse [
 	needsPrompt _ trueOrFalse
 ]
 
+{ #category : #evaluating }
+ShellBuiltin >> performWith: argumentArray evaluator: aPipeableEvaluator shell: aCommandShell input: inputStream output: outputStream error: errorStream [
+
+	self perform: self procedureSelector
+		withArguments: (Array
+			with: aPipeableEvaluator
+			with: aCommandShell
+			with: inputStream
+			with: outputStream
+			with: errorStream
+			with: argumentArray).
+	aPipeableEvaluator complete
+
+]
+
+{ #category : #printing }
+ShellBuiltin >> printOn: aStream [
+
+	super printOn: aStream.
+	aStream nextPutAll: ' for '.
+	self name printOn: aStream.
+]
+
 { #category : #accessing }
 ShellBuiltin >> procedureSelector [
 
@@ -749,4 +710,201 @@ ShellBuiltin >> procedureSelector [
 ShellBuiltin >> procedureSelector: aSymbol [
 
 	procedureSelector _ aSymbol
+]
+
+{ #category : #implementations }
+ShellBuiltin >> pwdCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+	"Answer the current working directory (a string) or an invalid command message."
+
+	| directoryString |
+	directoryString _ commandShell workingDirectory.
+	directoryString isEmpty ifTrue: [directoryString _ self nullDirectoryString].
+	argArray size == 0 ifFalse:
+		[myProxy fail.
+		^ commandShell invalidCommandMessage].
+	stdout nextPutAll: directoryString; nextPut: Character lf
+
+]
+
+{ #category : #'help messages' }
+ShellBuiltin >> pwdHelp [
+
+	^ 'pwd - print current working directory'
+
+]
+
+{ #category : #implementations }
+ShellBuiltin >> slsCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+	"Simple directory contents lister"
+
+	| filePatterns d entries names dirs files entry linesToPrint lineCount cacheStream |
+
+	"A small value of linesToPrint will prevent an ExternalCommandShell from
+	overdriving is stdout stream. Maybe. A larger value allows faster updates to
+	an interactive CommandShell display."
+	linesToPrint _ 16.
+
+	(argArray isNil or: [argArray size == 0])
+		ifTrue:
+			["Contents of current directory."
+			filePatterns _ Array with: '*']
+		ifFalse:
+			["List named files"
+			filePatterns _ argArray].
+	d _ FileDirectory on: commandShell workingDirectory.
+	entries _ d entries.
+	names _ Set new.
+	filePatterns do: [:pat | names addAll: (commandShell shellSyntax glob: pat inDirectory: d)].
+	dirs _ OrderedCollection new.
+	files _ OrderedCollection new.
+	names asSortedArray do:
+		[:n |
+		entry _ entries detect: [:e | e name = n].
+		entry isDirectory
+			ifTrue: [dirs add: entry]
+			ifFalse: [files add: entry]].
+
+	linesToPrint _ 5.
+	lineCount _ 1.
+	cacheStream _ WriteStream on: ''.
+	dirs do:	[:dir |
+		lineCount _ lineCount + 1.
+		cacheStream nextPutAll: (self dirEntryString: dir); nextPut: Character lf.
+		(lineCount > linesToPrint) ifTrue:
+			[stdout nextPutAll: cacheStream contents.
+			cacheStream _ WriteStream on: ''.
+			lineCount _ 1]].
+	files do: [:file |
+		lineCount _ lineCount + 1.
+		cacheStream nextPutAll: (self dirEntryString: file); nextPut: Character lf.
+		(lineCount > linesToPrint) ifTrue:
+			[stdout nextPutAll: cacheStream contents.
+			cacheStream _ WriteStream on: ''.
+			lineCount _ 1]].
+	stdout nextPutAll: cacheStream contents.
+]
+
+{ #category : #'help messages' }
+ShellBuiltin >> slsHelp [
+
+	^ 'sls [filepatterns] - list current directory contents'
+
+]
+
+{ #category : #implementations }
+ShellBuiltin >> snapshotCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+	"Save the image"
+
+	| s |
+	Smalltalk at: #WorldState ifPresent:
+		[:ws |
+		s _ Semaphore new.
+		commandShell safeToExit: false.
+		stdout nextPutAll: Smalltalk imageName; nextPut: Character lf.
+		ws addDeferredUIMessage:
+			[Smalltalk snapshot: true andQuit: false.
+			s ifNotNil: [s signal] "s is nil when resuming after snapshot"].
+		s ifNotNil: [s wait]]
+
+]
+
+{ #category : #'help messages' }
+ShellBuiltin >> snapshotHelp [
+
+	^ 'snapshot - save the Squeak image'
+]
+
+{ #category : #implementations }
+ShellBuiltin >> sqshCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+	"Open a new shell window."
+
+	| ws |
+	argArray size == 0
+		ifTrue:
+			[commandShell scheduleToEvaluate: [commandShell class open]]
+		ifFalse:
+			[ws _ WriteStream on: String new.
+			argArray inject: true into:
+				[:first :each |
+				first ifFalse: [ws nextPut: Character space].
+				ws nextPutAll: each.
+				false].
+			commandShell scheduleToEvaluate: [commandShell class openLabel: ws contents] fixTemps]
+
+]
+
+{ #category : #'help messages' }
+ShellBuiltin >> sqshHelp [
+
+	^ 'sqsh [title] - open new shell window'
+
+]
+
+{ #category : #private }
+ShellBuiltin >> timeoutAfter: milliseconds notifying: sema [
+	"Under certain conditions it is possible to receive a false negative on
+	and end of file check (for example, closing the writer end of a pipe
+	from Squeak, and immediately checking for end of file on the reader
+	in the same Squeak method). If looping while waiting on end of file,
+	this timeout method can be used to prevent a deadlock condition."
+
+	[(Delay forMilliseconds: milliseconds) wait.
+	sema signal] fork
+]
+
+{ #category : #implementations }
+ShellBuiltin >> ttyExitCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+	"Exit an ExternalCommandShell by quitting Squeak. The image is not saved and the shutdown
+	list is not processed."
+
+	commandShell safeToExit
+		ifTrue: [Smalltalk quitPrimitive]
+		ifFalse: [stderr nextPutAll: 'cannot exit in same command line with snapshot'; nextPut: Character lf]
+
+]
+
+{ #category : #'help messages' }
+ShellBuiltin >> ttyExitHelp [
+
+	^ 'exit - exit shell and quit Squeak without saving image'
+]
+
+{ #category : #implementations }
+ShellBuiltin >> typeCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
+	"Answer how each name would be interpreted if used as a command name."
+
+	| results exe |
+	argArray size == 0
+		ifTrue:
+			[^ '']
+		ifFalse:
+			[results _ WriteStream on: Array new.
+			argArray do:
+			[:arg |
+			(commandShell isBuiltInCommand: arg)
+				ifTrue:
+					[results nextPut: arg, ' is a shell builtin']
+				ifFalse:
+					[self canAccessOSProcess
+					 	ifFalse:
+							[self inform:
+								((Smalltalk hasClassNamed: #OSProcess)
+									ifTrue: [(Smalltalk at: #OSProcess) accessor class name]
+									ifFalse: [commandShell class name]), ' cannot access system'.
+							stdout nextPutAll: 'cannot access system'; nextPut: Character lf.
+							^ self].
+					exe _ commandShell shellSyntax findExecutablePathFor: arg inDirectoryPath: commandShell workingDirectory.
+					(commandShell shellSyntax isExecutable: exe) ifFalse: [exe _ nil].
+					exe isNil
+						ifTrue: [results nextPut: arg, ': not found']
+								ifFalse: [results nextPut: arg, ' is ', exe]]].
+				results contents do: [:e | stdout nextPutAll: e; nextPut: Character lf]]
+
+]
+
+{ #category : #'help messages' }
+ShellBuiltin >> typeHelp [
+
+	^ 'type [names...] - indicate how each name would be interpreted if used as a command'
+
 ]

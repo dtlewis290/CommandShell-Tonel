@@ -49,18 +49,71 @@ InternalPipe class >> testPipe [
 	| pipe result |
 	pipe _ self new.
 	pipe nextPutAll: 'string to send through an InternalPipe'.
+	pipe closeWriter.
 	result _ pipe upToEnd.
 	pipe close.
 	^ result
 
 ]
 
+{ #category : #finalization }
+InternalPipe >> addDummyNilAsEndOfFileIndicatorForBlockingPipe [
+	"And add a trailing nil to the pipe to mimic the behaviour of an external pipe
+	which blocks until the writer end is closed. Writing a trailing nil the the queue
+	has the side effect of waking up any process which is blocked waiting on the
+	queue, which will receive the nil as an indication that the pipe has been closed.
+	FIXME: This is almost certainly a Bad Idea, so it is encapsulated in its own method."
+
+	self isBlocking ifTrue: [queue nextPut: nil]
+
+]
+
 { #category : #testing }
 InternalPipe >> atEnd [
-	"Answer whether the receiver can access any more objects."
+	"Answer whether the receiver can access any more objects. A nonblocking
+	pipe with writer end closed which answers nil is considered to be at end.
+	See InternalPipe>>closeWriter. Yes, it is ugly to have a pipe which cannot
+	pass a nil object, but this is intended to mimic the behavior of an external
+	OS pipe in nonblocking mode."
 
-	^ self writerClosed and: [queue size == 0]
+	^ self writerClosed and:
+		[self isBlocking
+			ifTrue:
+				[(queue size == 0) or:
+					[(queue size == 1) and:
+						[(queue nextPut: queue next) isNil]]]
+			ifFalse:
+				[queue size == 0]]
 
+]
+
+{ #category : #testing }
+InternalPipe >> atEndOfFile [
+	"Answer whether the receiver is at its end based on the result of
+	the last read operation. For compatibility with ExternalPipe."
+
+	^ self atEnd
+
+]
+
+{ #category : #accessing }
+InternalPipe >> basicNext [
+	"Answer the next object accessible by the receiver."
+
+	self nonBlockingMode
+		ifFalse:
+			[^ queue next]
+		ifTrue:
+			[queue isEmpty ifTrue: [^ nil] ifFalse: [^ queue next]]
+
+]
+
+{ #category : #accessing }
+InternalPipe >> basicNextPut: anObject [ 
+	"Insert the argument, anObject, as the next object accessible by the 
+	receiver. Answer anObject."
+
+	^ queue nextPut: anObject
 ]
 
 { #category : #finalization }
@@ -71,7 +124,11 @@ InternalPipe >> close [
 
 { #category : #finalization }
 InternalPipe >> closeReader [
-	"Nothing to do. This is for OSPipe compatibility."
+	"Protocol compatibility with OSPipe. No further reads are possible after
+	closing the reader, therefore any dependents and events may be released.
+	Nothing actually is done, except to release dependents and events."
+
+	self release
 
 ]
 
@@ -83,8 +140,12 @@ InternalPipe >> closeWriter [
 	process which is blocked waiting on the queue, which will receive the nil
 	as an indication that the pipe has been closed."
 
-	self writerClosed: true.
-	self nextPut: nil
+	self writerClosed ifFalse:
+		[self writerClosed: true.
+		self addDummyNilAsEndOfFileIndicatorForBlockingPipe.
+		self notifyDataReady	"in case someone is waiting on the pipe output"]
+
+
 ]
 
 { #category : #testing }
@@ -119,13 +180,25 @@ InternalPipe >> initialize [
 
 ]
 
+{ #category : #testing }
+InternalPipe >> isBlocking [
+	"Answer true if reader end is set to blocking mode."
+
+	^ self nonBlockingMode not
+]
+
+{ #category : #testing }
+InternalPipe >> isPipe [
+
+	^ true
+
+]
+
 { #category : #accessing }
 InternalPipe >> next [
 	"Answer the next object accessible by the receiver."
 
-	(self nonBlockingMode and: [queue size == 0])
-		ifTrue: [^ nil]
-		ifFalse: [^ queue next]
+	^ self basicNext
 
 ]
 
@@ -135,13 +208,11 @@ InternalPipe >> next: anInteger [
 
 	| strm c |
 	strm _ WriteStream on: ''.
-	(1 to: anInteger) do:
-		[:index |
+	(1 to: anInteger) do: [:index |
 		self atEnd
 			ifTrue: [^ strm contents]
-			ifFalse:
-				[(c _ self next) ifNil: [^ strm contents].
-				strm nextPut: c]].
+			ifFalse: [(c _ self basicNext) ifNil: [^ strm contents].
+					strm nextPut: c]].
 	^ strm contents
 
 ]
@@ -151,7 +222,12 @@ InternalPipe >> nextPut: anObject [
 	"Insert the argument, anObject, as the next object accessible by the 
 	receiver. Answer anObject."
 
-	^ queue nextPut: anObject
+	| result |
+	result _ queue nextPut: anObject.
+	self notifyDataReady.
+	Processor yield.
+	^ result
+
 ]
 
 { #category : #accessing }
@@ -159,7 +235,11 @@ InternalPipe >> nextPutAll: aCollection [
 	"Append the elements of aCollection to the sequence of objects accessible 
 	by the receiver. Answer aCollection."
 
-	aCollection do: [:e | queue nextPut: e]
+	| result |
+	result _ aCollection do: [:e | queue nextPut: e].
+	self notifyDataReady.
+	Processor yield.
+	^ result
 
 ]
 
@@ -174,6 +254,16 @@ InternalPipe >> nonBlockingMode [
 InternalPipe >> nonBlockingMode: trueOrFalse [
 
 	nonBlockingMode _ trueOrFalse
+
+]
+
+{ #category : #'event driven reader' }
+InternalPipe >> notifyDataReady [
+	"Whenever new data becomes available, notify any dependents. This method
+	exists only to document the event generation mechanism, which is intended
+	to be compatible with events generated by an OSPipe."
+
+	self changed
 
 ]
 
@@ -196,6 +286,16 @@ InternalPipe >> setBlocking [
 	"For compatibility with OSPipe"
 
 	self nonBlockingMode: false
+]
+
+{ #category : #'event driven reader' }
+InternalPipe >> setBufferedReader [
+	"An InternalPipe behaves like an OSPipe with a buffered reader, and is
+	capable of generating events when data is available. Answer true to
+	indicate that this is the case."
+
+	^ true
+
 ]
 
 { #category : #'initialize-release' }
@@ -231,6 +331,14 @@ InternalPipe >> upToEnd [
 			ifTrue: [^ strm contents]
 			ifFalse: [strm nextPut: c]].
 	^ strm contents
+]
+
+{ #category : #accessing }
+InternalPipe >> upToEndOfFile [
+	"For compatibility with external pipes"
+
+	^ self upToEnd
+
 ]
 
 { #category : #accessing }
