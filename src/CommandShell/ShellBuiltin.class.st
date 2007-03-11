@@ -609,7 +609,7 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 	"Open a Smalltalk inspector on the contents of stdin, or the file(s) named on the
 	command line."
 
-	| fs inputString |
+	| fs inputString pathName |
 	(argArray isNil or: [argArray size == 0])
 		ifTrue:
 			[stdin ifNotNil:
@@ -629,8 +629,11 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 				ifFalse:
 					[argArray do:
 						[:e |
-						fs _ (FileDirectory default fileExists: e)
-							ifTrue: [FileStream readOnlyFileNamed: e]
+						pathName := commandShell shellSyntax
+							firstExpandedArgument: e
+							inDirectoryPath: commandShell shellSyntax workingDirectory.
+						fs _ (FileDirectory default fileExists: pathName)
+							ifTrue: [FileStream readOnlyFileNamed: pathName]
 							ifFalse: [nil].
 						fs isNil
 							ifTrue:

@@ -911,10 +911,11 @@ CommandShell >> evaluatePipeline: aPipeline [
 			self backgroundProxies addAll: aPipeline.
 			aPipeline value.
 			"Print the index of the background process."
-			self errorStream nextPutAll: '[', index asString, '] '.
-			aPipeline last isExternalProcess ifTrue:
-				[aPipeline last processProxy pid printOn: self errorStream].
-			self errorStream cr; nextPut: Character lf]
+			self scheduleToEvaluate:
+				[self errorStream nextPutAll: '[', index asString, '] '.
+				aPipeline last isExternalProcess ifTrue:
+					[aPipeline last processProxy pid printOn: self errorStream].
+				self errorStream cr; nextPut: Character lf]]
 		ifFalse:
 			[self keyboardConnector: aPipeline pipeToInput.
 			self registerForegroundCompletionEventsFor: aPipeline.

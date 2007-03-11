@@ -311,8 +311,9 @@ CommandShellTranscript >> processCommand: aCommandString [
 { #category : #'command prompt' }
 CommandShellTranscript >> prompt [
 
-	self show: self cliShell promptString.
-	self restoreSelectionMarker
+	self cliShell scheduleToEvaluate:
+		[self show: self cliShell promptString.
+		self restoreSelectionMarker]
 ]
 
 { #category : #'command prompt' }

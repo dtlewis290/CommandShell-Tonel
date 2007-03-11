@@ -63,8 +63,7 @@ PipeJunction >> canProvideOutputPipe [
 PipeJunction >> close [
 	"Close pipe to proxy input."
 
-	(pipeToInput notNil and: [pipeToInput closed not])
-		ifTrue: [pipeToInput close]
+	pipeToInput ifNotNil: [pipeToInput close]
 
 ]
 
