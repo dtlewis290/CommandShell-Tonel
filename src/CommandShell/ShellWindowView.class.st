@@ -33,7 +33,6 @@ ShellWindowView >> on: anObject text: getTextSel accept: setTextSel readSelectio
 
 	super on: anObject text: getTextSel accept: setTextSel readSelection: getSelectionSel menu: getMenuSel.
 	self model prompt
-
 ]
 
 { #category : #updating }

@@ -13,13 +13,13 @@ ShellWindowMorph class >> open [
 
 	"ShellWindowMorph open"
 
-	^ CommandShell open dependents at: 2
+	^ CommandShell open model dependents at: 2
 ]
 
 { #category : #'menu commands' }
 ShellWindowMorph >> accept [
 
-	self model cr; flush; processCommand: self commandLineInput asString
+	self model doCommandsInString: self commandLineInput asString
 
 ]
 
@@ -35,9 +35,7 @@ ShellWindowMorph >> appendEntry [
 	self selectInvisiblyFrom: textMorph asText size + 1 to: textMorph asText size.
 	str _ model contents.
 	(str size > 0) ifTrue:
-		[self replaceSelectionWith: (Text
-			string: str
-			attribute: (TextFontChange fontNumber: self textStyle defaultFontIndex)).
+		[self replaceSelectionWith: str asText.
 		self selectInvisiblyFrom: textMorph asText size + 1 to: textMorph asText size.
 		model reset]
 
@@ -75,18 +73,10 @@ ShellWindowMorph >> setText: aText [
 		ifNil: [textMorph _ TtyTextMorphForEditView new
 						contents: aText wrappedTo: self innerBounds width-6.
 				textMorph setEditView: self.
-				textMorph setTextStyle: self textStyle.
 				scroller addMorph: textMorph]
 		ifNotNil: [textMorph newContents: aText].
 	self hasUnacceptedEdits: false.
 	self setScrollDeltas.
-]
-
-{ #category : #'model access' }
-ShellWindowMorph >> textStyle [
-	"A fixed width font for the text morph"
-
-	^ TextStyle named: 'Atlanta'
 ]
 
 { #category : #updating }
