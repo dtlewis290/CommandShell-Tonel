@@ -11,10 +11,9 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'cliShell',
-		'evaluatorProcess',
-		'loopDelay',
 		'isRunning',
 		'inputStream',
+		'lineBuffer',
 		'sigIntSema',
 		'sigIntHandler'
 	],
@@ -77,7 +76,7 @@ ExternalCommandShell class >> open [
 
 { #category : #'system startup' }
 ExternalCommandShell class >> shutDown: quitting [
-	"System is going down. Stop the evaluation loop so it will not try to 
+	"System is going down. Stop input processing so we will not try to 
 	refer to invalid IO streams when the image is restarted. If OSProcess
 	is in this  image, it important that #startup be send to ThisOSProcess
 	before it is sent to ExternalCommandShell. Therefore ensure that
@@ -166,10 +165,10 @@ ExternalCommandShell >> defaultBuiltinCommands [
 
 ]
 
-{ #category : #'read-eval loop' }
-ExternalCommandShell >> defaultLoopDelay [
+{ #category : #'input processing' }
+ExternalCommandShell >> disableInputProcessing [
 
-	^ 100	"milliseconds"
+	self inputStream removeDependent: self; disableEventHandling
 ]
 
 { #category : #'interrupt handling' }
@@ -192,16 +191,23 @@ ExternalCommandShell >> editCommand: aString [
 	^ super editCommand: aString
 ]
 
-{ #category : #accessing }
-ExternalCommandShell >> evaluatorProcess [
+{ #category : #'input processing' }
+ExternalCommandShell >> enableInputProcessing [
 
-	^ evaluatorProcess ifNil: [evaluatorProcess _ self readEvalLoop]
+	self inputStream addDependent: self; enableEventHandling
 ]
 
-{ #category : #accessing }
-ExternalCommandShell >> evaluatorProcess: aProcess [
+{ #category : #'input processing' }
+ExternalCommandShell >> handleInput: str [ 
 
-	evaluatorProcess _ aProcess
+	| rs line |
+	self lineBuffer nextPutAll: str.
+	[self lineBuffer contents includes: Character lf]
+		whileTrue: [rs _ ReadStream on: lineBuffer contents.
+			self lineBuffer: nil.
+			line _ rs upTo: Character lf.
+			self cliShell command: line.
+			self lineBuffer nextPutAll: rs upToEnd]
 ]
 
 { #category : #'initialize-release' }
@@ -249,23 +255,17 @@ ExternalCommandShell >> isRunning: trueOrFalse [
 ]
 
 { #category : #accessing }
-ExternalCommandShell >> loopDelay [
-	"When in a polling loop, pause for this number of milliseconds in the loop. A
-	longer delay reduces the load on Squeak from the command shell. A shorter delay
-	speeds up the processing at the expense of overall Squeak responsiveness."
+ExternalCommandShell >> lineBuffer [
+	"Answer the value of lineBuffer"
 
-	^ loopDelay ifNil: [loopDelay _ self defaultLoopDelay]
-
+	^ lineBuffer ifNil: [lineBuffer := WriteStream on: '']
 ]
 
 { #category : #accessing }
-ExternalCommandShell >> loopDelay: millisecondCount [
-	"When in a polling loop, pause for this number of milliseconds in the loop. A
-	longer delay reduces the load on Squeak from the command shell. A shorter delay
-	speeds up the processing at the expense of overall Squeak responsiveness."
+ExternalCommandShell >> lineBuffer: anObject [
+	"Set the value of lineBuffer"
 
-	loopDelay _ millisecondCount
-
+	lineBuffer _ anObject
 ]
 
 { #category : #printing }
@@ -298,26 +298,6 @@ ExternalCommandShell >> promptTwo [
 
 ]
 
-{ #category : #'read-eval loop' }
-ExternalCommandShell >> readEvalLoop [
-
-	| delay strm eol c |
-	delay _ Delay forMilliseconds: self loopDelay.
-	strm _ WriteStream on: ''.
-	eol _ Character lf.
-	^ [[self inputStream ifNotNilDo:
-		[:input |
-		[(c _ input next) notNil] whileTrue:
-			[(c == eol)
-				ifTrue:
-					[self cliShell command: strm contents.
-					strm _ WriteStream on: '']
-				ifFalse:
-					[strm nextPut: c]]].
-	delay wait] repeat] newProcess
-
-]
-
 { #category : #'initialize-release' }
 ExternalCommandShell >> release [
 
@@ -344,19 +324,20 @@ ExternalCommandShell >> setNonblockingInput [
 { #category : #'initialize-release' }
 ExternalCommandShell >> setStdioStreams [
 
-	Smalltalk at: #OSProcess ifPresent:
-		[:osp |
-		self inputStream: osp thisOSProcess stdIn.
-		self cliShell outputStream: osp thisOSProcess stdOut.
-		self cliShell errorStream: osp thisOSProcess stdErr]
-
+	Smalltalk
+		at: #OSProcess
+		ifPresent: [:osp | 
+			self inputStream: osp thisOSProcess stdIn
+				asBufferedAsyncFileReadStream disableEventHandling.
+			self cliShell outputStream: osp thisOSProcess stdOut.
+			self cliShell errorStream: osp thisOSProcess stdErr]
 ]
 
 { #category : #'initialize-release' }
 ExternalCommandShell >> shutdownInOldSession [
 	"The VM is about to shut down."
 
-	self terminateEvaluatorProcess.
+	self disableInputProcessing.
 	self stopHandlingInterruptSignal
 
 ]
@@ -409,13 +390,14 @@ ExternalCommandShell >> sigIntSema: aSemaphore [
 { #category : #'initialize-release' }
 ExternalCommandShell >> start [
 
+	self isRunning ifTrue: [self stop].
 	self setNonblockingInput.
 	self isRunning: true.
 	self startHandlingInterruptSignal.
 	self cliShell addDependent: self.
 	self cliShell outputStream cr; nextPut: Character lf.
 	self cliShell notifyPrompt.
-	self evaluatorProcess isSuspended ifTrue: [self evaluatorProcess resume]
+	self enableInputProcessing
 
 ]
 
@@ -437,21 +419,19 @@ ExternalCommandShell >> startHandlingInterruptSignal [
 
 { #category : #'initialize-release' }
 ExternalCommandShell >> startUpInNewSession [
-	"Image has been restarted, so the references to standard input, output and error are
-	no longer valid. Start a new evaluation loop to make things right."
+	"Image has been restarted, so the references to standard input, output
+	and error are no longer valid. Reinitialize to make things right."
 
 	self setNonblockingInput.
 	self setStdioStreams.
-	self isRunning ifTrue:
-		[self stop.
-		self start]
-
+	self isRunning
+		ifTrue: [self stop; start]
 ]
 
 { #category : #'initialize-release' }
 ExternalCommandShell >> stop [
 
-	self terminateEvaluatorProcess.
+	self disableInputProcessing.
 	self stopHandlingInterruptSignal.
 	self cliShell ifNotNilDo: [:shell | shell removeDependent: self].
 	self isRunning: false
@@ -473,16 +453,11 @@ ExternalCommandShell >> stopHandlingInterruptSignal [
 
 ]
 
-{ #category : #'initialize-release' }
-ExternalCommandShell >> terminateEvaluatorProcess [
-
-	self evaluatorProcess terminate.
-	self evaluatorProcess: nil
-]
-
 { #category : #updating }
 ExternalCommandShell >> update: event [
 
+	event == self inputStream
+		ifTrue: [^ self handleInput: event upToEnd].
 	event == #prompt	"display $PS1"
 		ifTrue: [^ self prompt].
 	event == #alternatePrompt	"display $PS2"
