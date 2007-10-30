@@ -702,7 +702,7 @@ ShellSyntax >> pathAboveRoot [
 
 	 "ShellSyntax new pathAboveRoot"
 
-	^ (Smalltalk platformName = 'Win32')
+	^ (self platformName = 'Win32')
 		ifTrue: ['']
 		ifFalse: [FileDirectory slash].
 
@@ -750,6 +750,14 @@ ShellSyntax >> pipeCharToken [
 	"The command pipeline character"
 
 	^ '|'
+]
+
+{ #category : #'platform dependent' }
+ShellSyntax >> platformName [ 
+	"After Squeak version 3.6, #platformName was moved to SmalltalkImage "
+
+	^ ((Smalltalk classNamed: 'SmalltalkImage')
+		ifNil: [^ Smalltalk platformName]) current platformName
 ]
 
 { #category : #'path name expansion' }
@@ -889,7 +897,7 @@ ShellSyntax >> splitLocationPrefixFromPath: aPathString [
 	 "ShellSyntax new splitLocationPrefixFromPath: '\u'"
 
 	| prefix path |
-	(Smalltalk platformName = 'Win32')
+	(self platformName = 'Win32')
 		ifTrue:
 			[((aPathString at: 2 ifAbsent: []) == $:)
 				ifTrue:

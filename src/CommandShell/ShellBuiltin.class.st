@@ -393,12 +393,12 @@ ShellBuiltin >> copyUntilDoneFrom: aPipe to: aStream [
 	is used to prevent deadlock conditions."
 
 	| sema s |
-	sema _ Semaphore new.
+	sema := Semaphore new.
 	aPipe when: #dataReady send: #signal to: sema.
 	[aPipe atEndOfFile] whileFalse:
 		[self timeoutAfter: 200 notifying: sema.
 		sema wait. "Wait for data available"
-		[(s _ aPipe next: 10000) isEmpty] whileFalse:
+		[(s := aPipe next: 10000) isEmpty] whileFalse:
 			[aStream nextPutAll: s; flush]].
 	aPipe release.
 	^ aStream
