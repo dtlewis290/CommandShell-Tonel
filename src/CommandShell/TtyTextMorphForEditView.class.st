@@ -10,7 +10,7 @@ Class {
 { #category : #editing }
 TtyTextMorphForEditView >> keyStroke: evt [
 
-	(self editView model filterAndForward: evt keyValue asCharacter)
+	(self editView model filterAndForwardEvent: evt)
 		ifNotNil: [^ super keyStroke: evt]
 
 ]

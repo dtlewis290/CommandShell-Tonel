@@ -17,45 +17,23 @@ Class {
 }
 
 { #category : #'path name expansion' }
-ShellSyntax >> appendPath: aPathString toPath: startingPathString [ 
+ShellSyntax >> appendPath: aPathString toPath: startingPathString [
+
 	"ShellSyntax new appendPath: 'hosts' toPath: '/etc'"
 	"ShellSyntax new appendPath: 'etc' toPath: '/'"
 	"ShellSyntax new appendPath: 'hosts' toPath: '/etc'"
 	"ShellSyntax new appendPath: 'WINDOWS' toPath: 'C:\'"
 	"ShellSyntax new appendPath: 'someFileName' toPath: 'C:\WINDOWS'"
 
-	| newPath |
-	^ (aPathString findTokens: FileDirectory slash)
-		inject: startingPathString
-		into: [:dirPath :nextPart | 
-			nextPart = '..'
-				ifTrue: [newPath _ self upOneDirectoryLevel: dirPath]
-				ifFalse: [nextPart = '.'
-						ifTrue: [newPath _ dirPath]
-						ifFalse: [newPath _ (self isAtFileSystemRoot: dirPath)
-										ifTrue: [dirPath , nextPart]
-										ifFalse: [dirPath , FileDirectory slash , nextPart]]].
-			newPath]
+	^ (self isAtFileSystemRoot: startingPathString)
+		ifTrue: [startingPathString, aPathString]
+		ifFalse: [startingPathString, FileDirectory slash, aPathString]
 ]
 
 { #category : #'command string parsing' }
 ShellSyntax >> argsFromCommand: aString [
-	"Answer a collection of strings from a whitespace delimited string. Single quote characters
-	protect substrings from expansion to tokens. Single quote characters may be escaped by
-	the backslash character to prevent this interpretation."
 
-	^ (self stringTokensFrom: aString) first
-
-]
-
-{ #category : #private }
-ShellSyntax >> canAccessOSProcess [
-	"True if OSProcess is in the image and if the OSProcess plugin is functioning properly"
-
-	"ShellSyntax new canAccessOSProcess"
-
-	| osp |
-	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
+	^ aString findTokens: ' 	'
 
 ]
 
@@ -71,17 +49,6 @@ ShellSyntax >> character: aCharacter matches: aToken [
 ShellSyntax >> commentChar [
 
 	^ $#
-]
-
-{ #category : #globbing }
-ShellSyntax >> containsExpansionTokens: aString [
-	"Answer true if aString contains wildcard expansion characters, or if it contains
-	anything that might be construed as a regular expression for globbing, or if it
-	contains path separator characters. If false, the sender may safely skip normal
-	glob expansion on aString."
-
-	^ aString includesAnyOf: {$? . $* . $[ . FileDirectory pathNameDelimiter}
-
 ]
 
 { #category : #accessing }
@@ -127,54 +94,39 @@ ShellSyntax >> defaultPathFor: aPathStringWithPrefix [
 
 ]
 
-{ #category : #'command string parsing' }
-ShellSyntax >> doItStringFrom: aCommandString [
-	"Answer a string which can be evaluated as Smalltalk doIt, or nil."
+{ #category : #'path name expansion' }
+ShellSyntax >> expandArgument: aString inDirectoryPath: aPath [
+	"Expand a single argument and answer a fully qualified path to the first matching
+	name. If no match, answer the literal path and file name (which does not exist).
+	This method may be used to expand a single argument, such as the target for a
+	command output redirection, where the target is expected to resolve to a single
+	file name."
 
-	| s |
-	s _ aCommandString withoutTrailingBlanks.
-	s last == $!
-		ifTrue: [^ aCommandString copyUpToLast: $!]
-		ifFalse: [^ nil]
-]
+	"ShellSyntax new expandArgument: 'b?*h' inDirectoryPath: '/usr/bin'"
+	"ShellSyntax new expandArgument: 'b?*h' inDirectoryPath: '/no/such/directory'"
+	"ShellSyntax new expandArgument: 'no*such*file???' inDirectoryPath: '/usr/bin'"
+	"ShellSyntax new expandArgument: '/usr/bin/vi' inDirectoryPath: '/usr/bin'"
+	"ShellSyntax new expandArgument: '../bin/vi' inDirectoryPath: '/usr/bin'"
+	"ShellSyntax new expandArgument: nil inDirectoryPath: '/usr/bin'"
 
-{ #category : #defaults }
-ShellSyntax >> escapeChar [
-	"The character to use to escape the normal interpretation of the following character
-	in a string."
+	| expanded path trimmedString |
+	aString ifNil: [^ ''].
+	trimmedString _ aString withBlanksTrimmed.
+	expanded _ self expandArgumentsFrom: (Array with: trimmedString) inDirectoryPath: aPath.
+	path _ expanded isEmpty
+			ifTrue: [trimmedString]
+			ifFalse: [expanded first].
+	^ self newPathFor: path fromDefault: aPath
 
-	^ $\
 ]
 
 { #category : #'path name expansion' }
-ShellSyntax >> expandArgument: aString inDirectoryPath: aDefaultFileDirectoryPath [
-	"Perform globbing expansion of a command argument. If argument is not a
-	pathname, use aDefaultFileDirectory as the context for globbing. Answer a
-	(possibly empty) collection of all matching paths relative to the default
-	directory path."
+ShellSyntax >> expandArgumentsFrom: argArray [
+	"Perform globbing expansion of command arguments."
 
-	"ShellSyntax new expandArgument: 'ho?ts' inDirectoryPath: '/etc'"
-	"ShellSyntax new expandArgument: '/b?n/s?' inDirectoryPath: '/etc'"
-	"ShellSyntax new expandArgument: 'fs*' inDirectoryPath: '/etc'"
-	"ShellSyntax new expandArgument: 'NOSUCHFILE' inDirectoryPath: '/etc'"
-	"ShellSyntax new expandArgument: '/us*/b?n/v?' inDirectoryPath: '/etc'"
-	"ShellSyntax new expandArgument: 'b?n/v?' inDirectoryPath: '/usr'"
-	"ShellSyntax new expandArgument: nil inDirectoryPath: '/etc'"
+	"ShellSyntax new expandArgumentsFrom: #('this' 'is' 'a' 'test' 'Sq*log')"
 
-	| dirPath pathNames newArgs |
-	aString ifNil: [^ Array new: 0].
-	dirPath _ (aDefaultFileDirectoryPath
-				ifNil: [self workingDirectory])
-					ifNil: [FileDirectory default pathName].
-	pathNames _ (self containsExpansionTokens: aString)
-				ifTrue: [self expandedPathsFrom: aString beginningAt: dirPath]
-				ifFalse: [OrderedCollection new].
-	newArgs _ pathNames collect:
-				[:p | (aDefaultFileDirectoryPath notNil and: [p beginsWith: aDefaultFileDirectoryPath, FileDirectory slash])
-					ifTrue: [(ReadStream on: p) next: aDefaultFileDirectoryPath size + FileDirectory slash size; upToEnd]
-					ifFalse: [p]].
-	newArgs isEmpty ifTrue: [newArgs add: aString].
-	^ newArgs
+	^ self expandArgumentsFrom: argArray inDirectoryPath: FileDirectory default pathName
 
 ]
 
@@ -193,7 +145,8 @@ ShellSyntax >> expandArgumentsFrom: argArray inDirectoryPath: aDefaultFileDirect
 		expandArgumentsFrom: #('this' 'is' 'a' 'test' 'Sq*log' '/us*/b?n/v?')
 		inDirectoryPath: nil"
 
-	| newArgs |
+	| newArgs pathStrings dirPath |
+	dirPath _ aDefaultFileDirectoryPath ifNil: [FileDirectory default pathName].
 	newArgs _ OrderedCollection new.
 	argArray do:
 		[:arg |
@@ -201,10 +154,13 @@ ShellSyntax >> expandArgumentsFrom: argArray inDirectoryPath: aDefaultFileDirect
 			ifTrue:
 				[newArgs add: arg]
 			ifFalse:
-				[newArgs addAll: (self
-					expandArgument: arg
-					inDirectoryPath: aDefaultFileDirectoryPath)]].
+				[(pathStrings _ self glob: arg inDirectory: (FileDirectory on: dirPath))
+					isEmpty ifTrue: [pathStrings _ self expandedPathsFrom: arg beginningAt: dirPath].
+				pathStrings isEmpty
+					ifTrue: [newArgs add: arg]
+					ifFalse: [newArgs addAll: pathStrings]]].
 	^ newArgs
+
 ]
 
 { #category : #'path name expansion' }
@@ -250,6 +206,28 @@ ShellSyntax >> expandPathParts: pathParts beginningAt: root [
 ]
 
 { #category : #'path name expansion' }
+ShellSyntax >> expandedFileNames: argArray inDirectoryPath: dirPathString [
+	"Expand argArray into a collection of file names"
+
+	"ShellSyntax new
+		expandedFileNames: (Array with: '/etc/h?st*' with: '/bin/*sh')
+		inDirectoryPath: nil"
+
+	| oc |
+	argArray size == 0
+		ifTrue:
+			[^ argArray]
+		ifFalse:
+			[oc _ OrderedCollection new.
+			argArray do:
+				[:arg |
+				oc addAll: (self expandArgumentsFrom: (Array with: arg)
+								inDirectoryPath: dirPathString)]].
+	^ oc collect: [:e | self newPathFor: e fromDefault: dirPathString]
+
+]
+
+{ #category : #'path name expansion' }
 ShellSyntax >> expandedPathsFrom: aPathString beginningAt: firstPartOfPath [
 	"Answer a collection of all paths which match aPathString. If aPathString is a relative path,
 	expand the path relative to firstPartOfPath."
@@ -271,66 +249,24 @@ ShellSyntax >> expandedPathsFrom: aPathString beginningAt: firstPartOfPath [
 	 "ShellSyntax new expandedPathsFrom: 'C:\CONFIG.*' beginningAt: nil"
 	 "ShellSyntax new expandedPathsFrom: 'C:\CONFIG.*' beginningAt: '\'"
 
-	^ (self isAbsolutePath: aPathString)
-		ifTrue: [self expandedPathsFromAbsolutePath: aPathString]
-		ifFalse: [self expandedPathsFromRelativePath: aPathString beginningAt: firstPartOfPath]
-
-]
-
-{ #category : #'path name expansion' }
-ShellSyntax >> expandedPathsFromAbsolutePath: anAbsolutePathString [
-	"Answer a collection of all paths which match anAbsolutePathString."
-
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/e*c/h*s'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: 'e*c/h*s'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/usr/bin/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: 'bin/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/usr/*/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/usr/bin/../bin/./../bin/../../usr/bin/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/bin/../bin/./../bin/../../usr/bin/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/usr/bin/../bin/./../bin/../../../../../usr/bin/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '../../../../../../usr/bin/vi'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '/'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '*.image'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: 'C:\WINDOWS\*.*'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: '*.*'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: 'C:\*.*'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: 'C:\CONFIG.*'"
-	 "ShellSyntax new expandedPathsFromAbsolutePath: 'C:\CONFIG.*'"
-
-	| result pathParts a prefix dirPathString root |
+	| result oldPrefix a prefix dirPathString pathParts root |
 	result _ OrderedCollection new.
-	a _ self splitLocationPrefixFromPath: anAbsolutePathString.
-	prefix _ a at: 1.
+	oldPrefix _ firstPartOfPath isNil
+				ifTrue: ['']
+				ifFalse: [(self splitLocationPrefixFromPath: firstPartOfPath) first].
+	a _ self splitLocationPrefixFromPath: aPathString.
+	prefix _ (a at: 1) isEmpty
+				ifTrue: [oldPrefix]
+				ifFalse: [a at: 1].
 	dirPathString _ a at: 2.
 	pathParts _ dirPathString findTokens: FileDirectory slash.
-	root _ prefix, FileDirectory slash.
-	result addAll: (self expandPathParts: pathParts beginningAt: root).
-	^ result
-
-
-]
-
-{ #category : #'path name expansion' }
-ShellSyntax >> expandedPathsFromRelativePath: aPathString beginningAt: firstPartOfPath [
-	"Answer a collection of all paths which match aPathString. Expand the path relative to firstPartOfPath."
-
-	 "ShellSyntax new expandedPathsFromRelativePath: 'e*c/h*s' beginningAt: '/'"
-	 "ShellSyntax new expandedPathsFromRelativePath: 'usr/b?n/vi' beginningAt: '/'"
-	 "ShellSyntax new expandedPathsFromRelativePath: 'bin/vi' beginningAt: '/usr'"
-	 "ShellSyntax new expandedPathsFromRelativePath: 'usr/*/vi' beginningAt: nil"
-	 "ShellSyntax new expandedPathsFromRelativePath: 'usr/bin/../bin/./../bin/../../usr/bin/vi' beginningAt: '/'"
-	 "ShellSyntax new expandedPathsFromRelativePath: 'bin/../bin/./../bin/../../usr/bin/vi' beginningAt: '/usr'"
-	 "ShellSyntax new expandedPathsFromRelativePath: '../../../../../../usr/bin/vi' beginningAt: '/'"
-	 "ShellSyntax new expandedPathsFromRelativePath: '*.image' beginningAt: nil"
-	 "ShellSyntax new expandedPathsFromRelativePath: '*.*' beginningAt: 'C:\WINDOWS'"
-
-	| result pathParts root |
-	result _ OrderedCollection new.
-	pathParts _ aPathString findTokens: FileDirectory slash.
-	root _ firstPartOfPath isNil
-				ifTrue: [FileDirectory default pathName]
-				ifFalse: [firstPartOfPath].
+	root _ (self isAbsolutePath: dirPathString)
+			ifTrue: "Fully qualified path name, ignore firstPartOfPathName"
+				[prefix, FileDirectory slash]
+			ifFalse: "Relative path name, need to use firstPartOfPathName"
+				[firstPartOfPath isNil
+					ifTrue: [FileDirectory default pathName]
+					ifFalse: [firstPartOfPath]].
 	result addAll: (self expandPathParts: pathParts beginningAt: root).
 	^ result
 
@@ -349,12 +285,9 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 	"ShellSyntax new findExecutablePathFor: 'a' inDirectoryPath: nil"
 	"ShellSyntax new findExecutablePathFor: 'sqcat' inDirectoryPath: '/home/lewis/bin'"
 
-	| delimiter path localNames fd fullName dir |
-	self canAccessOSProcess ifFalse: [^ nil].
+	| delimiter path localNames fd fullName pathEntries dir |
 	delimiter _ FileDirectory pathNameDelimiter.
-	path _ (pathString
-				ifNil: [self workingDirectory])
-					ifNil: [FileDirectory default pathName].
+	path _ pathString ifNil: [FileDirectory default pathName].
 	"Unix compatibility note: If aString contains wildcard characters,
 	it is expanded in the context of the current working directory. Expansion
 	does not take place in the context of the PATH directories."
@@ -388,7 +321,16 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 				ifTrue:
 					["Name was not expanded, so use the unmodified value of aString"
 					localNames _ Array with: aString].
-			dir _ (self pathEntriesInDirectoryPath: path)
+		(Smalltalk hasClassNamed: #OSProcess)
+			ifTrue:
+				[pathEntries _ ((Smalltalk at: #OSProcess) thisOSProcess path findTokens: ':')
+					collect:
+						[:e | (e first == delimiter)
+						ifTrue: [e]
+						ifFalse: [path, delimiter asString, e]]]
+			ifFalse:
+				[pathEntries _ #()].
+			dir _ pathEntries
 				detect: [:pathName |
 					(localNames
 						detect: [:fileName |
@@ -405,30 +347,65 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 ]
 
 { #category : #'path name expansion' }
-ShellSyntax >> firstExpandedArgument: aString inDirectoryPath: aPath [
-	"Expand a single argument and answer a fully qualified path to the first matching
-	name. If no match, answer the literal path and file name (which does not exist).
-	If aString is nil, answer an empty string. This method may be used to expand a single
-	argument, such as the target for a command output redirection, where the target is
-	expected to resolve to a single file name."
+ShellSyntax >> findPathTo: aString inDirectoryPath: pathString [
+	"Look for a path to aString, following Unix conventions for searching the PATH.
+	If no likely candidate is found, answer nil."
 
-	"ShellSyntax new firstExpandedArgument: 'b?*h' inDirectoryPath: '/usr/bin'"
-	"ShellSyntax new firstExpandedArgument: 'b?*h' inDirectoryPath: '/no/such/directory'"
-	"ShellSyntax new firstExpandedArgument: 'no*such*file???' inDirectoryPath: '/usr/bin'"
-	"ShellSyntax new firstExpandedArgument: '/usr/bin/vi' inDirectoryPath: '/usr/bin'"
-	"ShellSyntax new firstExpandedArgument: '../bin/vi' inDirectoryPath: '/usr/bin'"
-	"ShellSyntax new firstExpandedArgument: '../b?n' inDirectoryPath: '/usr/bin'"
-	"ShellSyntax new firstExpandedArgument: nil inDirectoryPath: '/usr/bin'"
+	"ShellSyntax new findPathTo: 'bash' inDirectoryPath: nil"
+	"ShellSyntax new findPathTo: 'ReadMe.txt' inDirectoryPath: nil"
+	"ShellSyntax new findPathTo: 'SqueakDebug.log' inDirectoryPath: nil"
+	"ShellSyntax new findPathTo: 'noSuchFileName' inDirectoryPath: nil"
+	"ShellSyntax new findPathTo: 'a' inDirectoryPath: nil"
 
-	| expanded path trimmedString |
-	aString ifNil: [^ ''].
-	trimmedString _ aString withBlanksTrimmed.
-	expanded _ self expandArgument: trimmedString inDirectoryPath: aPath.
-	path _ expanded isEmpty
-			ifTrue: [trimmedString]
-			ifFalse: [expanded first].
-	^ self newPathFor: path fromDefault: aPath
+	| delimiter localNames pathEntries dir fd exeName path relativePath |
+	delimiter _ FileDirectory pathNameDelimiter.
+	path _ pathString ifNil: [FileDirectory default pathName].
+	(aString includes: delimiter)
+		ifTrue:
+			["A fully or partially qualified path, do not search PATH"
+			(self isAbsolutePath: aString)
+				ifTrue:
+					["Fully qualified path from the file system root"
+					(FileDirectory default fileExists: aString)
+						ifTrue: [^ aString]
+						ifFalse: [^ nil]]
+				ifFalse:
+					["A path relative to the current directory, pathString"
+					relativePath _ path, FileDirectory slash, aString.
+					(FileDirectory default fileExists: relativePath)
+						ifTrue: [^ relativePath]
+						ifFalse: [^ nil]]]
+		ifFalse:
+			["Look for the file in the PATH locations"
+			localNames _ self glob: aString. "Unix shells do this for some reason"
+			(localNames size == 0)
+				ifTrue:
+					["Name was not expanded, so use the unmodified value of aString"
+					localNames _ Array with: aString].
 
+			(Smalltalk hasClassNamed: #OSProcess)
+				ifTrue:
+					[pathEntries _ ((Smalltalk at: #OSProcess) thisOSProcess path findTokens: ':')
+						collect:
+							[:e | (e first == delimiter)
+							ifTrue: [e]
+							ifFalse: [path, FileDirectory slash, e]]]
+				ifFalse:
+					[pathEntries _ #()].
+			dir _ pathEntries
+				detect: [:pathName |
+					fd _ FileDirectory on: pathName.
+					(localNames
+						detect: [:fileName |
+							(fd fileExists: fileName)
+								ifTrue: [exeName _ fileName. true]
+								ifFalse: [false]]
+						ifNone: [nil]) notNil]
+				ifNone: [exeName].
+			dir isNil
+				ifTrue: [^ nil]
+				ifFalse: [^ (self expandedPathsFrom: (dir, FileDirectory slash, exeName)
+								beginningAt: FileDirectory slash) at: 1 ifAbsent: [nil]]]
 ]
 
 { #category : #'working directory' }
@@ -469,7 +446,7 @@ ShellSyntax >> glob: aString inDirectory: aFileDirectory [
 
 	[^ self glob: aString names: aFileDirectory fileAndDirectoryNames]
 		on: Error
-		do: [:ex | ^ #()]
+		do: [^ #()]
 
 
 ]
@@ -569,6 +546,12 @@ ShellSyntax >> isAtFileSystemRoot: aPathString [
 ShellSyntax >> isComment: aString [
 	"Answer true if aString is empty or if its first non-space character is commentChar"
 
+	"ShellSyntax new isComment: '   #comment'"
+	"ShellSyntax new isComment: '#comment'"
+	"ShellSyntax new isComment: '   notComment'"
+	"ShellSyntax new isComment: 'notComment'"
+	"ShellSyntax new isComment: ''"
+
 	^ (aString size == 0)
 		or:
 			[aString do: [:e | (e isSeparator not)
@@ -577,63 +560,26 @@ ShellSyntax >> isComment: aString [
 ]
 
 { #category : #'platform dependent' }
-ShellSyntax >> isDirectoryPath: aPathString [
-
-	| fullPath localName entry |
-	^ (('*', FileDirectory slash) match: aPathString) or:
-		[fullPath _ FileDirectory default fullNameFor: aPathString.
-		localName _ FileDirectory localNameFor: fullPath.
-		entry _ (FileDirectory on: (FileDirectory dirPathFor: fullPath)) entries
-			detect: [:e | e name = localName] ifNone: [nil].
-		entry notNil and: [entry isDirectory]]
-
-]
-
-{ #category : #'command string parsing' }
-ShellSyntax >> isDoItCommand: aCommandString [
-	"Answer true if aCommandString should be evaluated as Smalltalk doIt."
-
-	^ aCommandString withoutTrailingBlanks last == $!
-]
-
-{ #category : #'platform dependent' }
-ShellSyntax >> isExecutable: aPath [ 
-	"Answer true if aPath points to an executable file. This could be 
-	enhanced to support setting UID and GID for a CommandShell session. 
+ShellSyntax >> isExecutable: aPath [
+	"Answer true if aPath points to an executable file. This could be
+	enhanced to support setting UID and GID for a CommandShell session.
 	For now, just take the default for the current Squeak process."
 
 	^ aPath notNil
-		and: [(Smalltalk
-				at: #OSProcess
-				ifPresent: [:osp | osp accessor isExecutable: aPath])
-				ifNil: [false]]
+		and: [(Smalltalk hasClassNamed: #OSProcess)
+			and: [(Smalltalk at: #OSProcess) accessor isExecutable: aPath]]
+
 ]
 
 { #category : #'command string parsing' }
 ShellSyntax >> isFlagParameter: aString [
 	"Answer true if aString begins with $- (the convention for command flags for Unix)"
 
+	"ShellSyntax new isFlagParameter: '-help'"
+	"ShellSyntax new isFlagParameter: 'filename'"
+	"ShellSyntax new isFlagParameter: ''"
+
 	^ (aString size > 0) and: [(aString at: 1) == $-]
-]
-
-{ #category : #'path name expansion' }
-ShellSyntax >> newDirPath: aPath from: initialPath [
-	"Answer a path string for a change directory command. Change from initialPath
-	(usually the current working directory) to the new path, where aPath may be
-	either an absolute path name (fully specified from the root) or a relative path
-	name (relative to initialPath)."
-
-	"self new newDirPath: 'b?n' from: '/usr'"
-	"self new newDirPath: '..' from: '/usr/bin'"
-	"self new newDirPath: '.././bin' from: '/usr/bin'"
-	"self new newDirPath: '../../../../..' from: '/usr/bin'"
-	"self new newDirPath: '../../../../../usr' from: '/usr/bin'"
-
-	^ (self expandedPathsFrom: aPath beginningAt: initialPath)
-		at: 1
-		ifAbsent: [nil]
-
-
 ]
 
 { #category : #'path name expansion' }
@@ -681,20 +627,6 @@ ShellSyntax >> nextGlobToken: aStream lastToken: aToken tokenStream: aTokenStrea
 					^ c asString]]
 ]
 
-{ #category : #defaults }
-ShellSyntax >> noWaitToken [
-	"This character at the end of a command string means execute as detached process."
-
-	^ '&'
-]
-
-{ #category : #'working directory' }
-ShellSyntax >> nullDirectoryString [
-	"String to display when the current directory is one level above the file system root."
-
-	^ '[]'
-]
-
 { #category : #'platform dependent' }
 ShellSyntax >> pathAboveRoot [
 	"Answer a path pointing to a location above the file system root. The
@@ -705,23 +637,6 @@ ShellSyntax >> pathAboveRoot [
 	^ (self platformName = 'Win32')
 		ifTrue: ['']
 		ifFalse: [FileDirectory slash].
-
-]
-
-{ #category : #'platform dependent' }
-ShellSyntax >> pathEntriesInDirectoryPath: basePath [
-	"Answer a possibly empty collection of path entries from a colon-delimited path
-	string provided by the operating system. Relative path names are interpreted relative
-	to basePath"
-
-	"ShellSyntax new pathEntriesInDirectoryPath: FileDirectory default pathName"
-
-	^ (Smalltalk at: #OSProcess ifPresent:
-		[:osp |
-		(osp thisOSProcess path findTokens: ':')
-			collect:
-				[:e | self newPathFor: e fromDefault: basePath]])
-		ifNil: [Array new].
 
 ]
 
@@ -752,7 +667,7 @@ ShellSyntax >> pipeCharToken [
 	^ '|'
 ]
 
-{ #category : #'platform dependent' }
+{ #category : #'version dependent' }
 ShellSyntax >> platformName [ 
 	"After Squeak version 3.6, #platformName was moved to SmalltalkImage "
 
@@ -761,47 +676,21 @@ ShellSyntax >> platformName [
 ]
 
 { #category : #'path name expansion' }
-ShellSyntax >> programNameAndArgumentsFrom: aString inDirectoryPath: pathString findExecutable: expandExePath [
-	"Answer an array with the name of the program to run, and with the expanded
-	arguments list. If expandExePath is true, search the file system for an executable
-	program to run, otherwise use the literal command name."
+ShellSyntax >> programNameAndArgumentsFrom: aString inDirectoryPath: pathString [
 
-	"ShellSyntax new
-		programNameAndArgumentsFrom: 'sleep 6'
-		inDirectoryPath: '/etc'
-		findExecutable: true"
-	"ShellSyntax new
-		programNameAndArgumentsFrom: 'sleep 6'
-		inDirectoryPath: '/etc'
-		findExecutable: false"
-	"ShellSyntax new
-		programNameAndArgumentsFrom: 'ls -l h?s*'
-		inDirectoryPath: '/etc'
-		findExecutable: true"
+	"ShellSyntax new programNameAndArgumentsFrom: 'sleep 6' inDirectoryPath: '/etc'"
+	"ShellSyntax new programNameAndArgumentsFrom: 'ls -l h?s*' inDirectoryPath: '/etc'"
 
 	| tokens tok args exe |
 	tokens _ self argsFromCommand: aString.
 	tokens size == 0
 		ifTrue: [tok _ '']
 		ifFalse: [tok _ tokens at: 1].
-	args _ self
-		expandArgumentsFrom: (tokens copyFrom: 2 to: tokens size)
-		inDirectoryPath: pathString.
-	exe _ expandExePath
-		ifTrue: [(self findExecutablePathFor: tok inDirectoryPath: pathString) ifNil: [tok]]
-		ifFalse: [tok].
+	args _ self expandArgumentsFrom: (tokens copyFrom: 2 to: tokens size) inDirectoryPath: pathString.
+	exe _ self findExecutablePathFor: tok inDirectoryPath: pathString.
+	exe ifNil: [exe _ tok].
 	^ Array with: exe with: args
 
-]
-
-{ #category : #defaults }
-ShellSyntax >> quoteChar [
-	"In a Unix shell, this character is used to delimit chunks of text which should not
-	be expanded with wildcards or shell variables. In a Smalltalk compiler, this character
-	delimits a String. ShellSyntax interprets it as a delimiter for a  literal string which
-	should not be expanded or interpreted in any way."
-
-	^ $'
 ]
 
 { #category : #'command string parsing' }
@@ -827,21 +716,21 @@ ShellSyntax >> redirectIOFor: commandString inDirectoryPath: dirPathString [
 			[tok _ tokenStream next.
 			tok == #inputRedirect
 				ifTrue: ["Do input redirection"
-					target _ self firstExpandedArgument: tokenStream next
+					target _ self expandArgument: tokenStream next
 								inDirectoryPath: dirPathString.
 					input _ FileStream readOnlyFileNamed: target.
 					input
 						ifNil: [self inform: 'Cannot open ' , target , ', using default stdin']]
 				ifFalse: [tok == #outputRedirect
 						ifTrue: ["Do output redirection"
-							target _ self firstExpandedArgument: tokenStream next
+							target _ self expandArgument: tokenStream next
 										inDirectoryPath: dirPathString.
 							output _ self truncatedOutputFile: target.
 							output ifNil:
 									[self inform: 'Cannot open ' , target , ', using default stdout']]
 						ifFalse: [tok == #outputAppendRedirect
 								ifTrue: ["Do output redirection, appended to existing output file if any."
-									target _ self firstExpandedArgument: tokenStream next
+									target _ self expandArgument: tokenStream next
 												inDirectoryPath: dirPathString.
 									output _ FileStream fileNamed: target.
 									output isNil
@@ -849,14 +738,14 @@ ShellSyntax >> redirectIOFor: commandString inDirectoryPath: dirPathString [
 										ifFalse: [output setToEnd]]
 								ifFalse: [tok == #errorRedirect
 										ifTrue: ["Do error redirection"
-											target _ self firstExpandedArgument: tokenStream next
+											target _ self expandArgument: tokenStream next
 														inDirectoryPath: dirPathString.
 											error _ self truncatedOutputFile: target.
 											error ifNil:
 													[self inform: 'Cannot open ' , target , ', using default stdout']]
 										ifFalse: [tok == #errorAppendRedirect
 												ifTrue: ["Do error redirection, appended to existing error file if any. "
-													target _ self firstExpandedArgument: tokenStream next
+													target _ self expandArgument: tokenStream next
 																inDirectoryPath: dirPathString.
 													error _ FileStream fileNamed: target.
 													error isNil
@@ -912,60 +801,6 @@ ShellSyntax >> splitLocationPrefixFromPath: aPathString [
 			[prefix _ ''.
 			path _ aPathString].
 	^ Array with: prefix with: path
-
-]
-
-{ #category : #'command string parsing' }
-ShellSyntax >> splitPipelineCommands: aCommand [
-	"Answer a list of the individual commands in a command pipeline string,
-	delimited by the pipe character."
-
-	^ (aCommand findTokens: self pipeCharToken) collect: [:e | e withBlanksTrimmed]
-
-]
-
-{ #category : #'command string parsing' }
-ShellSyntax >> stringTokensFrom: aString [
-	"Answer a two element array with a collection of strings from a whitespace
-	delimited string, and with an optional error message. Single quote characters
-	protect substrings from expansion to tokens. Single quote characters may be
-	escaped by the backslash character to prevent this interpretation."
-
-	| result r w errorMessage quoteEnabled t |
-	result _ OrderedCollection new.
-	r _ ReadStream on: aString.
-	w _ WriteStream on: String new.
-	errorMessage _ nil.
-	(quoteEnabled _ r peek == self quoteChar) ifTrue: [r next].
-	[r atEnd] whileFalse:
-		[t _ r next.
-		(t == self quoteChar)
-			ifTrue:
-				[quoteEnabled _ quoteEnabled not]
-			ifFalse:
-				[quoteEnabled
-					ifTrue:
-						[w nextPut: t]
-					ifFalse:
-						[(t == self escapeChar)
-							ifTrue:
-								["An escaped character is treated as a literal character."
-								t _ r next.
-								t isNil
-									ifTrue: ["FIXME: This would indicate an escaped end of line"]
-									ifFalse: [w nextPut: t]]
-							ifFalse:
-								[t isSeparator
-									ifTrue:
-										["Whitespace delimits tokens."
-										(w isEmpty) ifFalse: [result add: w contents].
-										w _ WriteStream on: String new.
-										[r peek notNil and: [r peek isSeparator]] whileTrue: [r next].]
-									ifFalse:
-										[w nextPut: t]]]]].
-	quoteEnabled ifTrue: [errorMessage _ 'unbalanced quotes'].
-	(w isEmpty) ifFalse: [result add: w contents].
-	^ Array with: result with: errorMessage
 
 ]
 
@@ -1101,8 +936,6 @@ ShellSyntax >> upOneDirectoryLevel: aPathName [
 	 "ShellSyntax new upOneDirectoryLevel: '/usr/bin'"
 	 "ShellSyntax new upOneDirectoryLevel: '/usr'"
 	 "ShellSyntax new upOneDirectoryLevel: '/'"
-	 "ShellSyntax new upOneDirectoryLevel: 'usr'"
-	 "ShellSyntax new upOneDirectoryLevel: ''"
 
 	| prefixAndPath prefix path newPath |
 	prefixAndPath _ self splitLocationPrefixFromPath: aPathName.
@@ -1110,27 +943,16 @@ ShellSyntax >> upOneDirectoryLevel: aPathName [
 	path _ prefixAndPath at: 2.
 	(self isAtFileSystemRoot: aPathName)
 		ifTrue:
-			[(self isAbsolutePath: aPathName)
-				ifTrue:
-					[prefix isEmpty
-						ifTrue: "Normal case, unix. Do not go up a level."
-							[^ aPathName]
-						ifFalse: "A Win32 device name, go up a level above the file systems"
-							[^ '']]
-				ifFalse:
-					["One level above whererever we are. Unfortunately we have
-					no way to know where we are, so this probably should be treated
-					as a sytax error."
-					^ '..']]
+			[prefix isEmpty
+				ifTrue: "Normal case, unix. Do not go up a level."
+					[^ aPathName]
+				ifFalse: "A Win32 device name, go up a level above the file systems"
+					[^ '']]
 		ifFalse:
-			[newPath _ (path includes: FileDirectory pathNameDelimiter)
-				ifTrue: [path copyUpToLast: FileDirectory pathNameDelimiter]
-				ifFalse: [''].
+			[newPath _ path copyUpToLast: FileDirectory pathNameDelimiter.
 			^ newPath isEmpty
 				ifTrue:
-					[(self isAbsolutePath: aPathName)
-						ifTrue: [prefix, FileDirectory slash]
-						ifFalse: [prefix]]
+					[prefix, FileDirectory slash]
 				ifFalse:
 					[prefix, newPath]]
 
@@ -1140,7 +962,9 @@ ShellSyntax >> upOneDirectoryLevel: aPathName [
 ShellSyntax >> workingDirectory [
 
 	^ self cwdDictionary at: self cwdIndex ifAbsentPut:
-		[Smalltalk at: #OSProcess ifPresent: [:osp | osp thisOSProcess getCwd]]
+		[(Smalltalk hasClassNamed: #OSProcess)
+			ifTrue: [(Smalltalk at: #OSProcess) thisOSProcess getCwd]
+			ifFalse: [nil]]
 
 ]
 

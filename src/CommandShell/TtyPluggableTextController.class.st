@@ -18,11 +18,8 @@ TtyPluggableTextController >> accept [
 	"Evaluate command in a separate process. The separate process will
 	send #addDeferredUIMessage: to generate a new prompt when complete."
 
-	self model
-		activeController: self;
-		cr;
-		flush;
-		processCommand: self commandLineInput asString
+	self model readSyncSemaphore; activeController: self.
+	self model doCommandsInString: self commandLineInput asString
 ]
 
 { #category : #accessing }

@@ -1,5 +1,5 @@
 "
-I evaluate Smalltalk expressions, taking input from my pipeToInput, and print the results of the evaluation on my pipeFromOutput. I may append error messages to my errorPipelineStream. I provide a framework for pipelines of expressions, possibly combined in the same pipeline with ExternalOSProcess proxies executing external operating system commands.
+I evaluate Smalltalk expressions taken from my pipeToInput, and print the results of the evaluation on my pipeFromOutput. I may append error messages to my errorPipelineStream. I provide a framework for pipelines of expressions, possibly combined in the same pipeline with ExternalOSProcess proxies executing external operating system commands.
 
 My evaluationBlock may be supplied directly, or can be compiled from an expression string. If compiled from an expression string, the names 'stdin', 'stdout', 'stderr', and 'args' are used to refer to the input stream, output stream, error stream, and an array of arguments. If any of these names are used in the expression string, then the evaluation block will be compiled in such as way as to connect these names with their corresponding streams or argument array.
 
@@ -8,37 +8,234 @@ Class {
 	#name : #PipeableEvaluator,
 	#superclass : #PipeJunction,
 	#instVars : [
-		'argumentArray',
 		'runState',
+		'expression',
+		'evaluationBlock',
+		'extraArguments',
+		'needsPrompt',
 		'exitStatus',
 		'outputHasBeenRedirected'
 	],
 	#category : #CommandShell
 }
 
-{ #category : #accessing }
-PipeableEvaluator >> argumentArray [
+{ #category : #'instance creation' }
+PipeableEvaluator class >> block: aSimpleBlock [
 
-	^ argumentArray
+	"(PipeableEvaluator block: [#'This block answers a symbol as String']) value upToEnd"
 
-]
-
-{ #category : #accessing }
-PipeableEvaluator >> argumentArray: anArrayOfStrings [
-
-	argumentArray _ anArrayOfStrings
+	^ self block: aSimpleBlock
+		pipeFrom: nil
 
 ]
 
-{ #category : #testing }
-PipeableEvaluator >> atEnd [
-	"True after processing is complete and all available data has been read from
-	the output pipe."
+{ #category : #'instance creation' }
+PipeableEvaluator class >> block: aSimpleBlock pipeFrom: inputStream [
 
-	^ self isComplete
-		and: [self outputHasBeenRedirected
-				or: [self outputIsExternalStream
-					or: [pipeFromOutput atEnd]]]
+	"(PipeableEvaluator
+		block: [:input | input contents]
+		pipeFrom: (ReadStream on: 'Here is some input text'))
+			value upToEnd"
+
+	^ self block: aSimpleBlock pipeFrom: inputStream errorPipelineStream: (WriteStream on: String new)
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> block: aSimpleBlock pipeFrom: inputStream errorPipelineStream: errorStream [
+
+	^ self block: aSimpleBlock pipeFrom: inputStream pipeTo: nil errorPipelineStream: errorStream
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> block: aSimpleBlock pipeFrom: inputStream pipeTo: outputStream errorPipelineStream: errorStream [
+
+	^ self block: aSimpleBlock pipeFrom: inputStream pipeTo: outputStream errorPipelineStream: errorStream withArgs: nil
+
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> block: aBlock pipeFrom: inputStream pipeTo: outputStream errorPipelineStream: errorStream withArgs: anArrayOfOtherArguments [
+
+	"(PipeableEvaluator
+		block: [:in :out :err :stuff |
+				out nextPutAll: in contents; cr.
+				err nextPutAll: 'hello stderr'.
+				stuff do: [:e | out nextPutAll: e; cr]]
+		pipeFrom: (ReadStream on: 'Here is some input text')
+		pipeTo: nil
+		errorPipelineStream: nil
+		withArgs: #(arg1 arg2 arg3))
+			value upToEnd"
+
+	^ super new
+		evaluationBlock: aBlock;
+		pipeToInput: inputStream;
+		pipeFromOutput: outputStream;
+		errorPipelineStream: errorStream;
+		extraArguments: anArrayOfOtherArguments;
+		notYetRunning;
+		initialize
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> command: aString [
+
+	"(PipeableEvaluator command: '''Hello world!''') value upToEnd"
+
+	^ self command: aString pipeFrom: nil errorPipelineStream: nil
+
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> command: aString pipeFrom: inputStream errorPipelineStream: errorStream [
+
+	"(PipeableEvaluator
+		command: 'stdout nextPutAll: stdin upToEnd'
+		pipeFrom: (ReadStream on: 'Here is some input text')
+		errorPipelineStream: (WriteStream on: ''))
+			value upToEnd"
+
+	^ self command: aString pipeFrom: inputStream pipeTo: nil errorPipelineStream: errorStream
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> command: aString pipeFrom: inputStream pipeTo: outputStream errorPipelineStream: errorStream [
+
+	"(PipeableEvaluator
+		command: 'stdout nextPutAll: stdin contents'
+		pipeFrom: (ReadStream on: 'Here is some input text')
+		pipeTo: nil
+		errorPipelineStream: (WriteStream on: ''))
+			value upToEnd"
+
+	^ super new
+		expression: aString;
+		pipeToInput: inputStream;
+		pipeFromOutput: outputStream;
+		errorPipelineStream: errorStream;
+		notYetRunning;
+		initialize
+]
+
+{ #category : #'instance creation' }
+PipeableEvaluator class >> command: aString pipeFrom: inputStream pipeTo: outputStream errorPipelineStream: errorStream withArgs: anArrayOfOtherArguments [
+
+	"(PipeableEvaluator
+		command: 'stdout nextPutAll: stdin contents; cr. ',
+				'stderr nextPutAll: ''hello stderr''. ',
+				'args do: [:arg | stdout nextPutAll: arg; cr]'
+		pipeFrom: (ReadStream on: 'Here is some input text')
+		pipeTo: nil
+		errorPipelineStream: (WriteStream on: '')
+		withArgs: #(this is a test))
+			value upToEnd"
+
+	^ super new
+		expression: aString;
+		pipeToInput: inputStream;
+		pipeFromOutput: outputStream;
+		errorPipelineStream: errorStream;
+		extraArguments: anArrayOfOtherArguments;
+		notYetRunning;
+		initialize
+]
+
+{ #category : #defaults }
+PipeableEvaluator class >> defaultSyntaxClass [
+
+	^ ShellSyntax
+]
+
+{ #category : #evaluating }
+PipeableEvaluator >> addTreeLeaves: treeOfSymbols to: aCollection [
+	"Flatten a tree of Symbols built by a Scanner."
+
+	treeOfSymbols do: [:e |
+		(e isKindOf: Array)
+			ifTrue: [self addTreeLeaves: e to: aCollection]
+			ifFalse: [aCollection add: e]].
+	^ aCollection
+]
+
+{ #category : #evaluating }
+PipeableEvaluator >> blockString [
+	"Answer source code for a block to execute my expression. Attempt to give it the correct
+	number of parameters based on scanning expression for use of #args, #stderr, #stdout,
+	and #stdin tokens."
+
+	"PipeableEvaluator new expression: 'stdout nextPutAll: (args at: 4)'; blockString"
+	"PipeableEvaluator new expression: 'stderr nextPutAll: stdin contents'; blockString"
+	"PipeableEvaluator new expression: 'stdout nextPutAll: stdin contents'; blockString"
+	"PipeableEvaluator new expression: 'stdin contents'; blockString"
+	"PipeableEvaluator new expression: '#HelloWorld'; blockString"
+
+	| tokens prefix |
+	self expression isNil
+		ifTrue:
+			[^ '[]']
+		ifFalse:
+			[tokens _ self addTreeLeaves: (Scanner new scanTokens: expression) to: OrderedCollection new.
+			(tokens includes: #args)
+				ifTrue:
+					[prefix _ '[:stdin :stdout :stderr :args | ']
+				ifFalse:
+					[(tokens includes: #stderr)
+						ifTrue:
+							[prefix _ '[:stdin :stdout :stderr | ']
+						ifFalse:
+							[(tokens includes: #stdout)
+								ifTrue:
+									[prefix _ '[:stdin :stdout | ']
+								ifFalse:
+									[(tokens includes: #stdin)
+										ifTrue:
+											[prefix _ '[:stdin | ']
+										ifFalse:
+											[prefix _ '[']]]].
+			^ prefix, self expression, ']']
+
+]
+
+{ #category : #evaluating }
+PipeableEvaluator >> blockValue [
+	"Evaluate my evaluationBlock. For a smart block, answer self. For a dumb
+	block, answer the result of evaluating it. Heuristic: If the block receives
+	two or more arguments, then assume that it was smart enough to write
+	output to stdout. Otherwise, assume that it was a dumb block."
+
+	| nArgs |
+	self evaluationBlock ifNil: [^ nil].
+	nArgs _ evaluationBlock numArgs.
+	(nArgs == 0)
+		ifTrue: "dumb block"
+			[^ evaluationBlock value]
+		ifFalse:
+			[(nArgs == 1)
+				ifTrue: "dumb block"
+					[^ evaluationBlock value: self pipeToInput]
+				ifFalse:
+					[(nArgs == 2)
+						ifTrue: "smart block"
+							[evaluationBlock
+								value: self pipeToInput
+								value: self pipeFromOutput]	
+						ifFalse:
+							[(nArgs == 3)
+								ifTrue: "smart block"
+									[evaluationBlock
+										value: self pipeToInput
+										value: self pipeFromOutput
+										value: self errorPipelineStream]
+								ifFalse:
+									[(nArgs == 4)
+										ifTrue: "smart block"
+											[evaluationBlock
+												value: self pipeToInput
+												value: self pipeFromOutput
+												value: self errorPipelineStream
+												value: self extraArguments]
+										ifFalse: "really stupid block"
+											[self error: 'expected block with 4 or fewer arguments'. ^ nil]]]]]
 
 ]
 
@@ -47,46 +244,89 @@ PipeableEvaluator >> canProvideOutputPipe [
 	"Answer false if output has been redirected to a file and cannot be accessed by
 	the next process proxy in a command pipeline."
 
-	^ super canProvideOutputPipe and: [self outputHasBeenRedirected not]
+	^ self outputHasBeenRedirected not
+
+]
+
+{ #category : #evaluating }
+PipeableEvaluator >> closePipes [
+
+	pipeFromOutput ifNotNil: [pipeFromOutput close].
+	pipeToInput ifNotNil: [pipeToInput close].
+	self errorHasBeenRedirected ifTrue: [errorPipelineStream close]
+
+]
+
+{ #category : #evaluating }
+PipeableEvaluator >> compile [
+	"Compile my expression into a block with zero to four parameters. The parameters,
+	if present, correspond to my pipeToInput, pipeFromOutput, errorPipelineStream, and
+	an array of extra parameters (in that order). By convention, these are named 'stdin',
+	'stdout', 'stderr', and 'args' within my expression string.
+
+	If the compilation fails due to a syntax error (compile time failure, not run time
+	failure), put an error message on the standard error stream and answer a block
+	which evaluates to a null string."
+
+	evaluationBlock ifNil:
+		[evaluationBlock _ self handleCompileErrorFor:
+			[Compiler evaluate: self blockString
+					for: self
+					notifying: self
+					logged: false]]
 
 ]
 
 { #category : #'setting run state' }
 PipeableEvaluator >> complete [
-	"Evaluation has been completed. Perform some cleanup and notify
-	interested parties."
+	"Evaluation has been completed."
 
-	self closePipeInputs.
-	self runState: #complete.
-	self errorHasBeenRedirected
-		ifTrue: [self closeErrorPipeline]
+	self runState: #complete
+
 ]
 
-{ #category : #accessing }
-PipeableEvaluator >> errorPipelineStream [
-	"Accumulates the error output of commands in a command pipeline."
+{ #category : #testing }
+PipeableEvaluator >> errorHasBeenRedirected [
+	"Answer true if the error output has been redirected to an external file
+	and is not available to be read as error output of a pipeline."
 
-	errorPipelineStream isNil
+	^ self errorPipelineStream isKindOf: FileStream
+
+]
+
+{ #category : #streaming }
+PipeableEvaluator >> errorUpToEnd [
+	"Answer all available characters from my error stream. If evaluation
+	has not happened yet, do it now."
+
+	self isComplete ifFalse: [self value].
+	^ (errorPipelineStream isNil or: [self errorHasBeenRedirected])
 		ifTrue:
-			[errorPipelineStream _ InternalPipe nonBlockingPipe.
-			errorPipelineStream addDependent: self].
-	^ errorPipelineStream
+			['']
+		ifFalse:
+			[errorPipelineStream upToEnd]
 
 ]
 
 { #category : #accessing }
-PipeableEvaluator >> errorPipelineStream: aStream [
-	"Accumulates the error output of commands in a command pipeline."
+PipeableEvaluator >> evaluationBlock [
+	"Answer the block to be evaluated, possibly compiling it from the expression string."
 
-	errorPipelineStream ifNotNil: [errorPipelineStream removeDependent: self].
-	errorPipelineStream _ aStream.
-	errorPipelineStream ifNotNil: [errorPipelineStream addDependent: self]
+	evaluationBlock ifNil: [self compile].
+	^ evaluationBlock
+]
 
+{ #category : #accessing }
+PipeableEvaluator >> evaluationBlock: aBlock [
+	"The block to be evaluated, possibly compiled from the expression string."
+
+	evaluationBlock _ aBlock
 ]
 
 { #category : #accessing }
 PipeableEvaluator >> exitStatus [
 
+	exitStatus ifNil: [self success].
 	^ exitStatus
 ]
 
@@ -96,10 +336,62 @@ PipeableEvaluator >> exitStatus: aSymbol [
 	exitStatus _ aSymbol
 ]
 
+{ #category : #accessing }
+PipeableEvaluator >> expression [
+
+	^ expression
+]
+
+{ #category : #accessing }
+PipeableEvaluator >> expression: aString [
+
+	expression _ aString
+]
+
+{ #category : #accessing }
+PipeableEvaluator >> extraArguments [
+	"Any additional arguments for my evaluationBlock, to be passed in an Array."
+
+	^ extraArguments
+]
+
+{ #category : #accessing }
+PipeableEvaluator >> extraArguments: anArray [
+	"Any additional arguments for my evaluationBlock, to be passed in an Array."
+
+	extraArguments _ anArray
+]
+
 { #category : #evaluating }
 PipeableEvaluator >> fail [
 
 	self exitStatus: #fail
+]
+
+{ #category : #'error handling' }
+PipeableEvaluator >> handleCompileErrorFor: aBlock [
+	"Evaluate aBlock. On error, put a message onto the error stream and declare failure."
+
+	^ [aBlock value]
+		on: Error
+		do: [:e |
+			self errorPipelineStream
+				nextPutAll: 'Compiler: invalid Smalltalk expression', Character lf asString.
+			self fail.
+			nil]
+
+]
+
+{ #category : #'error handling' }
+PipeableEvaluator >> handleRuntimeErrorFor: aBlock [
+	"Evaluate aBlock. On error, put a message onto the error stream and declare failure."
+
+	^ [aBlock value]
+		on: Error
+		do: [:e |
+			self errorPipelineStream nextPutAll: e description; nextPut: Character lf.
+			self fail]
+
 ]
 
 { #category : #'initialize - release' }
@@ -109,8 +401,7 @@ PipeableEvaluator >> initialize [
 
 	pipeFromOutput isNil
 		ifTrue: [self ensurePipeFromOutput]
-		ifFalse: [self outputHasBeenRedirected: true].
-	^ super initialize
+		ifFalse: [self outputHasBeenRedirected: true]
 
 ]
 
@@ -124,6 +415,44 @@ PipeableEvaluator >> isComplete [
 PipeableEvaluator >> isNotYetRunning [
 
 	^ self runState == #notYetRunning
+]
+
+{ #category : #accessing }
+PipeableEvaluator >> needsPrompt [
+	"Answer true if a shell will want to issue a prompt after evaluating me."
+
+	needsPrompt ifNil: [needsPrompt _ true].
+	^ needsPrompt
+
+]
+
+{ #category : #accessing }
+PipeableEvaluator >> needsPrompt: aBoolean [
+	"True if a shell will want to issue a prompt after evaluating me."
+
+	needsPrompt _ aBoolean
+
+]
+
+{ #category : #streaming }
+PipeableEvaluator >> next [
+
+	^ pipeFromOutput next
+
+]
+
+{ #category : #streaming }
+PipeableEvaluator >> next: count [
+
+	^ pipeFromOutput next: count
+
+]
+
+{ #category : #streaming }
+PipeableEvaluator >> nextFromError: count [
+
+	^ errorPipelineStream next: count
+
 ]
 
 { #category : #streaming }
@@ -172,6 +501,29 @@ PipeableEvaluator >> notify: aString at: aPosition in: aStream [
 
 ]
 
+{ #category : #'command pipelines' }
+PipeableEvaluator >> output [
+	"Answer output contents."
+
+	^ self outputHasBeenRedirected
+		ifTrue: ['']
+		ifFalse: [self pipeFromOutput upToEnd]
+
+]
+
+{ #category : #'command pipelines' }
+PipeableEvaluator >> outputAndError [
+	"Answer an array with output and error contents. If standard error has been
+	redirected to a file, answer a null string as the error message."
+
+	| out err |
+	out _ self output.
+	(self errorHasBeenRedirected)
+		ifTrue: [err _ '']
+		ifFalse: [err _ errorPipelineStream contents].
+	^ Array with: out with: err
+]
+
 { #category : #accessing }
 PipeableEvaluator >> outputHasBeenRedirected [
 	"True if pipeFromOutput has been redirected to a FileStream"
@@ -186,34 +538,59 @@ PipeableEvaluator >> outputHasBeenRedirected: trueOrFalse [
 	outputHasBeenRedirected _ trueOrFalse
 ]
 
-{ #category : #testing }
-PipeableEvaluator >> outputIsExternalStream [
-	"True if output is being piped to an external proxy, or if output has been
-	redirected to a file."
+{ #category : #'command pipelines' }
+PipeableEvaluator >> outputPipeForNextProxy [
 
-	^ self pipeFromOutput isKindOf: FileStream
+	^ self outputHasBeenRedirected
+		ifTrue: [nil]
+		ifFalse: [pipeFromOutput]
 
 ]
 
 { #category : #accessing }
-PipeableEvaluator >> pipeFromError [
-	"Internal evaluators use the errorPipelineStream directly"
+PipeableEvaluator >> pid [
+	"A PipeableEvaluator does not have a pid, so answer nil. This is for
+	compatability in a Unix process pipeline."
 
-	^ self errorPipelineStream
+	^ nil
+]
+
+{ #category : #'command pipelines' }
+PipeableEvaluator >> prepareOutputForPipe [
+	"Output stream will be used by another process proxy as input. Set output stream
+	characteristics accordingly."
+
 ]
 
 { #category : #printing }
 PipeableEvaluator >> printOn: aStream [
 
 	super printOn: aStream.
-	aStream nextPutAll: ' ('; nextPutAll: self runState; nextPut: $)
+	self isComplete
+		ifTrue: [aStream nextPutAll: ' (complete)']
+		ifFalse: [aStream nextPutAll: ' (notYetRunning)']
+]
+
+{ #category : #'command pipelines' }
+PipeableEvaluator >> replaceOutputStreamWith: anotherStream [
+	"Sender is not happy with the kind of output stream we are using. Replace
+	pipeFromOutput with anotherStream, and copy the current contents of pipeFromOutput
+	to the new stream."
+
+	| oldOutputStream |
+	oldOutputStream _ self pipeFromOutput.
+	self pipeFromOutput: anotherStream.
+	oldOutputStream ifNotNil:
+		[anotherStream ifNotNil:
+			[anotherStream nextPutAll: oldOutputStream contents].
+		oldOutputStream close]
 
 ]
 
 { #category : #accessing }
 PipeableEvaluator >> runState [
 
-	^ runState ifNil: [runState _ #notYetRunning]
+	^ runState
 
 ]
 
@@ -246,6 +623,14 @@ PipeableEvaluator >> selectionInterval [
 	^ 1 to: 1
 ]
 
+{ #category : #'command pipelines' }
+PipeableEvaluator >> setNonBlockingOutput [
+	"Check first to make sure process is not complete because pipeFromOutput will not respond
+	to #setNonBlocking after the process has exited."
+
+	self isComplete ifFalse: [pipeFromOutput setNonBlocking]
+]
+
 { #category : #testing }
 PipeableEvaluator >> succeeded [
 	"Answer true if my evaluation completed successfully."
@@ -274,20 +659,65 @@ PipeableEvaluator >> unknownRunState [
 
 ]
 
+{ #category : #streaming }
+PipeableEvaluator >> upToEnd [
+	"Answer all available characters from my output. If evaluation has not
+	happened yet, do it now."
+
+	self isComplete ifFalse: [self value].
+	^ self pipeFromOutput isNil
+		ifTrue:
+			['']
+		ifFalse:
+			[pipeFromOutput upToEnd]
+
+]
+
+{ #category : #evaluating }
+PipeableEvaluator >> value [
+	"Evaluate my evaluationBlock. If the block evaluates to anything other
+	than self, then print the result on pipeFromOutput as output. Otherwise,
+	assume that the block was smart enough to have written its own output.
+	For a block which does not write its own output, add a trailing <cr> after
+	the evaluation if needed. Answer self as the result of the evaluation."
+
+	| result resultString |
+	self success. "Hope for the best, send #fail if something goes wrong"
+	self isNotYetRunning ifTrue:
+		[self ensurePipeFromOutput.
+		self running.
+		self evaluationBlock notNil
+			ifTrue:
+				[result _ self handleRuntimeErrorFor: [self blockValue].
+				(result == self)
+					ifFalse:
+						[resultString _ result asString.
+						pipeFromOutput nextPutAll: resultString.
+						(resultString isEmpty not and:
+							[(resultString last ~= Character cr) and:
+								[resultString last ~= Character lf]])
+						ifTrue: [pipeFromOutput nextPut: Character cr]]]
+			ifFalse:
+				[self fail].
+		self closePipes.
+		self complete]
+
+]
+
 { #category : #'command pipelines' }
 PipeableEvaluator >> | anotherCommandString [
 	"Pipe my output to another evaluator, where the other evaluator evaluates
 	anotherCommandString."
 
-	"((ExpressionEvaluator command: 'Smalltalk')
+	"((PipeableEvaluator command: 'Smalltalk')
 		| 'stdout nextPutAll: stdin upToEnd'
 		| 'stdout nextPutAll: stdin upToEnd') upToEnd"
 
-	"(ExpressionEvaluator command: 'BOGUS')
+	"(PipeableEvaluator command: 'BOGUS')
 		| 'stdout nextPutAll: stdin upToEnd'
 		| 'stdout nextPutAll: stdin upToEnd'"
 
-	"((ExpressionEvaluator command: '(true == false) not')
+	"((PipeableEvaluator command: '(true == false) not')
 		| 'stdout nextPutAll: stdin upToEnd'
 		| 'stdout nextPutAll: stdin upToEnd') upToEnd"
 

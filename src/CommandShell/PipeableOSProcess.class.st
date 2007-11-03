@@ -11,9 +11,9 @@ Class {
 	#name : #PipeableOSProcess,
 	#superclass : #PipeJunction,
 	#instVars : [
-		'pipeFromError',
 		'processProxy',
-		'keepInitialStdOutOpen',
+		'pipeFromError',
+		'closeOutputOnExit',
 		'keepInitialStdErrOpen',
 		'accessProtect'
 	],
@@ -26,21 +26,7 @@ PipeableOSProcess class >> bash [
 
 	"self bash"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | ^ self command: proxyClass bashShellPath].
-	^ self notify: 'OSProcess not available'
-
-]
-
-{ #category : #utility }
-PipeableOSProcess class >> canAccessOSProcess [
-	"True if OSProcess is in the image and if the OSProcess plugin is functioning properly"
-
-	"self canAccessOSProcess"
-
-	| osp |
-	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
-
+	^ self command: self externalProxyClass bashShellPath
 ]
 
 { #category : #'external command processing' }
@@ -60,6 +46,22 @@ PipeableOSProcess class >> command: aString [
 		output: nil
 		error: nil
 		errorPipelineStream: nil
+]
+
+{ #category : #'external command processing' }
+PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream [
+
+	"PipeableOSProcess command: 'sleep 6' environment: nil workingDir: '/etc' input: nil output: nil error: nil"
+	"(PipeableOSProcess command: 'ls -l' environment: nil workingDir: '/etc' input: nil output: nil error: nil) output"
+
+	^ self command: aString
+		environment: anEnvironmentDictionary
+		workingDir: pathString
+		input: inputStream
+		output: outputStream
+		error: errorStream
+		errorPipelineStream: nil
+
 ]
 
 { #category : #'external command processing' }
@@ -83,21 +85,17 @@ PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary
 
 	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil) output"
 
-	| nameAndArgs proxyClass |
-	nameAndArgs _ aSyntaxProcessor isNil
+	| nameAndArgs defaultPath |
+	aSyntaxProcessor isNil
 		ifTrue:
-			[(proxyClass _ self externalProxyClass) isNil
-				ifTrue:
-					[Array with: aString with: Array new]
-				ifFalse:
-					[Array
-						with: proxyClass defaultShellPath
-						with: (Array with: '-c' with: aString)]]
+			[defaultPath _ self externalProxyClass ifNotNilDo: [:c | c defaultShellPath].
+			nameAndArgs _ Array
+				with: defaultPath
+				with: (Array with: '-c' with: aString)]
 		ifFalse:
-			[aSyntaxProcessor
+			[nameAndArgs _ aSyntaxProcessor
 				programNameAndArgumentsFrom: aString
-				inDirectoryPath: pathString
-				findExecutable: true].
+				inDirectoryPath: pathString].
 	^ self
 		forkAndExec: (nameAndArgs at: 1)
 		arguments: (nameAndArgs at: 2)
@@ -125,26 +123,38 @@ PipeableOSProcess class >> command: aCommandString pipeFrom: aPipeStream errorPi
 ]
 
 { #category : #'external command processing' }
+PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream errorPipelineStream: anErrorWriteStream [
+	"Set up the command but do not actually fork the child process."
+
+	"PipeableOSProcess commandNoEvaluate: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
+
+	 ^ self commandNoEvaluate: aString
+		environment: anEnvironmentDictionary
+		workingDir: pathString
+		input: inputStream
+		output: outputStream
+		error: errorStream
+		errorPipelineStream: anErrorWriteStream
+		shellSyntax: nil
+
+]
+
+{ #category : #'external command processing' }
 PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream errorPipelineStream: anErrorWriteStream shellSyntax: aSyntaxProcessor [
 	"Set up the command but do not actually fork the child process."
 
 	"PipeableOSProcess commandNoEvaluate: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil"
 
-	| nameAndArgs proxyClass |
-	nameAndArgs _ aSyntaxProcessor isNil
+	| nameAndArgs |
+	aSyntaxProcessor isNil
 		ifTrue:
-			[(proxyClass _ self externalProxyClass) isNil
-				ifTrue:
-					[Array with: aString with: Array new]
-				ifFalse:
-					[Array
-						with: proxyClass defaultShellPath
-						with: (Array with: '-c' with: aString)]]
+			[nameAndArgs _ Array
+				with: self externalProxyClass defaultShellPath
+				with: (Array with: '-c' with: aString)]
 		ifFalse:
-			[aSyntaxProcessor
+			[nameAndArgs _ aSyntaxProcessor
 				programNameAndArgumentsFrom: aString
-				inDirectoryPath: pathString
-				findExecutable: true].
+				inDirectoryPath: pathString].
 	^ self
 		new: (nameAndArgs at: 1)
 		arguments: (nameAndArgs at: 2)
@@ -159,10 +169,9 @@ PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironment
 { #category : #'process proxy classes' }
 PipeableOSProcess class >> externalProxyClass [
 
-	"self externalProxyClass"
-
-	^ Smalltalk at: #ExternalOSProcess ifPresent: [:eosp | eosp concreteClass]
-
+	^ (Smalltalk hasClassNamed: #ExternalOSProcess)
+		ifTrue: [(Smalltalk at: #ExternalOSProcess) concreteClass]
+		ifFalse: [nil]
 ]
 
 { #category : #'instance creation' }
@@ -172,16 +181,20 @@ PipeableOSProcess class >> forkAndExec: executableFile arguments: arrayOfStrings
 
 	"PipeableOSProcess forkAndExec: '/bin/ls' arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil descriptors: nil workingDir: '/etc' errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
 
-	^ self canAccessOSProcess
-		ifTrue:
-			[(self new: executableFile
-			arguments: arrayOfStrings
-			environment: stringDictionary
-			descriptors: arrayOf3Streams
-			workingDir: pathString
-			errorPipelineStream: anErrorStream) value; yourself]
+	(Smalltalk hasClassNamed: #OSProcess)
 		ifFalse:
-			[self notify: 'OSProcess not available or OSProcess plugin not functioning']
+			[self inform: 'cannot access system'.
+			^ nil].
+	(Smalltalk at: #OSProcess) accessor canAccessSystem
+		ifFalse:
+			[self inform: (Smalltalk at: #OSProcess) accessor class name, ' cannot access system'.
+			^ nil].
+	^ (self new: executableFile
+		arguments: arrayOfStrings
+		environment: stringDictionary
+		descriptors: arrayOf3Streams
+		workingDir: pathString
+		errorPipelineStream: anErrorStream) value; yourself
 
 ]
 
@@ -192,17 +205,13 @@ PipeableOSProcess class >> new: executableFile arguments: arrayOfStrings environ
 
 	"PipeableOSProcess new: '/bin/ls' arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil descriptors: nil workingDir: '/etc' errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
 
-	"PipeableOSProcess new: 'sol' arguments: nil environment: nil descriptors: nil workingDir: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
-
 	| pp proc s |
 	pp _ super new.
-	proc _ self externalProxyClass ifNotNilDo:
-		[:proxyClass |
-		proxyClass
+	self externalProxyClass ifNil: [^ nil].
+	proc _ self externalProxyClass
 			programName: executableFile
 			arguments: arrayOfStrings
-			initialEnvironment: stringDictionary].
-	proc ifNil: [^ self notify: 'OSProcess not available'].
+			initialEnvironment: stringDictionary.
 	arrayOf3Streams isNil
 		ifTrue:
 			[pp createPipes.
@@ -242,18 +251,13 @@ PipeableOSProcess class >> remoteShell: remoteSystemName [
 
 	"self remoteShell: 'localhost'"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | 
-		^ self
-			forkAndExec: proxyClass remoteShellPath
-			arguments: (Array with: remoteSystemName with: 'sh')
-			environment: nil
-			descriptors: nil
-			workingDir: nil
-			errorPipelineStream: nil].
-	^ self notify: 'OSProcess not available'
-
-
+	^ self
+		forkAndExec: self externalProxyClass remoteShellPath
+		arguments: (Array with: remoteSystemName with: 'sh')
+		environment: nil
+		descriptors: nil
+		workingDir: nil
+		errorPipelineStream: nil
 
 ]
 
@@ -263,21 +267,18 @@ PipeableOSProcess class >> remoteShellExample: remoteUnixHostName [
 	of some commands on the remote host. You must have security access to
 	the remote system in order for this to work."
 
-	"PipeableOSProcess remoteShellExample: 'minnow.cc.gatech.edu'"
 	"PipeableOSProcess remoteShellExample: 'micron'"
+	"PipeableOSProcess remoteShellExample: 'minnow.cc.gatech.edu'"
 	"PipeableOSProcess remoteShellExample: 'localhost'"
 
-	| rsh output |
+	| rsh |
 	rsh _  self remoteShell: remoteUnixHostName.
 	rsh exec: 'echo remote host name is '.
 	rsh exec: 'hostname'.
 	rsh exec: 'exit'.
-	output _ rsh output.
 	rsh close.
-	rsh succeeded
-		ifTrue: [self notify: output]
-		ifFalse: [self notify: 'remote shell failed with error message: ', rsh errorUpToEnd].
-	^ rsh
+	^ rsh output
+
 
 ]
 
@@ -287,10 +288,7 @@ PipeableOSProcess class >> shell [
 
 	"self shell"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | ^ self command: proxyClass defaultShellPath].
-	^ self notify: 'OSProcess not available'
-
+	^ self command: self externalProxyClass defaultShellPath
 ]
 
 { #category : #examples }
@@ -326,13 +324,13 @@ PipeableOSProcess class >> waitForCommand: aCommandString [
 	The active Smalltalk process waits for completion of the external command process. This just
 	uses a simple polling loop, which is not very elegant but works well enough for most purposes."
 
-	"self waitForCommand: 'echo sleeping...; sleep 3; echo I just slept for three seconds'"
+	"PipeableOSProcess waitForCommand: 'echo sleeping...; sleep 3; echo I just slept for three seconds'"
 
 	| proc d |
 	d _ Delay forMilliseconds: 50.
 	proc _ self command: aCommandString.
 	proc ifNil: [self class noAccessorAvailable].
-	[proc isComplete] whileFalse: [d wait].
+	[proc runState == #complete] whileFalse: [d wait].
 	^ proc
 
 ]
@@ -341,12 +339,7 @@ PipeableOSProcess class >> waitForCommand: aCommandString [
 PipeableOSProcess class >> wish [
 	"Start a Tk/Tcl command interpreter"
 
-	"self shell"
-
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | ^ self command: proxyClass tkShellPath].
-	^ self notify: 'OSProcess not available'
-
+	^ self command: self tkShellPath
 ]
 
 { #category : #utility }
@@ -354,7 +347,7 @@ PipeableOSProcess class >> xon: remoteSystem command: aCommandString [
 	"Convenience method for running an X program on a remote system and displaying its window
 	on the local display."
 
-	"self xon: 'micron' command: 'xeyes'"
+	"PipeableOSProcess xon: 'micron' command: 'xeyes'"
 
 	^ self command: 'xon ', remoteSystem, ' ', aCommandString
 
@@ -364,88 +357,75 @@ PipeableOSProcess class >> xon: remoteSystem command: aCommandString [
 PipeableOSProcess class >> xterm: aCommandString [
 	"Convenience method for running a command in an external xterm window"
 
-	"self xterm: 'top -d 2'"
+	"PipeableOSProcess xterm: 'top -d 2'"
 
 	^ self command: 'xterm -T ''', aCommandString, ''' -e ', aCommandString
 ]
 
-{ #category : #'command pipelines - private' }
+{ #category : #'command pipelines' }
 PipeableOSProcess >> addToErrorPipeline: aString [
 
-	(aString isNil or: [aString isEmpty])
-		ifFalse: [self errorPipelineStream nextPutAll: aString]
+	(aString notNil
+		and: [aString size ~= 0])
+			ifTrue:
+				[self errorPipelineStream nextPutAll: aString]
 ]
 
-{ #category : #testing }
-PipeableOSProcess >> atEnd [
-	"True after processing is complete and all available data has been read 
-	from the output pipe."
+{ #category : #'child process termination' }
+PipeableOSProcess >> close [
+	"Close pipe to child stdin."
 
-	^ pipeFromOutput isNil or: [pipeFromOutput atEnd]
-
-]
-
-{ #category : #'initialize - release' }
-PipeableOSProcess >> closeOutput [
-
-	self pipeFromOutput ifNotNilDo: [:p | p removeDependent: self; close]
+	pipeToInput ifNotNil: [pipeToInput close]
 
 ]
 
-{ #category : #'initialize - release' }
-PipeableOSProcess >> closePipeInputs [
-	"Close all pipe endpoints not used after process termination."
+{ #category : #accessing }
+PipeableOSProcess >> closeOutputOnExit [
 
-	super closePipeInputs.
-	pipeFromError ifNotNil: [pipeFromError closeWriter]
+	^ closeOutputOnExit ifNil: [closeOutputOnExit _ true]
 
 ]
 
-{ #category : #'initialize - release' }
+{ #category : #accessing }
+PipeableOSProcess >> closeOutputOnExit: trueOrFalse [
+
+	closeOutputOnExit _ trueOrFalse
+
+]
+
+{ #category : #'child process termination' }
 PipeableOSProcess >> closePipes [
 	"Replace the output and error pipe streams with internal pipes, and close
 	all input and output pipes."
 
-	| output out err |
-	self keepInitialStdOutOpen
+	| output |
+	self closeOutputOnExit
 		ifTrue:
-			["The pipe stream will be closed by the next process in the command pipeline"
-			pipeFromOutput ifNotNilDo: [:p | p triggerDataReady]]
-		ifFalse:
 			[(output _ self pipeFromOutput)
 				ifNotNil:
 					[accessProtect critical:
 						[self pipeFromOutput: InternalPipe new.
-						out _ output upToEnd.
-						out isEmpty ifFalse:
-							[self pipeFromOutput nextPutAll: out.
-							self triggerOutputDataReady].
+						self pipeFromOutput nextPutAll: output upToEnd.
 						self pipeFromOutput closeWriter.
-						output removeDependent: self; close]]].
+						output close]]]
+		ifFalse:
+			["The pipe stream will be closed by the next process in the command pipeline"].
 	(pipeFromError) ifNotNil:
 		[accessProtect critical:
-			[err _ pipeFromError upToEnd.
-			err isEmpty ifFalse:
-				[self addToErrorPipeline: err.
-				self triggerEvent: #errorDataReady].
-			pipeFromError removeDependent: self; close]].
+			[self addToErrorPipeline: pipeFromError upToEnd.
+			pipeFromError close]].
 	self keepInitialStdErrOpen ifTrue: [self processProxy initialStdErr close].
 	self pipeToInput ifNotNil: [pipeToInput close]
 
-]
-
-{ #category : #updating }
-PipeableOSProcess >> complete [
-
-	super complete.
-	self updateErrorPipelineStreamToEndOfFile
 ]
 
 { #category : #'initialize - release' }
 PipeableOSProcess >> createErrorPipe [
 	"Create a pipe for the error stream from the child process."
 
-	self pipeFromError: PipeJunction externalPipeClass nonBlockingPipe
+	(Smalltalk hasClassNamed: #OSPipe)
+		ifTrue:
+			[pipeFromError _ (Smalltalk at: #OSPipe) nonBlockingPipe]
 
 ]
 
@@ -453,16 +433,19 @@ PipeableOSProcess >> createErrorPipe [
 PipeableOSProcess >> createInputPipe [
 	"Create a pipe for input to the child process."
 
-	self pipeToInput: PipeJunction externalPipeClass blockingPipe
+	(Smalltalk hasClassNamed: #OSPipe)
+		ifTrue:
+			[pipeToInput _ (Smalltalk at: #OSPipe) blockingPipe]
 
 ]
 
 { #category : #'initialize - release' }
 PipeableOSProcess >> createOutputPipe [
-	"Create a pipe for output from the child process. The pipe should later be set
-	to nonBlocking mode only if necessary to provent Squeak VM deadlocks."
+	"Create a pipe for output from the child process."
 
-	self pipeFromOutput: PipeJunction externalPipeClass blockingPipe
+	(Smalltalk hasClassNamed: #OSPipe)
+		ifTrue:
+			[pipeFromOutput _ (Smalltalk at: #OSPipe) nonBlockingPipe]
 
 ]
 
@@ -475,21 +458,12 @@ PipeableOSProcess >> createPipes [
 
 ]
 
-{ #category : #'event handling' }
-PipeableOSProcess >> enableErrorStreamTriggers [
-	"Set the error stream to be event driven if possible, and answer true
-	if event driven output is supported, otherwise false."
+{ #category : #testing }
+PipeableOSProcess >> errorHasBeenRedirected [
+	"Answer true if the error output has been redirected to an external file
+	and is not available to be read as error output of a pipeline."
 
-	pipeFromError ifNotNilDo: [:err | ^ err setBufferedReader].
-	^ false
-]
-
-{ #category : #'event handling' }
-PipeableOSProcess >> enableEventTriggers [
-	"Set the output and error streams to be event driven if possible, and 
-	answer true if event driven output is supported, otherwise false."
-
-	^ self enableOutputStreamTriggers and: [self enableErrorStreamTriggers]
+	^ self pipeFromError isNil
 
 ]
 
@@ -501,30 +475,15 @@ PipeableOSProcess >> errorPipelineContents [
 	 	ifFalse: [self errorPipelineStream contents]
 ]
 
-{ #category : #accessing }
-PipeableOSProcess >> errorPipelineStream: aStream [
-	"Accumulates the error output of commands in a command pipeline. Overridden
-	to eliminate setting self as a dependent of the error pipeline stream."
-
-	errorPipelineStream _ aStream
-
-]
-
 { #category : #streaming }
 PipeableOSProcess >> errorUpToEnd [
 	"Answer all available characters from the error stream of my external process."
 
-	^ accessProtect critical: [super errorUpToEnd]
-
-]
-
-{ #category : #streaming }
-PipeableOSProcess >> errorUpToEndOfFile [
-	"Answer all available characters from the error stream. Block and
-	continue reading until end of file is detected."
-
-	self updateErrorPipelineStreamToEndOfFile.
-	^ errorPipelineStream upToEnd
+	^ accessProtect critical:
+		[self addToErrorPipeline: (pipeFromError upToEnd).
+		self errorHasBeenRedirected
+			ifTrue: ['']
+			ifFalse: [self errorPipelineStream upToEnd]]
 
 ]
 
@@ -542,6 +501,13 @@ PipeableOSProcess >> exec: aString [
 
 
 
+]
+
+{ #category : #'initialize - release' }
+PipeableOSProcess >> finalize [
+
+	processProxy ifNotNil: [processProxy removeDependent: self].
+	self close
 ]
 
 { #category : #streaming }
@@ -583,8 +549,7 @@ PipeableOSProcess >> initialize [
 	"Semaphore to protect against finalizing the output and error streams
 	while they are being read."
 
-	accessProtect _ Semaphore forMutualExclusion.
-	^ super initialize
+	accessProtect _ Semaphore forMutualExclusion
 
 ]
 
@@ -631,30 +596,6 @@ PipeableOSProcess >> keepInitialStdErrOpen: trueOrFalse [
 	keepInitialStdErrOpen _ trueOrFalse
 ]
 
-{ #category : #accessing }
-PipeableOSProcess >> keepInitialStdOutOpen [
-	"If false, close the output pipe when the child exits. If true, do not close the output pipe.
-	This should be set true for an output pipe connected to another process in a pipeline,
-	where it is assumed that the next process will close the pipe when it is done reading
-	from it. Otherwise, the default behavior is to close the output pipe after transferring its
-	contents to a Smalltalk stream."
-
-	^ keepInitialStdOutOpen ifNil: [keepInitialStdOutOpen _ false]
-
-]
-
-{ #category : #accessing }
-PipeableOSProcess >> keepInitialStdOutOpen: trueOrFalse [
-	"If false, close the output pipe when the child exits. If true, do not close the output pipe.
-	This should be set true for an output pipe connected to another process in a pipeline,
-	where it is assumed that the next process will close the pipe when it is done reading
-	from it. Otherwise, the default behavior is to close the output pipe after transfering its
-	contents to a Smalltalk stream."
-
-	keepInitialStdOutOpen _ trueOrFalse
-
-]
-
 { #category : #'shell support' }
 PipeableOSProcess >> needsPrompt [
 	"After evaluating the command, a shell will want to issue a prompt"
@@ -690,11 +631,27 @@ PipeableOSProcess >> nextFromError: count [
 	the errorPipelineStream, so that they are concatenated with any preceeding
 	error message text (possibly from a preceeding process in a command pipeline)."
 
-	self updateErrorPipelineStream.
+	accessProtect critical:
+		[pipeFromError ifNotNil:
+			[self addToErrorPipeline: (pipeFromError next: count)]].
 	^ self errorHasBeenRedirected
 		ifTrue: [nil]
 		ifFalse: [self errorPipelineStream next: count]
 
+]
+
+{ #category : #streaming }
+PipeableOSProcess >> nextPut: aCharacter [
+	"Write aCharacter to the standard input stream of my external process."
+
+	^ pipeToInput nextPut: aCharacter
+]
+
+{ #category : #streaming }
+PipeableOSProcess >> nextPutAll: characters [
+	"Write characters to the standard input stream of my external process."
+
+	^ pipeToInput nextPutAll: characters
 ]
 
 { #category : #private }
@@ -715,7 +672,7 @@ PipeableOSProcess >> notifyError [
 				[(processProxy exitStatus ~= 0)
 					ifTrue:
 						[self inform:
-							self processProxy programName, ' exit status ',
+							self programName, ' exit status ',
 							processProxy exitStatus printString]]]
 
 ]
@@ -724,6 +681,65 @@ PipeableOSProcess >> notifyError [
 PipeableOSProcess >> nullStream [
 
 	^ FileStream oldFileNamed: '/dev/null'
+
+]
+
+{ #category : #'command pipelines' }
+PipeableOSProcess >> output [
+	"Wait for external process to exit, then answer the contents of its output stream.
+	This is intended as notation for completing an external command pipeline."
+
+	"((PipeableProcess command: 'ps') | 'grep squeak' | 'cut -c16-100') output"
+
+	^ self outputWithErrorNotifier: false
+
+]
+
+{ #category : #'command pipelines' }
+PipeableOSProcess >> outputAndError [
+	"Wait for external process to exit, then answer the contents of its output stream
+	and its accumulated error stream. This is intended as notation for completing an
+	external command pipeline."
+
+	"((PipeableProcess command: 'ps') | 'NoSuchCommand; grep squeak' | 'cut -c16-100') outputAndError"
+
+	| d s |
+	d _ Delay forMilliseconds: 50.
+	s _ WriteStream on: ''.
+	s nextPutAll: self upToEnd.
+	[processProxy runState == #complete]
+		whileFalse:
+			[d wait.
+			s nextPutAll: self upToEnd].
+	^ Array with: s contents with: self errorPipelineContents
+]
+
+{ #category : #'command pipelines' }
+PipeableOSProcess >> outputWithErrorNotifier: aBoolean [
+	"Wait for external process to exit, then answer the contents of its output stream.
+	This is intended as notation for completing an external command pipeline."
+
+	| d s |
+	d _ Delay forMilliseconds: 50.
+	s _ WriteStream on: ''.
+	s nextPutAll: self upToEnd.
+	[self processProxy runState == #complete]
+		whileFalse:
+			[d wait.
+			s nextPutAll: self upToEnd].
+	aBoolean ifTrue: [self notifyError].
+	^ s contents
+]
+
+{ #category : #'command pipelines' }
+PipeableOSProcess >> outputWithNotifier [
+	"Wait for external process to exit, then answer the contents of its output stream.
+	This is intended as notation for completing an external command pipeline."
+
+	"((PipeableProcess command: 'ps') | 'grep squeak' | 'cut -c16-100; SNAFU') outputWithNotifier"
+	"((PipeableProcess command: 'ps; SNAFU') | 'grep squeak' | 'cut -c16-100') outputWithNotifier"
+
+	^ self outputWithErrorNotifier: true
 
 ]
 
@@ -736,41 +752,15 @@ PipeableOSProcess >> pipeFromError [
 { #category : #accessing }
 PipeableOSProcess >> pipeFromError: aPipeStream [
 
-	(pipeFromError _ aPipeStream)
-		ifNotNilDo: [:p | p addDependent: self]
-
+	pipeFromError _ aPipeStream
 ]
 
-{ #category : #testing }
-PipeableOSProcess >> pipesAreEmpty [
-	"True after processing is complete and all available data has been read 
-	from the output pipe and the error pipe. Note: uses error handling 
-	rather than testing for pipe closed to avoid race condition."
-
-	^ (self atEndOfFile
-			and: [pipeFromError isNil
-					or: [pipeFromError atEndOfFile]])
-		and: [errorPipelineStream atEnd]
-]
-
-{ #category : #'command pipelines - private' }
-PipeableOSProcess >> prepareOutputForInternalReader [
-	"Output stream will be used directly by a Smalltalk process. Set output stream
-	characteristics accordingly."
-
-	super prepareOutputForInternalReader.
-	self setKeepInitialStdOutOpen.
-	self pipeFromError ifNotNilDo: [:err | err setNonBlocking]
-
-]
-
-{ #category : #'command pipelines - private' }
+{ #category : #'command pipelines' }
 PipeableOSProcess >> prepareOutputForPipe [
 	"Output stream will be used by another process proxy as input. Set output stream
 	characteristics accordingly."
 
-	super prepareOutputForPipe.
-	self setKeepInitialStdOutOpen; setBlockingOutput
+	self setKeepOutputOpen; setBlockingOutput
 
 ]
 
@@ -778,7 +768,7 @@ PipeableOSProcess >> prepareOutputForPipe [
 PipeableOSProcess >> printOn: aStream [
 
 	super printOn: aStream.
-	aStream nextPutAll: ' on '.
+	aStream nextPutAll: ' for '.
 	self processProxy printOn: aStream
 
 ]
@@ -798,14 +788,6 @@ PipeableOSProcess >> processProxy: aProxy [
 
 	aProxy addDependent: self.
 	processProxy _ aProxy
-]
-
-{ #category : #'initialize - release' }
-PipeableOSProcess >> release [
-
-	self processProxy release.
-	self pipeFromError release.
-	^ super release
 ]
 
 { #category : #'command pipelines' }
@@ -830,16 +812,6 @@ PipeableOSProcess >> replaceOutputStreamWith: anotherStreamOrNil [
 
 ]
 
-{ #category : #testing }
-PipeableOSProcess >> requiresNonBlockingInput [
-	"A PipeJunction managed by Squeak may be subject to deadlocks associated with
-	reading or writing an OSPipe. A PipeableOSProcess relies on the external operating
-	system to provide process scheduling, so it will not block the Squeak VM when it
-	is blocked on a read or a write."
-
-	^ false
-]
-
 { #category : #private }
 PipeableOSProcess >> setBlockingOutput [
 	"Set the pipe from the child stdout to blocking mode. This is the normal
@@ -849,8 +821,11 @@ PipeableOSProcess >> setBlockingOutput [
 	let the operating system timeslice the processes to keep the rest of the
 	world from hanging on a blocked read."
 
-	Smalltalk at: #OSProcess ifPresent:
-		[:osp | pipeFromOutput ifNotNil: [osp accessor setBlocking: self pipeFromOutput reader ioHandle]]
+	(Smalltalk hasClassNamed: #OSProcess)
+		ifTrue:
+			[pipeFromOutput ifNotNil:
+				[(Smalltalk at: #OSProcess) accessor
+					setBlocking: self pipeFromOutput reader ioHandle]]
 
 ]
 
@@ -864,12 +839,20 @@ PipeableOSProcess >> setKeepInitialStdErrOpen [
 ]
 
 { #category : #'command pipelines' }
-PipeableOSProcess >> setKeepInitialStdOutOpen [
+PipeableOSProcess >> setKeepOutputOpen [
 	"When child exits, do not close the output pipe. This is for an output pipe connected to
 	another process in a pipeline, where it is assumed that the next process will close
 	the pipe when it is done reading from it."
 
-	self keepInitialStdOutOpen: true
+	closeOutputOnExit _ false
+]
+
+{ #category : #'command pipelines' }
+PipeableOSProcess >> setNonBlockingOutput [
+	"Check first to make sure process is not complete because pipeFromOutput will not respond
+	to #setNonBlocking after the process has exited."
+
+	self isComplete ifFalse: [pipeFromOutput setNonBlocking]
 ]
 
 { #category : #testing }
@@ -898,21 +881,23 @@ PipeableOSProcess >> unixFileNumbers [
 		errorPipelineStream: ((WriteStream on: '')
 		nextPutAll: 'this is the error stream '; yourself)) unixFileNumbers"
 
-	| d |
-	Smalltalk at: #OSProcess ifPresent:
-		[:osp |
-		d _ Dictionary new.
-		d at: #initialStdIn put: (osp accessor unixFileNumber: processProxy initialStdIn ioHandle).
-		d at: #initialStdOut put: (osp accessor unixFileNumber: processProxy initialStdOut ioHandle).
-		d at: #initialStdErr put: (osp accessor unixFileNumber: processProxy initialStdErr ioHandle).
-		d at: #'pipeToInput writer'
-			put: (osp accessor unixFileNumber: pipeToInput writer ioHandle).
-		d at: #'pipeFromOutput reader'
-			put: (osp accessor unixFileNumber: pipeFromOutput reader ioHandle).
-		d at: #'pipeFromError reader'
-			put: (osp accessor unixFileNumber: pipeFromError reader ioHandle).
-		^ d].
-	^ nil
+	| d accessor |
+	(Smalltalk hasClassNamed: #OSProcess)
+		ifTrue:
+			[accessor _ (Smalltalk at: #OSProcess) accessor.
+			d _ Dictionary new.
+			d at: #initialStdIn put: (accessor unixFileNumber: processProxy initialStdIn ioHandle).
+			d at: #initialStdOut put: (accessor unixFileNumber: processProxy initialStdOut ioHandle).
+			d at: #initialStdErr put: (accessor unixFileNumber: processProxy initialStdErr ioHandle).
+			d at: #'pipeToInput writer'
+				put: (accessor unixFileNumber: pipeToInput writer ioHandle).
+			d at: #'pipeFromOutput reader'
+				put: (accessor unixFileNumber: pipeFromOutput reader ioHandle).
+			d at: #'pipeFromError reader'
+				put: (accessor unixFileNumber: pipeFromError reader ioHandle).
+			^ d]
+		ifFalse:
+			[^ nil]
 
 ]
 
@@ -920,17 +905,12 @@ PipeableOSProcess >> unixFileNumbers [
 PipeableOSProcess >> upToEnd [
 	"Answer all available characters from the output of my external process."
 
-	^ accessProtect critical: [super upToEnd]
-
-]
-
-{ #category : #streaming }
-PipeableOSProcess >> upToEndOfFile [
-	"Answer all available characters from the output stream. Block and
-	continue reading until end of file is detected."
-
-	^ accessProtect critical: [super upToEndOfFile]
-
+	| s |
+	s _ accessProtect critical:
+		[pipeFromOutput isNil
+			ifTrue: ['']
+			ifFalse: [pipeFromOutput upToEnd]].
+	^ s
 ]
 
 { #category : #updating }
@@ -938,44 +918,12 @@ PipeableOSProcess >> update: aParameter [
 	"Clean up after processProxy exits. Remove myself as a dependent of processProxy,
 	and close pipes."
 
-	(aParameter == pipeFromError)
+	super update: aParameter.
+	(aParameter == #runState and: [processProxy isComplete])
 		ifTrue:
-			[accessProtect critical: [self addToErrorPipeline: pipeFromError upToEnd].
-			^ self changed: self errorPipelineStream].
+			[processProxy removeDependent: self.
+			self closePipes]
 
-	(aParameter == #runState)
-		ifTrue:
-			[processProxy isComplete
-				ifTrue:
-					[self pipeFromError
-						ifNotNilDo: [:err | self addToErrorPipeline: err upToEndOfFile].
-					self complete.
-					self changed: aParameter]
-				ifFalse:
-					[^ self]].
-
-	^ super update: aParameter
-
-]
-
-{ #category : #'event handling' }
-PipeableOSProcess >> updateErrorPipelineStream [
-	"Ensure that all available error output is placed into errorPipelineStream."
-
-	accessProtect critical:
-		[pipeFromError ifNotNilDo: [:err | self addToErrorPipeline: err upToEnd]].
-
-]
-
-{ #category : #'event handling' }
-PipeableOSProcess >> updateErrorPipelineStreamToEndOfFile [
-	"Move all error output up to end of file to the errorPipelineStream."
-
-	accessProtect
-		critical: [self pipeFromError
-				ifNotNilDo: [:p |
-					errorPipelineStream nextPutAll: p upToEndOfFile.
-					p close]]
 ]
 
 { #category : #evaluating }
@@ -984,15 +932,14 @@ PipeableOSProcess >> value [
 
 	| p |
 	self errorHasBeenRedirected ifTrue: [self handlePrecedingError].
-	accessProtect critical:
-		[p _ processProxy ifNotNil: [processProxy value].
-		"The external child process now owns its own copy of the pipe handles. We no
-		longer need our copies of these handles, so close the ones that are not needed."
-		p ifNotNil:
-			[p closeInitialStdIn.
-			self keepInitialStdOutOpen ifFalse: [p closeInitialStdOut].
-			self keepInitialStdErrOpen ifFalse: [p closeInitialStdErr]]]
-
+	p _ processProxy ifNotNil: [processProxy value].
+	"The external child process now owns its own copy of the pipe handles. We no
+	longer need our copies of these handles, so close the ones that are not needed."
+	p ifNotNil:
+		[p closeInitialStdIn.
+		p closeInitialStdOut.
+		self keepInitialStdErrOpen ifFalse: [p closeInitialStdErr]].
+	^ p
 ]
 
 { #category : #'command pipelines' }
@@ -1000,9 +947,13 @@ PipeableOSProcess >> | anotherCommandString [
 	"Pipe my output to another external process, where the other external process
 	executes anotherCommandString."
 
-	"(PipeableOSProcess command: 'ps') | 'grep squeak' | 'cut -c16-100'"
+	"Potential timing problem: If this child process exits and completes its #update: before
+	receiving the #setKeepOutputOpen message here, the pipeline will not work. It is not
+	clear to me if this can actually happen in practice."
 
-	self setKeepInitialStdOutOpen.
+	"(PipeableProcess command: 'ps') | 'grep squeak' | 'cut -c16-100'"
+
+	self setKeepOutputOpen.
 	self setBlockingOutput.
 	^ self species
 			command: anotherCommandString
