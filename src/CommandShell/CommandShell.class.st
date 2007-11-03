@@ -322,7 +322,8 @@ CommandShell class >> initialize [
 		setWindowColorFor: #CommandShell 
 		to: (Color colorFrom: self windowColorSpecification pastelColor).
 	(TheWorldMenu respondsTo: #registerOpenCommand:)
-		ifTrue: [TheWorldMenu registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}]
+		ifTrue: [TheWorldMenu registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}].
+	self open processCommand: 'help'
 
 ]
 
