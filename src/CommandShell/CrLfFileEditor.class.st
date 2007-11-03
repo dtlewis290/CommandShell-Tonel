@@ -16,6 +16,22 @@ Class {
 	#category : #CommandShell
 }
 
+{ #category : #private }
+CrLfFileEditor class >> defaultLineEndConvention [
+	"FIXME: The Unix and Win32 are right, but I just guessed at the others - dtl"
+
+	| platform |
+	platform _  Smalltalk platformName.
+	(platform = 'unix') ifTrue: [^ #lf].
+	(platform = 'Win32') ifTrue: [^ #crlf].
+	(platform = 'Mac OS') ifTrue: [^ #cr].
+	(platform = 'RiscOS') ifTrue: [^ #cr].
+	(platform = 'OS2') ifTrue: [^ #crlf]. "FIXME: Is this the right name for OS2?"
+	"Add other system types here..."
+	^ #cr
+
+]
+
 { #category : #'instance creation' }
 CrLfFileEditor class >> editFileNamed: pathName [
 
@@ -23,9 +39,7 @@ CrLfFileEditor class >> editFileNamed: pathName [
 	"CrLfFileEditor editFileNamed: '/NO/SUCH/FILE'"
 	"CrLfFileEditor editFileNamed: '/etc/NOSUCHFILE)'"
 
-	| w |
-	Cursor read showWhile: [w _ (self openForFileNamed: pathName) openInWorld].
-	^ w
+	^ Cursor read showWhile: [self openForFileNamed: pathName].
 
 ]
 
@@ -37,7 +51,51 @@ CrLfFileEditor class >> fileNamed: pathName [
 	"CrLfFileEditor fileNamed: '/NO/SUCH/FILE'"
 	"CrLfFileEditor fileNamed: '/etc/NOSUCHFILE'"
 
-	| dirPath dir fs convention editText localName model |
+	^ self fileNamed: pathName withLabel: pathName
+
+]
+
+{ #category : #'instance creation' }
+CrLfFileEditor class >> fileNamed: pathName inDirectoryPath: dirPath [
+	"Answer a Controller or Morph as view on an instance of myself."
+
+	"CrLfFileEditor fileNamed: '/etc/hosts' inDirectoryPath: '/usr/bin'"
+	"CrLfFileEditor fileNamed: 'bin/vi' inDirectoryPath: '/usr'"
+	"CrLfFileEditor fileNamed: 'hosts' inDirectoryPath: '/etc'"
+	"CrLfFileEditor fileNamed: 'hosts' inDirectoryPath: '/usr/bin'"
+	"CrLfFileEditor fileNamed: '/NO/SUCH/FILE' inDirectoryPath: '/etc'"
+	"CrLfFileEditor fileNamed: '/etc/NOSUCHFILE' inDirectoryPath: '/etc'"
+
+	| dir fs convention editText |
+	dir _ FileDirectory on: dirPath.
+	(dir fileExists: pathName)
+		ifTrue:
+			[[fs _ CrLfFileStream readOnlyFileNamed: dirPath, FileDirectory slash, pathName.
+			convention _ fs detectLineEndConvention.
+			editText _ fs contentsOfEntireFile.
+			fs close]
+				on: Error
+				do: [:ex |
+					convention _ #lf.	"Default for Unix text files"
+					editText _ '']]
+		ifFalse:
+			[convention _ #lf.	"Default for Unix text files"
+			editText _ ''].
+	^ self on: editText
+		withLabel: pathName
+		inDirectory: dir
+		defaultFileName: pathName
+		lineEndConvention: convention
+
+]
+
+{ #category : #'instance creation' }
+CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
+	"Answer a Controller or Morph as view on an instance of myself."
+
+	"CrLfFileEditor fileNamed: '/etc/hosts' withLabel: 'an editor on /etc/hosts'"
+
+	| dirPath dir fs convention editText localName |
 	dirPath _ FileDirectory dirPathFor: pathName.
 	dir _ FileDirectory on: dirPath.
 	localName _ FileDirectory localNameFor: pathName.
@@ -48,19 +106,17 @@ CrLfFileEditor class >> fileNamed: pathName [
 			editText _ fs contentsOfEntireFile.
 			fs close]
 				on: Error
-				do: [convention _ #lf.	"Default for Unix text files"
+				do: [:ex |
+					convention _ #lf.	"Default for Unix text files"
 					editText _ '']]
 		ifFalse:
 			[convention _ #lf.	"Default for Unix text files"
 			editText _ ''].
-	model _ self new.
-	model
-		contents: editText;
-		directory: dir;
-		fileName: localName;
-		lineEndConvention: convention.
-
-	^ model withLabel: pathName
+	^ self on: editText
+		withLabel: windowLabel
+		inDirectory: dir
+		defaultFileName: localName
+		lineEndConvention: convention
 
 ]
 
@@ -72,6 +128,30 @@ CrLfFileEditor class >> initialize [
 	Preferences 
 		setWindowColorFor: #CrLfFileEditor 
 		to: (Color colorFrom: self windowColorSpecification pastelColor)
+
+]
+
+{ #category : #'instance creation' }
+CrLfFileEditor class >> on: aString withLabel: aLabelString inDirectory: aDirectory defaultFileName: nameString [
+
+	"(CrLfFileEditor on: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt') openInWorld"
+
+	^ self on: aString withLabel: aLabelString inDirectory: aDirectory defaultFileName: nameString lineEndConvention: self defaultLineEndConvention
+
+]
+
+{ #category : #'instance creation' }
+CrLfFileEditor class >> on: aString withLabel: aLabelString inDirectory: aDirectory defaultFileName: nameString lineEndConvention: convention [
+
+
+	"(CrLfFileEditor on: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt' lineEndConvention: #lf) openInWorld"
+
+	| model |
+	model _ self new contents: aString.
+	model directory: aDirectory.
+	model fileName: nameString.
+	model lineEndConvention: convention.
+	^ model withLabel: aLabelString
 
 ]
 
@@ -91,12 +171,22 @@ CrLfFileEditor class >> openForFileNamed: pathName [
 { #category : #'instance creation' }
 CrLfFileEditor class >> openOn: aString withLabel: aLabelString inDirectory: aDirectory defaultFileName: nameString [
 
-	"(CrLfFileEditor openOn: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt') openInWorld"
+	"CrLfFileEditor openOn: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt'"
+
+	^ self openOn: aString withLabel: aLabelString inDirectory: aDirectory defaultFileName: nameString lineEndConvention: self defaultLineEndConvention
+
+]
+
+{ #category : #'instance creation' }
+CrLfFileEditor class >> openOn: aString withLabel: aLabelString inDirectory: aDirectory defaultFileName: nameString lineEndConvention: convention [
+
+	"CrLfFileEditor openOn: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt' convention: #lf"
 
 	| model |
 	model _ self new contents: aString.
 	model directory: aDirectory.
 	model fileName: nameString.
+	model lineEndConvention: convention.
 	^ model openLabel: aLabelString
 
 ]
@@ -418,7 +508,7 @@ CrLfFileEditor >> openLabel: aLabelString [
 
 	Smalltalk isMorphic
 		ifTrue:
-			[^ self openAsMorphLabel: aLabelString]
+			[^ (self openAsMorphLabel: aLabelString) openInWorld]
 		ifFalse:
 			[^ (self mvcWithLabel: aLabelString) open]
 
@@ -457,7 +547,7 @@ CrLfFileEditor >> put: aText [
 				ifTrue:
 					[[fs truncate]
 						on: Error
-						do: [fs _ self bogusTruncate: fs]]
+						do: [:ex | fs _ self bogusTruncate: fs]]
 				ifFalse: [fs _ self bogusTruncate: fs]].
 	fs nextPutAll: str.
 	fs close.
