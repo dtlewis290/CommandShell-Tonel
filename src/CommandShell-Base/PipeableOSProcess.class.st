@@ -17,7 +17,7 @@ Class {
 		'keepInitialStdErrOpen',
 		'accessProtect'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #utility }
@@ -39,7 +39,7 @@ PipeableOSProcess class >> canAccessOSProcess [
 	"self canAccessOSProcess"
 
 	| osp |
-	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
+	^ (osp := Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
 
 ]
 
@@ -84,9 +84,9 @@ PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary
 	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil) output"
 
 	| nameAndArgs proxyClass |
-	nameAndArgs _ aSyntaxProcessor isNil
+	nameAndArgs := aSyntaxProcessor isNil
 		ifTrue:
-			[(proxyClass _ self externalProxyClass) isNil
+			[(proxyClass := self externalProxyClass) isNil
 				ifTrue:
 					[Array with: aString with: Array new]
 				ifFalse:
@@ -131,9 +131,9 @@ PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironment
 	"PipeableOSProcess commandNoEvaluate: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil"
 
 	| nameAndArgs proxyClass |
-	nameAndArgs _ aSyntaxProcessor isNil
+	nameAndArgs := aSyntaxProcessor isNil
 		ifTrue:
-			[(proxyClass _ self externalProxyClass) isNil
+			[(proxyClass := self externalProxyClass) isNil
 				ifTrue:
 					[Array with: aString with: Array new]
 				ifFalse:
@@ -195,8 +195,8 @@ PipeableOSProcess class >> new: executableFile arguments: arrayOfStrings environ
 	"PipeableOSProcess new: 'sol' arguments: nil environment: nil descriptors: nil workingDir: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
 
 	| pp proc s |
-	pp _ super new.
-	proc _ self externalProxyClass ifNotNilDo:
+	pp := super new.
+	proc := self externalProxyClass ifNotNilDo:
 		[:proxyClass |
 		proxyClass
 			programName: executableFile
@@ -210,19 +210,19 @@ PipeableOSProcess class >> new: executableFile arguments: arrayOfStrings environ
 			proc initialStdOut: pp pipeFromOutput writer.
 			proc initialStdErr: pp pipeFromError writer]
 		ifFalse:
-			[(s _ (arrayOf3Streams at: 1)) isNil
+			[(s := (arrayOf3Streams at: 1)) isNil
 				ifTrue:
 					[pp createInputPipe.
 					proc initialStdIn: pp pipeToInput reader]
 				ifFalse:
 					[proc initialStdIn: s].
-			(s _ (arrayOf3Streams at: 2)) isNil
+			(s := (arrayOf3Streams at: 2)) isNil
 				ifTrue:
 					[pp createOutputPipe.
 					proc initialStdOut: pp pipeFromOutput writer]
 				ifFalse:
 					[proc initialStdOut: s].
-			(s _ (arrayOf3Streams at: 3)) isNil
+			(s := (arrayOf3Streams at: 3)) isNil
 				ifTrue:
 					[pp createErrorPipe.
 					proc initialStdErr: pp pipeFromError writer]
@@ -268,11 +268,11 @@ PipeableOSProcess class >> remoteShellExample: remoteUnixHostName [
 	"PipeableOSProcess remoteShellExample: 'localhost'"
 
 	| rsh output |
-	rsh _  self remoteShell: remoteUnixHostName.
+	rsh :=  self remoteShell: remoteUnixHostName.
 	rsh exec: 'echo remote host name is '.
 	rsh exec: 'hostname'.
 	rsh exec: 'exit'.
-	output _ rsh output.
+	output := rsh output.
 	rsh close.
 	rsh succeeded
 		ifTrue: [self notify: output]
@@ -300,7 +300,7 @@ PipeableOSProcess class >> tkExample [
 	"PipeableOSProcess tkExample"
 
 	| wish |
-	wish _  self wish.
+	wish :=  self wish.
 	[wish
 		exec: 'button .b1 -text "This is button b1"';
 		exec: 'button .b2 -text "This is button b2"';
@@ -329,8 +329,8 @@ PipeableOSProcess class >> waitForCommand: aCommandString [
 	"self waitForCommand: 'echo sleeping...; sleep 3; echo I just slept for three seconds'"
 
 	| proc d |
-	d _ Delay forMilliseconds: 50.
-	proc _ self command: aCommandString.
+	d := Delay forMilliseconds: 50.
+	proc := self command: aCommandString.
 	proc ifNil: [self class noAccessorAvailable].
 	[proc isComplete] whileFalse: [d wait].
 	^ proc
@@ -412,11 +412,11 @@ PipeableOSProcess >> closePipes [
 			["The pipe stream will be closed by the next process in the command pipeline"
 			pipeFromOutput ifNotNilDo: [:p | p triggerDataReady]]
 		ifFalse:
-			[(output _ self pipeFromOutput)
+			[(output := self pipeFromOutput)
 				ifNotNil:
 					[accessProtect critical:
 						[self pipeFromOutput: InternalPipe new.
-						out _ output upToEnd.
+						out := output upToEnd.
 						out isEmpty ifFalse:
 							[self pipeFromOutput nextPutAll: out.
 							self triggerOutputDataReady].
@@ -424,7 +424,7 @@ PipeableOSProcess >> closePipes [
 						output removeDependent: self; close]]].
 	(pipeFromError) ifNotNil:
 		[accessProtect critical:
-			[err _ pipeFromError upToEnd.
+			[err := pipeFromError upToEnd.
 			err isEmpty ifFalse:
 				[self addToErrorPipeline: err.
 				self triggerEvent: #errorDataReady].
@@ -506,7 +506,7 @@ PipeableOSProcess >> errorPipelineStream: aStream [
 	"Accumulates the error output of commands in a command pipeline. Overridden
 	to eliminate setting self as a dependent of the error pipeline stream."
 
-	errorPipelineStream _ aStream
+	errorPipelineStream := aStream
 
 ]
 
@@ -565,7 +565,7 @@ PipeableOSProcess >> handlePrecedingError [
 	kludgy, but it works."
 
 	| d |
-	d _ Delay forMilliseconds: 200.
+	d := Delay forMilliseconds: 200.
 	self setKeepInitialStdErrOpen.
 	Processor yield.	"A chance to clean up predecessor proxies in command pipeline"
 	errorPipelineStream ifNotNil:
@@ -583,7 +583,7 @@ PipeableOSProcess >> initialize [
 	"Semaphore to protect against finalizing the output and error streams
 	while they are being read."
 
-	accessProtect _ Semaphore forMutualExclusion.
+	accessProtect := Semaphore forMutualExclusion.
 	^ super initialize
 
 ]
@@ -619,7 +619,7 @@ PipeableOSProcess >> keepInitialStdErrOpen [
 	a predecessor in a command pipeline might have more error messages to write
 	to the redirected error stream."
 
-	^ keepInitialStdErrOpen ifNil: [keepInitialStdErrOpen _ false]
+	^ keepInitialStdErrOpen ifNil: [keepInitialStdErrOpen := false]
 ]
 
 { #category : #accessing }
@@ -628,7 +628,7 @@ PipeableOSProcess >> keepInitialStdErrOpen: trueOrFalse [
 	a predecessor in a command pipeline might have more error messages to write
 	to the redirected error stream."
 
-	keepInitialStdErrOpen _ trueOrFalse
+	keepInitialStdErrOpen := trueOrFalse
 ]
 
 { #category : #accessing }
@@ -639,7 +639,7 @@ PipeableOSProcess >> keepInitialStdOutOpen [
 	from it. Otherwise, the default behavior is to close the output pipe after transferring its
 	contents to a Smalltalk stream."
 
-	^ keepInitialStdOutOpen ifNil: [keepInitialStdOutOpen _ false]
+	^ keepInitialStdOutOpen ifNil: [keepInitialStdOutOpen := false]
 
 ]
 
@@ -651,7 +651,7 @@ PipeableOSProcess >> keepInitialStdOutOpen: trueOrFalse [
 	from it. Otherwise, the default behavior is to close the output pipe after transfering its
 	contents to a Smalltalk stream."
 
-	keepInitialStdOutOpen _ trueOrFalse
+	keepInitialStdOutOpen := trueOrFalse
 
 ]
 
@@ -669,7 +669,7 @@ PipeableOSProcess >> next [
 	or nil if no data is available."
 
 	| s |
-	s _ accessProtect critical: [pipeFromOutput ifNotNil: [pipeFromOutput next]].
+	s := accessProtect critical: [pipeFromOutput ifNotNil: [pipeFromOutput next]].
 	^ s
 ]
 
@@ -679,7 +679,7 @@ PipeableOSProcess >> next: count [
 	or an empty string if no data is available."
 
 	| s |
-	s _ accessProtect critical: [pipeFromOutput ifNotNil: [pipeFromOutput next: count]].
+	s := accessProtect critical: [pipeFromOutput ifNotNil: [pipeFromOutput next: count]].
 	^ s
 ]
 
@@ -704,7 +704,7 @@ PipeableOSProcess >> notifyError [
 
 	| errText |
 	self isComplete ifTrue: [
-		errText _ self errorPipelineContents.
+		errText := self errorPipelineContents.
 		(errText size ~= 0)
 			ifTrue:
 				[self inform:
@@ -736,7 +736,7 @@ PipeableOSProcess >> pipeFromError [
 { #category : #accessing }
 PipeableOSProcess >> pipeFromError: aPipeStream [
 
-	(pipeFromError _ aPipeStream)
+	(pipeFromError := aPipeStream)
 		ifNotNilDo: [:p | p addDependent: self]
 
 ]
@@ -797,7 +797,7 @@ PipeableOSProcess >> processProxy: aProxy [
 	state changes."
 
 	aProxy addDependent: self.
-	processProxy _ aProxy
+	processProxy := aProxy
 ]
 
 { #category : #'initialize - release' }
@@ -901,7 +901,7 @@ PipeableOSProcess >> unixFileNumbers [
 	| d |
 	Smalltalk at: #OSProcess ifPresent:
 		[:osp |
-		d _ Dictionary new.
+		d := Dictionary new.
 		d at: #initialStdIn put: (osp accessor unixFileNumber: processProxy initialStdIn ioHandle).
 		d at: #initialStdOut put: (osp accessor unixFileNumber: processProxy initialStdOut ioHandle).
 		d at: #initialStdErr put: (osp accessor unixFileNumber: processProxy initialStdErr ioHandle).
@@ -985,7 +985,7 @@ PipeableOSProcess >> value [
 	| p |
 	self errorHasBeenRedirected ifTrue: [self handlePrecedingError].
 	accessProtect critical:
-		[p _ processProxy ifNotNil: [processProxy value].
+		[p := processProxy ifNotNil: [processProxy value].
 		"The external child process now owns its own copy of the pipe handles. We no
 		longer need our copies of these handles, so close the ones that are not needed."
 		p ifNotNil:

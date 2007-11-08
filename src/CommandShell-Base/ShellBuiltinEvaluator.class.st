@@ -8,7 +8,7 @@ Class {
 		'shellBuiltin',
 		'commandShell'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #'instance creation' }

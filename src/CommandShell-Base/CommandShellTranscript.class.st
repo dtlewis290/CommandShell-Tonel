@@ -9,7 +9,7 @@ Class {
 		'lastPromptString',
 		'activeController'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -76,7 +76,7 @@ CommandShellTranscript >> activeController: aController [
 	"In Morphic, alway nil. In MVC, the controller that most recently invoked
 	a command."
 
-	activeController _ aController
+	activeController := aController
 ]
 
 { #category : #'stream extensions' }
@@ -89,6 +89,22 @@ CommandShellTranscript >> bs [
 CommandShellTranscript >> characterLimit [
 	"Tell the views how much to retain on screen"
 	^ 20000
+]
+
+{ #category : #'input character filtering' }
+CommandShellTranscript >> checkSttyForEvent: keyboardEvent [
+	"Check for interrupt characters and such. Consume interrupt character and
+	answer nil, otherwise answer keyboardEvent."
+
+	(self isInterruptEvent: keyboardEvent)
+		ifTrue:
+			[self handleInterruptCharacterEvent.
+			^ nil].
+	(self isEndOfFileEvent: keyboardEvent)
+		ifTrue:
+			[self cliShell doEndOfFile.
+			^ nil].
+	^ keyboardEvent
 ]
 
 { #category : #'stream extensions' }
@@ -109,7 +125,7 @@ CommandShellTranscript >> cliShell [
 CommandShellTranscript >> cliShell: commandShell [
 	"Set the value of cliShell"
 
-	cliShell _ commandShell
+	cliShell := commandShell
 ]
 
 { #category : #'initialize-release' }
@@ -135,7 +151,7 @@ CommandShellTranscript >> confirmBeforeKilling: externalProxies [
 	| msgStrm |
 	(externalProxies size > 0)
 		ifTrue:
-			[msgStrm _ WriteStream on: String new.
+			[msgStrm := WriteStream on: String new.
 			(externalProxies size > 1)
 				ifTrue: [msgStrm nextPutAll: 'kill processes']
 				ifFalse: [msgStrm nextPutAll: 'kill process'].
@@ -147,8 +163,30 @@ CommandShellTranscript >> confirmBeforeKilling: externalProxies [
 
 ]
 
+{ #category : #'stream extensions' }
+CommandShellTranscript >> endEntry [
+	"Display all the characters since the last endEntry, and reset the stream"
+	self changed: #appendEntry.
+	self reset
+]
+
 { #category : #'input character filtering' }
-CommandShellTranscript >> doInterruptCharHandler [
+CommandShellTranscript >> filterAndForwardEvent: keyboardEvent [ 
+	"Filter keyboardEvent, taking special action if needed. If a child process
+	is active, forward keyboardEvent to the child and answer nil. Otherwise
+	answer keyboardEvent."
+
+	^ (self checkSttyForEvent: keyboardEvent)
+		ifNotNil: [self cliShell filterAndForwardEvent: keyboardEvent]
+]
+
+{ #category : #'stream extensions' }
+CommandShellTranscript >> flush [
+	self endEntry
+]
+
+{ #category : #'input character filtering' }
+CommandShellTranscript >> handleInterruptCharacterEvent [
 	"Interrupt character detected, do interrupt stuff."
 
 	self confirmBeforeKilling: (self cliShell foregroundProxies
@@ -160,32 +198,28 @@ CommandShellTranscript >> doInterruptCharHandler [
 
 ]
 
-{ #category : #'stream extensions' }
-CommandShellTranscript >> endEntry [
-	"Display all the characters since the last endEntry, and reset the stream"
-	self changed: #appendEntry.
-	self reset
+{ #category : #'input character filtering' }
+CommandShellTranscript >> isEndOfFileEvent: keystrokeEvent [ 
+	"A <ctl>d event, represented either as character value 4, or as $d with
+	the control or meta key. The actual representation varies on different
+	versions of Squeak."
+
+	^ keystrokeEvent keyValue == 4
+		or: [keystrokeEvent keyCharacter = $d
+				and: [keystrokeEvent controlKeyPressed
+						or: [keystrokeEvent commandKeyPressed]]]
 ]
 
 { #category : #'input character filtering' }
-CommandShellTranscript >> filterAndForward: aCharacter [
-	"Filter aCharacter, taking special action if needed. If a child process is active,
-	forward aCharacter to the child and answer nil. Otherwise answer aCharacter."
+CommandShellTranscript >> isInterruptEvent: keystrokeEvent [ 
+	"A <ctl>c event, represented either as character value 3, or as $c with
+	the control or meta key. The actual representation varies on different
+	versions of Squeak."
 
-	^ self cliShell filterAndForward: aCharacter
-]
-
-{ #category : #'input character filtering' }
-CommandShellTranscript >> filterAndForwardEvent: keyboardEvent [
-	"Filter keyboardEvent, taking special action if needed. If a child process is active,
-	forward keyboardEvent to the child and answer nil. Otherwise answer keyboardEvent."
-
-	^ self cliShell filterAndForwardEvent: keyboardEvent
-]
-
-{ #category : #'stream extensions' }
-CommandShellTranscript >> flush [
-	self endEntry
+	^ keystrokeEvent keyValue == 3
+		or: [keystrokeEvent keyCharacter = $c
+				and: [keystrokeEvent controlKeyPressed
+						or: [keystrokeEvent commandKeyPressed]]]
 ]
 
 { #category : #accessing }
@@ -198,8 +232,8 @@ CommandShellTranscript >> keyboardConnector [
 CommandShellTranscript >> labelString [
 
 	| directoryString |
-	directoryString _ self cliShell workingDirectory.
-	directoryString isEmpty ifTrue: [directoryString _ self cliShell shellSyntax nullDirectoryString].
+	directoryString := self cliShell workingDirectory.
+	directoryString isEmpty ifTrue: [directoryString := self cliShell shellSyntax nullDirectoryString].
 	^ self class defaultWindowName, ': ', directoryString
 
 ]
@@ -215,7 +249,7 @@ CommandShellTranscript >> lastPromptString [
 CommandShellTranscript >> lastPromptString: anObject [
 	"Set the value of lastPromptString"
 
-	lastPromptString _ anObject
+	lastPromptString := anObject
 ]
 
 { #category : #'stream extensions' }
@@ -246,8 +280,8 @@ CommandShellTranscript >> openAsMorphLabel: labelString [
 	"Build a morph viewing this stream"
 
 	| window textMorph |
-	window _ (SystemWindow labelled: labelString) model: self.
-	textMorph _ ShellWindowMorph
+	window := (SystemWindow labelled: labelString) model: self.
+	textMorph := ShellWindowMorph
 					on: self
 					text: nil
 					accept: nil
@@ -268,13 +302,13 @@ CommandShellTranscript >> openLabel: aString [
 	| topView codeView |
 	Smalltalk isMorphic ifTrue: [^ (self openAsMorphLabel: aString) openInWorld].
 
-	topView _ StandardSystemView new.
+	topView := StandardSystemView new.
 	topView model: self;
 			controller: DeferredActionStandardSystemController new;
 			borderWidth: 1;
 			label: aString;
 			minimumSize: 100 @ 50.
-	codeView _ ShellWindowView
+	codeView := ShellWindowView
 					on: self
 					text: nil
 					accept: nil
@@ -353,7 +387,7 @@ CommandShellTranscript >> restoreSelectionMarker [
 	| c |
 	Smalltalk isMorphic
 		ifFalse:
-			[c _ self activeController.
+			[c := self activeController.
 			self cliShell scheduleToEvaluate: [c initializeSelection] fixTemps]
 
 ]
@@ -377,7 +411,7 @@ CommandShellTranscript >> update: event [
 	event == #clearText
 		ifTrue: [^ self clear; restorePrompt].
 	event == #interruptCharacter
-		ifTrue: [^ self doInterruptCharHandler].
+		ifTrue: [^ self handleInterruptCharacterEvent].
 	event == #relabel
 		ifTrue: [^ self changed: event].
 	self error: ['unexpected event']

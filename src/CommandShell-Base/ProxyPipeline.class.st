@@ -14,7 +14,7 @@ Class {
 		'completionSemaphore',
 		'completionWatcher'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #'command processing' }
@@ -69,13 +69,13 @@ ProxyPipeline >> atEnd [
 ProxyPipeline >> background [
 	"Answer true if this pipeline should be evaluated in the background."
 
-	^ background ifNil: [background _ false]
+	^ background ifNil: [background := false]
 ]
 
 { #category : #accessing }
 ProxyPipeline >> background: trueOrFalse [
 
-	background _ trueOrFalse
+	background := trueOrFalse
 ]
 
 { #category : #'initialize - release' }
@@ -109,7 +109,7 @@ ProxyPipeline >> commandLine [
 ProxyPipeline >> commandLine: aString [
 	"Command line string from which this pipeline was constructed"
 
-	commandLine _ aString
+	commandLine := aString
 ]
 
 { #category : #accessing }
@@ -138,7 +138,7 @@ ProxyPipeline >> completionWatcher [
 ProxyPipeline >> completionWatcher: anObject [
 	"Set the value of completionWatcher"
 
-	completionWatcher _ anObject
+	completionWatcher := anObject
 ]
 
 { #category : #accessing }
@@ -191,7 +191,7 @@ ProxyPipeline >> fromString: aCommandString shell: aCommandShell [
 		inject: nil
 		into: [:prevProxy :command | 
 			| nextProxy |
-			nextProxy _ aCommandShell
+			nextProxy := aCommandShell
 				redirectedPipeableProxyFor: command
 				predecessorProxy: prevProxy.
 			prevProxy

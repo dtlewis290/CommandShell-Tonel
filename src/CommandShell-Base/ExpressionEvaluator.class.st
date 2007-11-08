@@ -8,7 +8,7 @@ Class {
 		'expression',
 		'evaluationBlock'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #'instance creation' }
@@ -95,24 +95,24 @@ ExpressionEvaluator >> blockString [
 		ifTrue:
 			[^ '[]']
 		ifFalse:
-			[tokens _ self addTreeLeaves: (Scanner new scanTokens: expression) to: OrderedCollection new.
+			[tokens := self addTreeLeaves: (Scanner new scanTokens: expression) to: OrderedCollection new.
 			(tokens includes: #args)
 				ifTrue:
-					[prefix _ '[:stdin :stdout :stderr :args | ']
+					[prefix := '[:stdin :stdout :stderr :args | ']
 				ifFalse:
 					[(tokens includes: #stderr)
 						ifTrue:
-							[prefix _ '[:stdin :stdout :stderr | ']
+							[prefix := '[:stdin :stdout :stderr | ']
 						ifFalse:
 							[(tokens includes: #stdout)
 								ifTrue:
-									[prefix _ '[:stdin :stdout | ']
+									[prefix := '[:stdin :stdout | ']
 								ifFalse:
 									[(tokens includes: #stdin)
 										ifTrue:
-											[prefix _ '[:stdin | ']
+											[prefix := '[:stdin | ']
 										ifFalse:
-											[prefix _ '[']]]].
+											[prefix := '[']]]].
 			^ prefix, self expression, ']']
 
 ]
@@ -126,7 +126,7 @@ ExpressionEvaluator >> blockValue [
 
 	| nArgs |
 	self evaluationBlock ifNil: [^ nil].
-	nArgs _ evaluationBlock numArgs.
+	nArgs := evaluationBlock numArgs.
 	(nArgs == 0)
 		ifTrue: "dumb block"
 			[^ evaluationBlock value]
@@ -182,7 +182,7 @@ ExpressionEvaluator >> compile [
 	which evaluates to a null string."
 
 	evaluationBlock ifNil:
-		[evaluationBlock _
+		[evaluationBlock :=
 			[Compiler evaluate: self blockString
 					for: self
 					notifying: self
@@ -209,7 +209,7 @@ ExpressionEvaluator >> evaluationBlock [
 ExpressionEvaluator >> evaluationBlock: aBlock [
 	"The block to be evaluated, possibly compiled from the expression string."
 
-	evaluationBlock _ aBlock
+	evaluationBlock := aBlock
 ]
 
 { #category : #accessing }
@@ -221,7 +221,7 @@ ExpressionEvaluator >> expression [
 { #category : #accessing }
 ExpressionEvaluator >> expression: aString [
 
-	expression _ aString
+	expression := aString
 ]
 
 { #category : #printing }
@@ -259,14 +259,14 @@ ExpressionEvaluator >> value [
 		self running.
 		self evaluationBlock notNil
 			ifTrue:
-				[result _ [self blockValue]
+				[result := [self blockValue]
 					on: Error
 					do: [:e |
 						self errorPipelineStream nextPutAll: e description; nextPut: Character lf.
 						self fail].
 				(result == self)
 					ifFalse:
-						[resultString _ result asString.
+						[resultString := result asString.
 						pipeFromOutput nextPutAll: resultString.
 						(resultString isEmpty not and:
 							[(resultString last ~= Character cr) and:

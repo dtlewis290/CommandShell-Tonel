@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
@@ -617,22 +617,6 @@ CommandShell >> checkSttyFor: characterValue [
 	^ characterValue
 ]
 
-{ #category : #'input character filtering' }
-CommandShell >> checkSttyForEvent: keyboardEvent [
-	"Check for interrupt characters and such. Consume interrupt character and
-	answer nil, otherwise answer keyboardEvent."
-
-	(self isInterruptEvent: keyboardEvent)
-		ifTrue:
-			[self doInterrupt.
-			^ nil].
-	(self isEndOfFileEvent: keyboardEvent)
-		ifTrue:
-			[self doEndOfFile.
-			^ nil].
-	^ keyboardEvent
-]
-
 { #category : #'initialize-release' }
 CommandShell >> clearSemaphore [
 
@@ -824,6 +808,30 @@ CommandShell >> doEndOfFile [
 
 ]
 
+{ #category : #'input character filtering' }
+CommandShell >> doInterrupt [
+	"Interrupt character detected, do interrupt stuff."
+
+	| msgStrm children answer |
+	children _ self externalChildren collect: [:e | e processProxy].
+	(children size > 0)
+		ifTrue:
+			[msgStrm _ WriteStream on: String new.
+			(children size > 1)
+				ifTrue: [msgStrm nextPutAll: 'kill processes']
+				ifFalse: [msgStrm nextPutAll: 'kill process'].
+			children do: [:e | msgStrm nextPutAll: ' ', e pid printString, ' (', e programName, ')'].
+			msgStrm nextPut: $?.
+			self readSyncSemaphore critical:
+				[self pauseStProcesses.
+				answer _ self confirm: msgStrm contents.
+				self unpauseStProcesses.
+				answer ifTrue:
+					[children reverseDo: [:e | e sigkill].
+					self terminateStProcesses]]]
+
+]
+
 { #category : #'process proxy creation' }
 CommandShell >> doItProxyFor: aCommandString input: in output: out error: err [
 	"Answer a PipeableEvaluator on a doIt command, or nil."
@@ -1012,23 +1020,17 @@ CommandShell >> filterAndForward: aCharacter [
 ]
 
 { #category : #'input character filtering' }
-CommandShell >> filterAndForwardEvent: keyboardEvent [
-	"Filter keyboardEvent, taking special action if needed. If a child process is active,
-	forward keyboardEvent to the child and answer nil. Otherwise answer keyboardEvent."
+CommandShell >> filterAndForwardEvent: keyboardEvent [ 
+	"Filter keyboardEvent, taking special action if needed. If a child process
+	is active, forward keyboardEvent to the child and answer nil. Otherwise
+	answer keyboardEvent."
 
-	^ (self checkSttyForEvent: keyboardEvent) ifNotNil:
-		[keyboardConnector isNil
-			ifTrue:
-				[keyboardEvent]
-			ifFalse:
-				[keyboardConnector closed
-					ifTrue:
-						[keyboardEvent]
-					ifFalse:
-						[keyboardConnector
-							nextPut: keyboardEvent keyValue asCharacter;
-							flush.
-						nil]]]
+	(keyboardConnector isNil or: [keyboardConnector closed])
+		ifTrue: [^ keyboardEvent]
+		ifFalse: [keyboardConnector
+					nextPut: keyboardEvent keyValue asCharacter;
+					flush.
+			^ nil]
 ]
 
 { #category : #'event handling' }
@@ -1194,18 +1196,6 @@ CommandShell >> isEndOfFile: anInteger [
 
 ]
 
-{ #category : #'input character filtering' }
-CommandShell >> isEndOfFileEvent: keystrokeEvent [ 
-	"A <ctl>d event, represented either as character value 4, or as $d with
-	the control or meta key. The actual representation varies on different
-	versions of Squeak."
-
-	^ keystrokeEvent keyValue == 4
-		or: [keystrokeEvent keyCharacter = $d
-				and: [keystrokeEvent controlKeyPressed
-						or: [keystrokeEvent commandKeyPressed]]]
-]
-
 { #category : #testing }
 CommandShell >> isExcludedFromHistory: commandString [
 	"Answer true if commandString should not be remembered in the history list. The 'fc'
@@ -1228,18 +1218,6 @@ CommandShell >> isInterrupt: anInteger [
 
 	^ anInteger == self interruptCharacterValue
 
-]
-
-{ #category : #'input character filtering' }
-CommandShell >> isInterruptEvent: keystrokeEvent [ 
-	"A <ctl>c event, represented either as character value 3, or as $c with
-	the control or meta key. The actual representation varies on different
-	versions of Squeak."
-
-	^ keystrokeEvent keyValue == 3
-		or: [keystrokeEvent keyCharacter = $c
-				and: [keystrokeEvent controlKeyPressed
-						or: [keystrokeEvent commandKeyPressed]]]
 ]
 
 { #category : #testing }

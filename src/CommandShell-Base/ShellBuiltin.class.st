@@ -33,7 +33,7 @@ Class {
 		'helpSelector',
 		'needsPrompt'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Commands'
 }
 
 { #category : #'instance creation' }

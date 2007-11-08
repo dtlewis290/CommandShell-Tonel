@@ -14,7 +14,7 @@ Class {
 		'pipeFromOutput',
 		'errorPipelineStream'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #defaults }
@@ -180,7 +180,7 @@ PipeJunction >> errorPipeForNextProxy [
 PipeJunction >> errorPipelineStream [
 	"Accumulates the error output of commands in a command pipeline."
 
-	errorPipelineStream isNil ifTrue: [errorPipelineStream _ InternalPipe nonBlockingPipe].
+	errorPipelineStream isNil ifTrue: [errorPipelineStream := InternalPipe nonBlockingPipe].
 	^ errorPipelineStream
 
 ]
@@ -189,7 +189,7 @@ PipeJunction >> errorPipelineStream [
 PipeJunction >> errorPipelineStream: aStream [
 	"Accumulates the error output of commands in a command pipeline."
 
-	errorPipelineStream _ aStream
+	errorPipelineStream := aStream
 
 ]
 
@@ -331,10 +331,10 @@ PipeJunction >> outputAndError [
 	"((PipeableOSProcess command: 'ps') | 'NoSuchCommand; grep squeak' | 'cut -c16-100') outputAndError"
 
 	| out err |
-	out _ self output.
+	out := self output.
 	(self errorHasBeenRedirected)
-		ifTrue: [err _ '']
-		ifFalse: [err _ errorPipelineStream contents].
+		ifTrue: [err := '']
+		ifFalse: [err := errorPipelineStream contents].
 	^ Array with: out with: err
 ]
 
@@ -343,9 +343,9 @@ PipeJunction >> outputOn: aStream [
 	"Wait for process completion, writing all available output on aStream"
 
 	| d |
-	d _ nil.
+	d := nil.
 	[self isComplete] whileFalse:
-		[(d ifNil: [d _ Delay forMilliseconds: 50]) wait.
+		[(d ifNil: [d := Delay forMilliseconds: 50]) wait.
 		aStream nextPutAll: self upToEnd].
 	aStream nextPutAll: self upToEndOfFile.
 	^ aStream
@@ -370,7 +370,7 @@ PipeJunction >> pipeFromOutput [
 { #category : #accessing }
 PipeJunction >> pipeFromOutput: aPipeStream [
 
-	(pipeFromOutput _ aPipeStream)
+	(pipeFromOutput := aPipeStream)
 		ifNotNilDo: [:p | p addDependent: self]
 
 ]
@@ -384,7 +384,7 @@ PipeJunction >> pipeToInput [
 { #category : #accessing }
 PipeJunction >> pipeToInput: aPipeStream [
 
-	pipeToInput _ aPipeStream
+	pipeToInput := aPipeStream
 ]
 
 { #category : #testing }
@@ -448,7 +448,7 @@ PipeJunction >> replaceOutputStreamWith: anotherStream [
 	to the new stream."
 
 	| oldOutputStream |
-	oldOutputStream _ self pipeFromOutput.
+	oldOutputStream := self pipeFromOutput.
 	oldOutputStream removeDependent: self. "Break old dependency"
 	self pipeFromOutput: anotherStream. "Restores the dependency automatically"
 	oldOutputStream ifNotNil:

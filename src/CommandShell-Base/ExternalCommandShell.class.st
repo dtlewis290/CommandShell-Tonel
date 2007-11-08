@@ -20,7 +20,7 @@ Class {
 	#classVars : [
 		'ExternalShell'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -40,7 +40,7 @@ ExternalCommandShell class >> initialize [
 
 	ExternalShell ifNotNil:
 		[ExternalShell stop.
-		ExternalShell _ nil].
+		ExternalShell := nil].
 	Smalltalk
 		addToStartUpList: self
 		after: (Smalltalk at: #ThisOSProcess
@@ -65,7 +65,7 @@ ExternalCommandShell class >> onTty [
 
 	"ExternalCommandShell onTty"
 
-	^ ExternalShell ifNil: [ExternalShell _ self basicNew initialize].
+	^ ExternalShell ifNil: [ExternalShell := self basicNew initialize].
 ]
 
 { #category : #'class initialization' }
@@ -123,7 +123,7 @@ ExternalCommandShell >> cliShell [
 ExternalCommandShell >> cliShell: anObject [
 	"Set the value of cliShell"
 
-	cliShell _ anObject
+	cliShell := anObject
 ]
 
 { #category : #'interrupt handling' }
@@ -145,7 +145,7 @@ ExternalCommandShell >> confirmBeforeKilling: externalProxies [
 	| msgStrm |
 	(externalProxies size > 0)
 		ifTrue:
-			[msgStrm _ WriteStream on: String new.
+			[msgStrm := WriteStream on: String new.
 			(externalProxies size > 1)
 				ifTrue: [msgStrm nextPutAll: 'kill processes']
 				ifFalse: [msgStrm nextPutAll: 'kill process'].
@@ -203,9 +203,9 @@ ExternalCommandShell >> handleInput: str [
 	| rs line |
 	self lineBuffer nextPutAll: str.
 	[self lineBuffer contents includes: Character lf]
-		whileTrue: [rs _ ReadStream on: lineBuffer contents.
+		whileTrue: [rs := ReadStream on: lineBuffer contents.
 			self lineBuffer: nil.
-			line _ rs upTo: Character lf.
+			line := rs upTo: Character lf.
 			self cliShell command: line.
 			self lineBuffer nextPutAll: rs upToEnd]
 ]
@@ -233,7 +233,7 @@ ExternalCommandShell >> inputStream [
 { #category : #accessing }
 ExternalCommandShell >> inputStream: externalStream [
 
-	inputStream _ externalStream
+	inputStream := externalStream
 ]
 
 { #category : #accessing }
@@ -241,7 +241,7 @@ ExternalCommandShell >> isRunning [
 	"True if my evaluation loop should be running. This instance variable supports
 	restarting the evaluation loop after an image restart."
 
-	^ isRunning ifNil: [isRunning _ false]
+	^ isRunning ifNil: [isRunning := false]
 
 ]
 
@@ -250,7 +250,7 @@ ExternalCommandShell >> isRunning: trueOrFalse [
 	"True if my evaluation loop should be running. This instance variable supports
 	restarting the evaluation loop after an image restart."
 
-	isRunning _ trueOrFalse
+	isRunning := trueOrFalse
 
 ]
 
@@ -265,7 +265,7 @@ ExternalCommandShell >> lineBuffer [
 ExternalCommandShell >> lineBuffer: anObject [
 	"Set the value of lineBuffer"
 
-	lineBuffer _ anObject
+	lineBuffer := anObject
 ]
 
 { #category : #printing }
@@ -346,14 +346,14 @@ ExternalCommandShell >> shutdownInOldSession [
 ExternalCommandShell >> sigIntHandler [
 	"The interrupt handler process, for catching <ctl>C from the keyboard."
 
-	^ sigIntHandler ifNil: [sigIntHandler _ self sigIntHandlerProcess]
+	^ sigIntHandler ifNil: [sigIntHandler := self sigIntHandlerProcess]
 ]
 
 { #category : #accessing }
 ExternalCommandShell >> sigIntHandler: aProcess [
 	"The interrupt handler process, for catching <ctl>C from the keyboard."
 
-	sigIntHandler _ aProcess
+	sigIntHandler := aProcess
 ]
 
 { #category : #'interrupt handling' }
@@ -383,7 +383,7 @@ ExternalCommandShell >> sigIntSema: aSemaphore [
 	"A Smalltalk Semaphore which will be signalled when an external SIGINT signal is
 	received from the operating system."
 
-	sigIntSema _ aSemaphore
+	sigIntSema := aSemaphore
 
 ]
 
@@ -411,7 +411,7 @@ ExternalCommandShell >> startHandlingInterruptSignal [
 		ifPresent:
 			[:osp |
 			osp accessor handlesOsSignals ifTrue:
-				[sema _ osp accessor forwardSignal: osp accessor primSigIntNumber.
+				[sema := osp accessor forwardSignal: osp accessor primSigIntNumber.
 				sema ifNotNil: [self sigIntSema: sema].
 				self sigIntHandler]]
 

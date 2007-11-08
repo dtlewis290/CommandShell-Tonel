@@ -12,7 +12,7 @@ Class {
 		'writerClosed',
 		'nonBlockingMode'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #'instance creation' }
@@ -47,10 +47,10 @@ InternalPipe class >> testPipe [
 	"InternalPipe testPipe inspect"
 
 	| pipe result |
-	pipe _ self new.
+	pipe := self new.
 	pipe nextPutAll: 'string to send through an InternalPipe'.
 	pipe closeWriter.
-	result _ pipe upToEnd.
+	result := pipe upToEnd.
 	pipe close.
 	^ result
 
@@ -161,7 +161,7 @@ InternalPipe >> contents [
 	"InternalPipe new nextPutAll: 'hello'; contents"
 
 	| s |
-	s _ self next: queue size.
+	s := self next: queue size.
 	self nextPutAll: s.
 	^ s
 ]
@@ -207,11 +207,11 @@ InternalPipe >> next: anInteger [
 	"Answer the next anInteger elements of my collection."
 
 	| strm c |
-	strm _ WriteStream on: ''.
+	strm := WriteStream on: ''.
 	(1 to: anInteger) do: [:index |
 		self atEnd
 			ifTrue: [^ strm contents]
-			ifFalse: [(c _ self basicNext) ifNil: [^ strm contents].
+			ifFalse: [(c := self basicNext) ifNil: [^ strm contents].
 					strm nextPut: c]].
 	^ strm contents
 
@@ -223,7 +223,7 @@ InternalPipe >> nextPut: anObject [
 	receiver. Answer anObject."
 
 	| result |
-	result _ queue nextPut: anObject.
+	result := queue nextPut: anObject.
 	self notifyDataReady.
 	Processor yield.
 	^ result
@@ -236,7 +236,7 @@ InternalPipe >> nextPutAll: aCollection [
 	by the receiver. Answer aCollection."
 
 	| result |
-	result _ aCollection do: [:e | queue nextPut: e].
+	result := aCollection do: [:e | queue nextPut: e].
 	self notifyDataReady.
 	Processor yield.
 	^ result
@@ -246,14 +246,14 @@ InternalPipe >> nextPutAll: aCollection [
 { #category : #accessing }
 InternalPipe >> nonBlockingMode [
 
-	^ nonBlockingMode ifNil: [nonBlockingMode _ false]
+	^ nonBlockingMode ifNil: [nonBlockingMode := false]
 
 ]
 
 { #category : #accessing }
 InternalPipe >> nonBlockingMode: trueOrFalse [
 
-	nonBlockingMode _ trueOrFalse
+	nonBlockingMode := trueOrFalse
 
 ]
 
@@ -277,7 +277,7 @@ InternalPipe >> peek [
 { #category : #accessing }
 InternalPipe >> queue [
 
-	^ queue ifNil: [queue _ SharedQueue new]
+	^ queue ifNil: [queue := SharedQueue new]
 
 ]
 
@@ -324,9 +324,9 @@ InternalPipe >> upToEnd [
 	"Answer the remaining elements in the pipe"
 
 	| strm c |
-	strm _ WriteStream on: ''.
+	strm := WriteStream on: ''.
 	[self atEnd] whileFalse:
-		[c _ self next.
+		[c := self next.
 		c isNil
 			ifTrue: [^ strm contents]
 			ifFalse: [strm nextPut: c]].
@@ -344,13 +344,13 @@ InternalPipe >> upToEndOfFile [
 { #category : #accessing }
 InternalPipe >> writerClosed [
 
-	^ writerClosed ifNil: [writerClosed _ false]
+	^ writerClosed ifNil: [writerClosed := false]
 
 ]
 
 { #category : #accessing }
 InternalPipe >> writerClosed: trueOrFalse [
 
-	writerClosed _ trueOrFalse
+	writerClosed := trueOrFalse
 
 ]

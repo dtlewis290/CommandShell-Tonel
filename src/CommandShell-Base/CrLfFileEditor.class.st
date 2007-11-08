@@ -13,7 +13,7 @@ Class {
 		'fileName',
 		'viewStyle'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Commands'
 }
 
 { #category : #private }

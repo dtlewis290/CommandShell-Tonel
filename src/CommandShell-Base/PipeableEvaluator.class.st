@@ -13,7 +13,7 @@ Class {
 		'exitStatus',
 		'outputHasBeenRedirected'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #accessing }
@@ -26,7 +26,7 @@ PipeableEvaluator >> argumentArray [
 { #category : #accessing }
 PipeableEvaluator >> argumentArray: anArrayOfStrings [
 
-	argumentArray _ anArrayOfStrings
+	argumentArray := anArrayOfStrings
 
 ]
 
@@ -68,7 +68,7 @@ PipeableEvaluator >> errorPipelineStream [
 
 	errorPipelineStream isNil
 		ifTrue:
-			[errorPipelineStream _ InternalPipe nonBlockingPipe.
+			[errorPipelineStream := InternalPipe nonBlockingPipe.
 			errorPipelineStream addDependent: self].
 	^ errorPipelineStream
 
@@ -79,7 +79,7 @@ PipeableEvaluator >> errorPipelineStream: aStream [
 	"Accumulates the error output of commands in a command pipeline."
 
 	errorPipelineStream ifNotNil: [errorPipelineStream removeDependent: self].
-	errorPipelineStream _ aStream.
+	errorPipelineStream := aStream.
 	errorPipelineStream ifNotNil: [errorPipelineStream addDependent: self]
 
 ]
@@ -93,7 +93,7 @@ PipeableEvaluator >> exitStatus [
 { #category : #accessing }
 PipeableEvaluator >> exitStatus: aSymbol [
 
-	exitStatus _ aSymbol
+	exitStatus := aSymbol
 ]
 
 { #category : #evaluating }
@@ -131,7 +131,7 @@ PipeableEvaluator >> nextPut: aCharacter [
 	"Write aCharacter to the standard input stream of my process."
 
 	| readPosition |
-	readPosition _ pipeToInput position.
+	readPosition := pipeToInput position.
 	pipeToInput setToEnd nextPut: aCharacter.
 	pipeToInput position: readPosition.
 	^ pipeToInput
@@ -143,7 +143,7 @@ PipeableEvaluator >> nextPutAll: aCollection [
 	"Write aCollection to the standard input stream of my process."
 
 	| readPosition |
-	readPosition _ pipeToInput position.
+	readPosition := pipeToInput position.
 	pipeToInput setToEnd nextPutAll: aCollection.
 	pipeToInput position: readPosition.
 	^ pipeToInput
@@ -162,7 +162,7 @@ PipeableEvaluator >> notYetRunning [
 PipeableEvaluator >> notify: aString at: aPosition in: aStream [
 
 	| s |
-	s _ aStream contents.
+	s := aStream contents.
 	self errorPipelineStream
 		nextPutAll: (s copyFrom: 1 to: (aPosition - 1));
 		nextPutAll: aString;
@@ -176,14 +176,14 @@ PipeableEvaluator >> notify: aString at: aPosition in: aStream [
 PipeableEvaluator >> outputHasBeenRedirected [
 	"True if pipeFromOutput has been redirected to a FileStream"
 
-	^ outputHasBeenRedirected ifNil: [outputHasBeenRedirected _ false]
+	^ outputHasBeenRedirected ifNil: [outputHasBeenRedirected := false]
 ]
 
 { #category : #accessing }
 PipeableEvaluator >> outputHasBeenRedirected: trueOrFalse [
 	"True if pipeFromOutput has been redirected to a FileStream"
 
-	outputHasBeenRedirected _ trueOrFalse
+	outputHasBeenRedirected := trueOrFalse
 ]
 
 { #category : #testing }
@@ -213,14 +213,14 @@ PipeableEvaluator >> printOn: aStream [
 { #category : #accessing }
 PipeableEvaluator >> runState [
 
-	^ runState ifNil: [runState _ #notYetRunning]
+	^ runState ifNil: [runState := #notYetRunning]
 
 ]
 
 { #category : #accessing }
 PipeableEvaluator >> runState: aSymbol [
 
-	runState _ aSymbol.
+	runState := aSymbol.
 	self changed: #runState
 
 ]
@@ -292,7 +292,7 @@ PipeableEvaluator >> | anotherCommandString [
 		| 'stdout nextPutAll: stdin upToEnd') upToEnd"
 
 	| new |
-	new _ self species
+	new := self species
 			command: anotherCommandString
 			pipeFrom: self pipeFromOutput
 			errorPipelineStream: self errorPipelineStream.

@@ -13,7 +13,7 @@ Class {
 		'cwdDictionary',
 		'cwdIndex'
 	],
-	#category : #CommandShell
+	#category : #'CommandShell-Base'
 }
 
 { #category : #'path name expansion' }
