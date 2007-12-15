@@ -21,7 +21,7 @@ CrLfFileEditor class >> defaultLineEndConvention [
 	"FIXME: The Unix and Win32 are right, but I just guessed at the others - dtl"
 
 	| platform |
-	platform _  Smalltalk platformName.
+	platform _  ShellSyntax new platformName.
 	(platform = 'unix') ifTrue: [^ #lf].
 	(platform = 'Win32') ifTrue: [^ #crlf].
 	(platform = 'Mac OS') ifTrue: [^ #cr].
