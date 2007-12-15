@@ -254,13 +254,6 @@ CommandShell class >> htmlOverview [
     additional error pipe is shared by all process proxies in the pipeline, such that
     any error output is accumulated in the shared error pipe stream.
 <p>
-    As the command pipeline is created from the command line string, each process
-    proxy sends a #value message to its predecessor cause it to be evaluated (internal
-    process proxies) or to create and run its external program (external process proxies).
-    The chain of process proxies is connected by pipes for the connected input and
-    output streams, and has a single shared pipe to collect error streams from all
-    the process proxies.
-<p>
     A command shell can obtain the output and error of a complex command pipeline
     simply by evaluating the last process proxy in the chain, and reading up to the
     end of its output and error pipes. Since a process proxy knows its run state, and
@@ -382,11 +375,9 @@ CommandShell class >> raceConditions [
 	"CommandShell new pipeline: 'CommandShell raceConditions! | edit'"
 
 	^
-'It may be possible to hang the Squeak VM in an IO race condition when doing certain command pipelines. These conditions have been largely (completely?) eliminated for Unix platforms through the use of nonblocking pipes in conjunction with polling processes on the Smalltalk side of the pipes. However, these notes are provided to describe possible deadlock scenarios.
+'It may be possible to hang the Squeak VM in an IO race condition when doing certain command pipelines. These conditions have been largely eliminated for Unix platforms through the use of nonblocking pipes in conjunction with asynchronous IO or polling processes on the Smalltalk side of the pipes. However, these notes are provided to describe possible deadlock scenarios.
 
 Note that nonblocking OS pipes are not yet available on Windows. Command pipelines with external OS processes on Windows are not supported. Blocking on read or write to an OSPipe in Windows will definitely lock the VM.
-
-The overall scenario is as follows: From a Squeak Shell, enter a command pipeline with an internal command proxy, piped to an external command proxy, piped to another internal command proxy. 
 
 Two kinds of deadlock are possible. In both cases, deadlock occurs when the single-threaded Squeak VM is blocked on a read or write to an OS pipe, and the blocked condition can only be cleared by another process running in the blocked VM.
 
@@ -398,29 +389,7 @@ Two kinds of deadlock are possible. In both cases, deadlock occurs when the sing
 
 Here are things to try if a deadlock occurs:
 
-Squeak will be blocked and will not respond to the mouse or keyboard. Open a command shell outside of Squeak (perhaps an xterm, or log in to another virtual terminal on Linux or FreeBSD). Using the "ps" command, find the Squeak VM process and its subprocesses. Kill the subprocess. In many cases this will free up the deadlock, and Squeak will come back to life. If this does not work, then you will probably find that one of the processes which you just killed is now in a "zombie" state, which means that the Squeak VM is deadlocked in such a way that it cannot recognize that its child process exited (and therefore cannot properly close the associated file handles). In this case, if your operating system supports a /proc file system, you may be able to break things free by emptying the pipes. On Linux, go to /proc/<pidOfTheSqueakVMProcess>/fd/ and do "cat" commands on all the pipe files in this directory. If none of this works, you are just plain stuck, and you will need to kill your Squeak session and recover anything valuable from the changes log.
-
-Notes:
-In the current implemention, the following command line will deadlock the VM.
-$ who | copyToOutput | copyToOutput | copyToOutput | cat | copyToOutput | copyToOutput
-
-The condition can be resolved by killing the "cat" command from outside of Squeak. The deadlock occurs because the "copyToOutput" command are shell builtins which have delays built into a loop of execution. The delays prevent another deadlock condition (overflowing the output pipe, resulting in a block on write deadlock). However, the delays also permit the "cat" command to complete execution prior to the preceding "copyToOutput" commands. The "copyToOutput" command after the "cat" will block on read, and the preceding "copyToOutput" commands are prevented from completing. The input to "cat" is never closed, so "cat" continues executing, and the Squeak VM stays blocked on a read indefinitely.
-
-Race conditions which are now prevented in this implementation:
-Fixed one race condition as follows:
-  "$ ls -lR / | copyToOutput | cat"
-
-This formerly resulted in the following race condition:
-  1) The "ls -lR" external process generates a large output string.
-  2) The "copyToOutput" internal doIt command pipes the large output string to an external "cat" command, and blocks on the write when the OS pipe is full.
-  3) The output of "cat" should be read by a Smalltalk process associated with a CommandShell, but...
-  4) The output of "cat" is not read, because we are still blocking on the write to the input of "cat".
-  5) ==> deadlock
-
-The CommandShell>>copyToOutput:input:output:error method (one of the shell builtin commands) now prevents this race condition by explicitly forcing updates of "OSProcess thisOSProcess updateActiveChildren".
-
-However, this still permitted the race condition to occur when interrupting the command line with a <ctl>C. Interrupt character processing now prevents this race condition by pausing all background processes in CommandShell>>doInterrupt.
-'
+Squeak will be blocked and will not respond to the mouse or keyboard. Open a command shell outside of Squeak (perhaps an xterm, or log in to another virtual terminal on Linux or FreeBSD). Using the "ps" command, find the Squeak VM process and its subprocesses. Kill the subprocess. In many cases this will free up the deadlock, and Squeak will come back to life. If this does not work, then you will probably find that one of the processes which you just killed is now in a "zombie" state, which means that the Squeak VM is deadlocked in such a way that it cannot recognize that its child process exited (and therefore cannot properly close the associated file handles). In this case, if your operating system supports a /proc file system, you may be able to break things free by emptying the pipes. On Linux, go to /proc/<pidOfTheSqueakVMProcess>/fd/ and do "cat" commands on all the pipe files in this directory. If none of this works, you are just plain stuck, and you will need to kill your Squeak session and recover anything valuable from the changes log.'
 ]
 
 { #category : #'system startup' }
