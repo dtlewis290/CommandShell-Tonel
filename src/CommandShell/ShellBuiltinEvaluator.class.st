@@ -34,7 +34,7 @@ ShellBuiltinEvaluator >> commandShell [
 { #category : #accessing }
 ShellBuiltinEvaluator >> commandShell: aCommandShell [
 
-	commandShell _ aCommandShell
+	commandShell := aCommandShell
 
 ]
 
@@ -63,7 +63,7 @@ ShellBuiltinEvaluator >> shellBuiltin [
 { #category : #accessing }
 ShellBuiltinEvaluator >> shellBuiltin: aShellBuiltin [
 
-	shellBuiltin _ aShellBuiltin
+	shellBuiltin := aShellBuiltin
 ]
 
 { #category : #evaluating }

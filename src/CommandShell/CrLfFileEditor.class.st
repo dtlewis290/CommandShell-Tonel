@@ -67,20 +67,20 @@ CrLfFileEditor class >> fileNamed: pathName inDirectoryPath: dirPath [
 	"CrLfFileEditor fileNamed: '/etc/NOSUCHFILE' inDirectoryPath: '/etc'"
 
 	| dir fs convention editText |
-	dir _ FileDirectory on: dirPath.
+	dir := FileDirectory on: dirPath.
 	(dir fileExists: pathName)
 		ifTrue:
-			[[fs _ CrLfFileStream readOnlyFileNamed: dirPath, FileDirectory slash, pathName.
-			convention _ fs detectLineEndConvention.
-			editText _ fs contentsOfEntireFile.
+			[[fs := CrLfFileStream readOnlyFileNamed: dirPath, FileDirectory slash, pathName.
+			convention := fs detectLineEndConvention.
+			editText := fs contentsOfEntireFile.
 			fs close]
 				on: Error
 				do: [:ex |
-					convention _ #lf.	"Default for Unix text files"
-					editText _ '']]
+					convention := #lf.	"Default for Unix text files"
+					editText := '']]
 		ifFalse:
-			[convention _ #lf.	"Default for Unix text files"
-			editText _ ''].
+			[convention := #lf.	"Default for Unix text files"
+			editText := ''].
 	^ self on: editText
 		withLabel: pathName
 		inDirectory: dir
@@ -96,22 +96,22 @@ CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
 	"CrLfFileEditor fileNamed: '/etc/hosts' withLabel: 'an editor on /etc/hosts'"
 
 	| dirPath dir fs convention editText localName |
-	dirPath _ FileDirectory dirPathFor: pathName.
-	dir _ FileDirectory on: dirPath.
-	localName _ FileDirectory localNameFor: pathName.
+	dirPath := FileDirectory dirPathFor: pathName.
+	dir := FileDirectory on: dirPath.
+	localName := FileDirectory localNameFor: pathName.
 	(dir fileExists: localName)
 		ifTrue:
-			[[fs _ CrLfFileStream readOnlyFileNamed: pathName.
-			convention _ fs detectLineEndConvention.
-			editText _ fs contentsOfEntireFile.
+			[[fs := CrLfFileStream readOnlyFileNamed: pathName.
+			convention := fs detectLineEndConvention.
+			editText := fs contentsOfEntireFile.
 			fs close]
 				on: Error
 				do: [:ex |
-					convention _ #lf.	"Default for Unix text files"
-					editText _ '']]
+					convention := #lf.	"Default for Unix text files"
+					editText := '']]
 		ifFalse:
-			[convention _ #lf.	"Default for Unix text files"
-			editText _ ''].
+			[convention := #lf.	"Default for Unix text files"
+			editText := ''].
 	^ self on: editText
 		withLabel: windowLabel
 		inDirectory: dir
@@ -147,7 +147,7 @@ CrLfFileEditor class >> on: aString withLabel: aLabelString inDirectory: aDirect
 	"(CrLfFileEditor on: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt' lineEndConvention: #lf) openInWorld"
 
 	| model |
-	model _ self new contents: aString.
+	model := self new contents: aString.
 	model directory: aDirectory.
 	model fileName: nameString.
 	model lineEndConvention: convention.
@@ -183,7 +183,7 @@ CrLfFileEditor class >> openOn: aString withLabel: aLabelString inDirectory: aDi
 	"CrLfFileEditor openOn: 'this is the string to edit' withLabel: 'this is the window label' inDirectory: FileDirectory default defaultFileName: 'buffer.txt' lineEndConvention: #lf"
 
 	| model |
-	model _ self new contents: aString.
+	model := self new contents: aString.
 	model directory: aDirectory.
 	model fileName: nameString.
 	model lineEndConvention: convention.
@@ -210,7 +210,7 @@ CrLfFileEditor >> bogusTruncate: fileStream [
 	this system. Note that this does not preserve file permissions."
 
 	| name |
-	name _ fileStream name.
+	name := fileStream name.
 	fileStream close.
 	directory deleteFileNamed: name.
 	^ CrLfFileStream fileNamed: name
@@ -222,7 +222,7 @@ CrLfFileEditor >> browseChanges [
 	"Browse in fileIn format."
 
 	| fs |
-	fs _  self directory fileNamed: fileName.
+	fs :=  self directory fileNamed: fileName.
 	ChangeList browseStream: fs.
 	fs close
 
@@ -252,10 +252,10 @@ CrLfFileEditor >> controllerForAccept [
 	| controller view |
 	Smalltalk isMorphic
 		ifTrue:
-			[controller _ dependents detect: [:e | e respondsTo: #accept] ifNone: [nil]]
+			[controller := dependents detect: [:e | e respondsTo: #accept] ifNone: [nil]]
 		ifFalse:
-			[view _ dependents detect: [:e | e controller respondsTo: #accept] ifNone: [nil].
-			controller _ view isNil
+			[view := dependents detect: [:e | e controller respondsTo: #accept] ifNone: [nil].
+			controller := view isNil
 				ifTrue: [nil]
 				ifFalse: [view controller]].
 	^ controller
@@ -283,7 +283,7 @@ CrLfFileEditor >> directory [
 { #category : #accessing }
 CrLfFileEditor >> directory: aDirectory [
 
-	directory _ aDirectory
+	directory := aDirectory
 ]
 
 { #category : #menus }
@@ -335,7 +335,7 @@ doIt printIt inspectIt fileItIn
 accept cancel
 shiftedYellowButtonActivity)]
 
-	ifTrue: [shiftMenu _ ParagraphEditor shiftedYellowButtonMenu.
+	ifTrue: [shiftMenu := ParagraphEditor shiftedYellowButtonMenu.
 		aMenu 
 			labels: shiftMenu labelString 
 			lines: shiftMenu lineArray
@@ -353,7 +353,7 @@ CrLfFileEditor >> fileName [
 { #category : #accessing }
 CrLfFileEditor >> fileName: aString [
 
-	fileName _ aString
+	fileName := aString
 ]
 
 { #category : #private }
@@ -363,7 +363,7 @@ CrLfFileEditor >> forceDirtyBuffer [
 	user."
 
 	| controller |
-	controller _ self dependents
+	controller := self dependents
 			detect: [:e | e respondsTo: #hasUnacceptedEdits:]
 			ifNone:
 				[self dependents
@@ -377,14 +377,14 @@ CrLfFileEditor >> forceDirtyBuffer [
 CrLfFileEditor >> getAnotherFileName: initialFileName [
 
 	| choice newFileName |
-	choice _ (PopUpMenu
+	choice := (PopUpMenu
 		labels: 'choose another name\cancel' withCRs)
 		startUpWithCaption: initialFileName.
 	choice = 1
-		ifTrue: [newFileName _ FillInTheBlank
+		ifTrue: [newFileName := FillInTheBlank
 									request: 'Enter a new file name'
 									initialAnswer: initialFileName.
-				newFileName _ (directory fileExists: newFileName)
+				newFileName := (directory fileExists: newFileName)
 					ifTrue: [self getFileName: newFileName]
 					ifFalse: [newFileName].
 				^ newFileName].
@@ -395,16 +395,16 @@ CrLfFileEditor >> getAnotherFileName: initialFileName [
 CrLfFileEditor >> getFileName: initialFileName [
 
 	| choice newFileName |
-	choice _ (PopUpMenu
+	choice := (PopUpMenu
 		labels: 'overwrite that file\choose another name\cancel' withCRs)
 		startUpWithCaption: initialFileName, ' already exists.'.
 	choice = 1
 		ifTrue: [^ initialFileName].
 	choice = 2
-		ifTrue: [newFileName _ FillInTheBlank
+		ifTrue: [newFileName := FillInTheBlank
 									request: 'Enter a new file name'
 									initialAnswer: initialFileName.
-				newFileName _ (directory fileExists: newFileName)
+				newFileName := (directory fileExists: newFileName)
 					ifTrue: [self getFileName: newFileName]
 					ifFalse: [newFileName].
 				^ newFileName].
@@ -441,7 +441,7 @@ CrLfFileEditor >> hexFormat: aString [
 	"CrLfFileEditor new hexFormat: 'this is a test of the HEX string reformat method'"
 
 	| s |
-	s _ WriteStream on: (String new: aString size*4).
+	s := WriteStream on: (String new: aString size*4).
 	0 to: aString size-1 by: 16 do:
 		[:loc | s nextPutAll: loc hex; space;
 			nextPut: $(; print: loc; nextPut: $); space; tab.
@@ -468,7 +468,7 @@ CrLfFileEditor >> lineEndConvention [
 CrLfFileEditor >> lineEndConvention: aSymbol [
 	"See CrLfFileStream for the allowable values of aSymbol."
 
-	lineEndConvention _ aSymbol
+	lineEndConvention := aSymbol
 ]
 
 { #category : #'initialize-release' }
@@ -477,14 +477,14 @@ CrLfFileEditor >> mvcWithLabel: aLabelString [
 	| topView fileContentsView |
 	Smalltalk isMorphic ifTrue:
 		[^ self error: 'this method should be used only for MVC'].
-	topView _ StandardSystemView new.
+	topView := StandardSystemView new.
 	topView
 		model: self;
 		controller: DeferredActionStandardSystemController new;
 		label: aLabelString;
 		minimumSize: 200@200.
 	topView borderWidth: 1.
-	fileContentsView _ PluggableTextView on: self
+	fileContentsView := PluggableTextView on: self
 		text: #contents
 		accept: #put:
 		readSelection: #contentsSelection
@@ -505,7 +505,7 @@ CrLfFileEditor >> openAsMorphLabel: aLabelString [
 		accept: #put:
 		readSelection: #contentsSelection menu: #fileContentsMenu:shifted:.
 	textMorph font: self defaultFont.
-	window _ (SystemWindow labelled: aLabelString) model: self.
+	window := (SystemWindow labelled: aLabelString) model: self.
 	window
 		addMorph: textMorph
 		frame: (0@0 corner: 1@1).
@@ -531,33 +531,33 @@ CrLfFileEditor >> put: aText [
 		ifTrue:
 			[self inform: 'cannot save file in hex mode'.
 			^ false].
-	str _ aText asString.
+	str := aText asString.
 	self contents: str.
 	(directory fileExists: fileName)
-		ifTrue: [newFileName _ self
+		ifTrue: [newFileName := self
 					getFileName: directory pathName,
 						FileDirectory slash , fileName.]
-		ifFalse: [newFileName _ directory pathName,
+		ifFalse: [newFileName := directory pathName,
 						FileDirectory slash , fileName].
 	newFileName ifNil: [^ false].
-	fs _ CrLfFileStream fileNamed: newFileName.
+	fs := CrLfFileStream fileNamed: newFileName.
 	[fs isNil] whileTrue:
 		[self inform: 'cannot write file'.
-		newFileName _ self getAnotherFileName: newFileName.
+		newFileName := self getAnotherFileName: newFileName.
 		newFileName isNil
 			ifTrue:
 				[self inform: 'file not written'.
 				^ false]
 			ifFalse:
-				[fs _ CrLfFileStream fileNamed: newFileName]].
+				[fs := CrLfFileStream fileNamed: newFileName]].
 	(str size < fs size)
 		ifTrue:
 			[(fs respondsTo: #truncate)
 				ifTrue:
 					[[fs truncate]
 						on: Error
-						do: [:ex | fs _ self bogusTruncate: fs]]
-				ifFalse: [fs _ self bogusTruncate: fs]].
+						do: [:ex | fs := self bogusTruncate: fs]]
+				ifFalse: [fs := self bogusTruncate: fs]].
 	fs nextPutAll: str.
 	fs close.
 	self updateFilePathWith: newFileName.
@@ -569,7 +569,7 @@ CrLfFileEditor >> save [
 
 	| controller |
 	self forceDirtyBuffer.
-	controller _ self controllerForAccept.
+	controller := self controllerForAccept.
 	controller ifNotNil: [controller accept]
 
 ]
@@ -578,14 +578,14 @@ CrLfFileEditor >> save [
 CrLfFileEditor >> saveAs [
 
 	| oldFilePath newFilePath controller |
-	oldFilePath _ self currentFilePathName.
-	newFilePath _ FillInTheBlank
+	oldFilePath := self currentFilePathName.
+	newFilePath := FillInTheBlank
 					request: 'Enter a new file name'
 					initialAnswer: oldFilePath.
 	newFilePath isEmpty
 		ifFalse:
 			[self updateFilePathWith: newFilePath.
-			controller _ self controllerForAccept.
+			controller := self controllerForAccept.
 			controller ifNotNil:
 				[self forceDirtyBuffer.
 				controller accept]]
@@ -620,7 +620,7 @@ CrLfFileEditor >> updateFilePathWith: aPathString [
 CrLfFileEditor >> viewStyle [
 	"#text or #hex"
 
-	viewStyle isNil ifTrue: [viewStyle _ #text].
+	viewStyle isNil ifTrue: [viewStyle := #text].
 	^ viewStyle
 ]
 
@@ -628,7 +628,7 @@ CrLfFileEditor >> viewStyle [
 CrLfFileEditor >> viewStyle: aSymbol [
 	"#text or #hex"
 
-	viewStyle _ aSymbol
+	viewStyle := aSymbol
 ]
 
 { #category : #'initialize-release' }

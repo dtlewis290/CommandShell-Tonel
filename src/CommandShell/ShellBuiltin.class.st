@@ -70,7 +70,7 @@ ShellBuiltin class >> commandDictionaryFor: aCommandShell commands: commandNameA
 		inject: Dictionary new
 		into:
 			[:d :cmd | | b |
-			b _ self perform: cmd with: aCommandShell.
+			b := self perform: cmd with: aCommandShell.
 			d at: b name put: b; yourself]
 ]
 
@@ -260,7 +260,7 @@ ShellBuiltin >> canAccessOSProcess [
 	"self canAccessOSProcess"
 
 	| osp |
-	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
+	^ (osp := Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
 
 ]
 
@@ -271,25 +271,25 @@ ShellBuiltin >> cdCommand: myProxy shell: commandShell input: stdin output: stdo
 	| newPath path arg pathCwd p |
 	argArray size == 0
 		ifTrue:
-			[newPath _ commandShell home]
+			[newPath := commandShell home]
 		ifFalse:
 			[argArray size == 1
 				ifTrue:
-					[path _ argArray at: 1.
+					[path := argArray at: 1.
 					(path = commandShell shellSyntax pathStringAboveRoot)
 						ifTrue:
-							[newPath _ commandShell shellSyntax pathAboveRoot]
+							[newPath := commandShell shellSyntax pathAboveRoot]
 						ifFalse:
-							[pathCwd _ commandShell shellSyntax getCwdForPath: path.
-							arg _ (path = FileDirectory slash)
+							[pathCwd := commandShell shellSyntax getCwdForPath: path.
+							arg := (path = FileDirectory slash)
 								ifTrue: [path]
 								ifFalse: [commandShell shellSyntax
 												firstExpandedArgument: path
 												inDirectoryPath: pathCwd].
-							newPath _ arg isEmpty
+							newPath := arg isEmpty
 								ifTrue: [arg]
 								ifFalse:
-									[p _ commandShell shellSyntax newDirPath: arg from: pathCwd.
+									[p := commandShell shellSyntax newDirPath: arg from: pathCwd.
 									p ifNotNil: [FileDirectory default fullNameFor: p]]]]
 				ifFalse:
 					[myProxy fail.
@@ -355,7 +355,7 @@ ShellBuiltin >> copyToErrorCommand: myProxy shell: commandShell input: stdin out
 				[:file |
 				(FileDirectory default fileExists: file)
 					ifTrue:
-						[fs _ FileStream readOnlyFileNamed: file.
+						[fs := FileStream readOnlyFileNamed: file.
 						fs ifNotNil:
 							[self copyUntilDoneFrom: fs to: stderr.
 							fs close]]]]
@@ -377,7 +377,7 @@ ShellBuiltin >> copyToOutputCommand: myProxy shell: commandShell input: stdin ou
 				[:file |
 				(FileDirectory default fileExists: file)
 					ifTrue:
-						[fs _ FileStream readOnlyFileNamed: file.
+						[fs := FileStream readOnlyFileNamed: file.
 						fs ifNotNil:
 							[self copyUntilDoneFrom: fs to: stdout.
 							fs close]]]]
@@ -412,16 +412,16 @@ ShellBuiltin >> dirEntryString: aDirectoryEntry [
 	"self new dirEntryString: FileDirectory default entries first"
 
 	| folderString nameStr dateStr sizeStr |
-	folderString _ ' [...]'.
-	nameStr _ (aDirectoryEntry at: 4)
+	folderString := ' [...]'.
+	nameStr := (aDirectoryEntry at: 4)
 		ifTrue: [aDirectoryEntry first , folderString]
 		ifFalse: [aDirectoryEntry first].
-	dateStr _ ((Date fromSeconds: (aDirectoryEntry at: 3) )
+	dateStr := ((Date fromSeconds: (aDirectoryEntry at: 3) )
 					printFormat: #(3 2 1 $. 1 1 2)) , ' ' ,
 				(String streamContents: [:s |
 					(Time fromSeconds: (aDirectoryEntry at: 3) \\ 86400)
 						print24: true on: s]).
-	sizeStr _ (aDirectoryEntry at: 5) asStringWithCommas.
+	sizeStr := (aDirectoryEntry at: 5) asStringWithCommas.
 	^ nameStr , '    (' , dateStr , ' ' , sizeStr , ')'
 
 ]
@@ -438,7 +438,7 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 			is scheduled to be created later, and the input pipe will be closed by
 			the caller of this method before the CrLfFileEditor ever has a chance
 			to read it."
-			inputString _ stdin isNil
+			inputString := stdin isNil
 				ifTrue:
 					['']
 				ifFalse:
@@ -453,10 +453,10 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 					inDirectory: (FileDirectory on: commandShell workingDirectory)
 					defaultFileName: 'buffer.txt'] fixTemps]
 		ifFalse:
-			[controllers _ argArray collect:
+			[controllers := argArray collect:
 				[:arg |
 				"Expand arguments to convert them to full pathnames as expected by CrLfFileEditor"
-				expandedName _ commandShell shellSyntax
+				expandedName := commandShell shellSyntax
 									firstExpandedArgument: arg
 									inDirectoryPath: commandShell shellSyntax workingDirectory.
 				CrLfFileEditor fileNamed: expandedName withLabel: arg].
@@ -510,12 +510,12 @@ ShellBuiltin >> fcCommand: myProxy shell: commandShell input: stdin output: stdo
 		[commandShell scheduleToEvaluate:
 			[argArray size == 0
 				ifTrue:
-					[cmd _ commandShell editCommand: (commandShell historyAt: 0)]
+					[cmd := commandShell editCommand: (commandShell historyAt: 0)]
 				ifFalse:
-					[[index _ (argArray at: 1) asNumber]
+					[[index := (argArray at: 1) asNumber]
 								on: Error
-								do: [:ex | index _ nil].
-					cmd _ commandShell editCommand:
+								do: [:ex | index := nil].
+					cmd := commandShell editCommand:
 							(index isNil
 								ifTrue: ['']
 								ifFalse: [commandShell historyAt: index])].
@@ -538,7 +538,7 @@ ShellBuiltin >> helpCommand: myProxy shell: commandShell input: stdin output: st
 	| topic command cacheStream |
 	argArray size == 0
 		ifTrue:
-			[cacheStream _ WriteStream on: ''.
+			[cacheStream := WriteStream on: ''.
 			(commandShell builtinCommands
 				collect: [:c | c helpSelector] thenSelect: [:s | s notNil])
 					asSortedArray do:
@@ -553,8 +553,8 @@ ShellBuiltin >> helpCommand: myProxy shell: commandShell input: stdin output: st
 				nextPut: Character lf.
 			stdout nextPutAll: cacheStream contents]
 		ifFalse:
-			[topic _ argArray at: 1.
-			command _ commandShell builtinCommands at: topic ifAbsent: [^ self].
+			[topic := argArray at: 1.
+			command := commandShell builtinCommands at: topic ifAbsent: [^ self].
 			command helpSelector ifNotNil:
 				[stdout nextPutAll: (self perform: command helpSelector); nextPut: Character lf]]
 
@@ -576,7 +576,7 @@ ShellBuiltin >> helpSelector [
 { #category : #accessing }
 ShellBuiltin >> helpSelector: aSymbol [
 
-	helpSelector _ aSymbol
+	helpSelector := aSymbol
 ]
 
 { #category : #implementations }
@@ -584,8 +584,8 @@ ShellBuiltin >> historyCommand: myProxy shell: commandShell input: stdin output:
 	"Display the command history list."
 
 	| ws rs |
-	ws _ WriteStream on: Character lf asString.
-	rs _ ReadStream on: commandShell commandHistory.
+	ws := WriteStream on: Character lf asString.
+	rs := ReadStream on: commandShell commandHistory.
 	[rs atEnd]
 		whileFalse: [ws nextPutAll: rs next.
 			ws nextPutAll: ' '.
@@ -617,7 +617,7 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 				is scheduled to be created later, and the input pipe will be closed by
 				the caller of this method before the deferred block ever has a
 				chance to read it."
-				inputString _ stdin ifNotNil:
+				inputString := stdin ifNotNil:
 					[(self copyUntilDoneFrom: stdin to: (WriteStream on: String new)) contents
 						replaceAll: Character lf with: Character cr].
 				commandShell scheduleToEvaluate: [inputString inspect]]]
@@ -631,7 +631,7 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 						pathName := commandShell shellSyntax
 							firstExpandedArgument: e
 							inDirectoryPath: commandShell shellSyntax workingDirectory.
-						fs _ (FileDirectory default fileExists: pathName)
+						fs := (FileDirectory default fileExists: pathName)
 							ifTrue: [FileStream readOnlyFileNamed: pathName]
 							ifFalse: [nil].
 						fs isNil
@@ -662,21 +662,21 @@ ShellBuiltin >> name [
 { #category : #accessing }
 ShellBuiltin >> name: aString [
 
-	name _ aString
+	name := aString
 ]
 
 { #category : #accessing }
 ShellBuiltin >> needsPrompt [
 	"True if the command should be followed by a prompt"
 
-	^ needsPrompt ifNil: [needsPrompt _ true]
+	^ needsPrompt ifNil: [needsPrompt := true]
 ]
 
 { #category : #accessing }
 ShellBuiltin >> needsPrompt: trueOrFalse [
 	"True if the command should be followed by a prompt"
 
-	needsPrompt _ trueOrFalse
+	needsPrompt := trueOrFalse
 ]
 
 { #category : #evaluating }
@@ -711,7 +711,7 @@ ShellBuiltin >> procedureSelector [
 { #category : #accessing }
 ShellBuiltin >> procedureSelector: aSymbol [
 
-	procedureSelector _ aSymbol
+	procedureSelector := aSymbol
 ]
 
 { #category : #implementations }
@@ -719,8 +719,8 @@ ShellBuiltin >> pwdCommand: myProxy shell: commandShell input: stdin output: std
 	"Answer the current working directory (a string) or an invalid command message."
 
 	| directoryString |
-	directoryString _ commandShell workingDirectory.
-	directoryString isEmpty ifTrue: [directoryString _ self nullDirectoryString].
+	directoryString := commandShell workingDirectory.
+	directoryString isEmpty ifTrue: [directoryString := self nullDirectoryString].
 	argArray size == 0 ifFalse:
 		[myProxy fail.
 		^ commandShell invalidCommandMessage].
@@ -744,45 +744,45 @@ ShellBuiltin >> slsCommand: myProxy shell: commandShell input: stdin output: std
 	"A small value of linesToPrint will prevent an ExternalCommandShell from
 	overdriving is stdout stream. Maybe. A larger value allows faster updates to
 	an interactive CommandShell display."
-	linesToPrint _ 16.
+	linesToPrint := 16.
 
 	(argArray isNil or: [argArray size == 0])
 		ifTrue:
 			["Contents of current directory."
-			filePatterns _ Array with: '*']
+			filePatterns := Array with: '*']
 		ifFalse:
 			["List named files"
-			filePatterns _ argArray].
-	d _ FileDirectory on: commandShell workingDirectory.
-	entries _ d entries.
-	names _ Set new.
+			filePatterns := argArray].
+	d := FileDirectory on: commandShell workingDirectory.
+	entries := d entries.
+	names := Set new.
 	filePatterns do: [:pat | names addAll: (commandShell shellSyntax glob: pat inDirectory: d)].
-	dirs _ OrderedCollection new.
-	files _ OrderedCollection new.
+	dirs := OrderedCollection new.
+	files := OrderedCollection new.
 	names asSortedArray do:
 		[:n |
-		entry _ entries detect: [:e | e name = n].
+		entry := entries detect: [:e | e name = n].
 		entry isDirectory
 			ifTrue: [dirs add: entry]
 			ifFalse: [files add: entry]].
 
-	linesToPrint _ 5.
-	lineCount _ 1.
-	cacheStream _ WriteStream on: ''.
+	linesToPrint := 5.
+	lineCount := 1.
+	cacheStream := WriteStream on: ''.
 	dirs do:	[:dir |
-		lineCount _ lineCount + 1.
+		lineCount := lineCount + 1.
 		cacheStream nextPutAll: (self dirEntryString: dir); nextPut: Character lf.
 		(lineCount > linesToPrint) ifTrue:
 			[stdout nextPutAll: cacheStream contents.
-			cacheStream _ WriteStream on: ''.
-			lineCount _ 1]].
+			cacheStream := WriteStream on: ''.
+			lineCount := 1]].
 	files do: [:file |
-		lineCount _ lineCount + 1.
+		lineCount := lineCount + 1.
 		cacheStream nextPutAll: (self dirEntryString: file); nextPut: Character lf.
 		(lineCount > linesToPrint) ifTrue:
 			[stdout nextPutAll: cacheStream contents.
-			cacheStream _ WriteStream on: ''.
-			lineCount _ 1]].
+			cacheStream := WriteStream on: ''.
+			lineCount := 1]].
 	stdout nextPutAll: cacheStream contents.
 ]
 
@@ -800,7 +800,7 @@ ShellBuiltin >> snapshotCommand: myProxy shell: commandShell input: stdin output
 	| s |
 	Smalltalk at: #WorldState ifPresent:
 		[:ws |
-		s _ Semaphore new.
+		s := Semaphore new.
 		commandShell safeToExit: false.
 		stdout nextPutAll: Smalltalk imageName; nextPut: Character lf.
 		ws addDeferredUIMessage:
@@ -825,7 +825,7 @@ ShellBuiltin >> sqshCommand: myProxy shell: commandShell input: stdin output: st
 		ifTrue:
 			[commandShell scheduleToEvaluate: [commandShell class open]]
 		ifFalse:
-			[ws _ WriteStream on: String new.
+			[ws := WriteStream on: String new.
 			argArray inject: true into:
 				[:first :each |
 				first ifFalse: [ws nextPut: Character space].
@@ -880,7 +880,7 @@ ShellBuiltin >> typeCommand: myProxy shell: commandShell input: stdin output: st
 		ifTrue:
 			[^ '']
 		ifFalse:
-			[results _ WriteStream on: Array new.
+			[results := WriteStream on: Array new.
 			argArray do:
 			[:arg |
 			(commandShell isBuiltInCommand: arg)
@@ -895,8 +895,8 @@ ShellBuiltin >> typeCommand: myProxy shell: commandShell input: stdin output: st
 									ifFalse: [commandShell class name]), ' cannot access system'.
 							stdout nextPutAll: 'cannot access system'; nextPut: Character lf.
 							^ self].
-					exe _ commandShell shellSyntax findExecutablePathFor: arg inDirectoryPath: commandShell workingDirectory.
-					(commandShell shellSyntax isExecutable: exe) ifFalse: [exe _ nil].
+					exe := commandShell shellSyntax findExecutablePathFor: arg inDirectoryPath: commandShell workingDirectory.
+					(commandShell shellSyntax isExecutable: exe) ifFalse: [exe := nil].
 					exe isNil
 						ifTrue: [results nextPut: arg, ': not found']
 								ifFalse: [results nextPut: arg, ' is ', exe]]].

@@ -62,8 +62,8 @@ CommandShell class >> command: aCommandString [
 	"CommandShell command: 'ls'"
 
 	| cs w |
-	cs _ self new.
-	w _ cs openLabel: self defaultWindowName.
+	cs := self new.
+	w := cs openLabel: self defaultWindowName.
 	w scheduleToEvaluate: [w nextPutAll: aCommandString; cr].
 	w processCommand: aCommandString.
 	^ w
@@ -330,7 +330,7 @@ CommandShell class >> makeVmIn: buildDirectoryPathName [
 	"CommandShell makeVmIn: FileDirectory default pathName, FileDirectory slash, 'build'"
 
 	| shell |
-	shell _ self new.
+	shell := self new.
 	shell open.
 	^ shell makeVmIn: buildDirectoryPathName
 
@@ -359,8 +359,8 @@ CommandShell class >> overview [
 	"CommandShell new pipeline: 'CommandShell overview! | edit'"
 
 	| rs ws |
-	rs _ ReadStream on: self htmlOverview.
-	ws _ WriteStream on: String new.
+	rs := ReadStream on: self htmlOverview.
+	ws := WriteStream on: String new.
 	[rs atEnd]
 		whileFalse:
 			[ws nextPutAll: (rs upTo: $<).
@@ -439,7 +439,7 @@ CommandShell >> activeController: aController [
 	"In Morphic, alway nil. In MVC, the controller which most recently invoked
 	a command."
 
-	activeController _ aController
+	activeController := aController
 ]
 
 { #category : #accessing }
@@ -448,7 +448,7 @@ CommandShell >> backgroundMessageQueue [
 	The message will be displayed the next time the user accepts a line of
 	text (presses CR)."
 
-	^ backgroundMessageQueue ifNil: [backgroundMessageQueue _ OrderedCollection new]
+	^ backgroundMessageQueue ifNil: [backgroundMessageQueue := OrderedCollection new]
 
 ]
 
@@ -456,7 +456,7 @@ CommandShell >> backgroundMessageQueue [
 CommandShell >> backgroundMessageQueue: anObject [
 	"Set the value of backgroundMessageQueue"
 
-	backgroundMessageQueue _ anObject
+	backgroundMessageQueue := anObject
 ]
 
 { #category : #'event handling' }
@@ -487,7 +487,7 @@ CommandShell >> backgroundPipelines [
 	this collection. New pipelines are inserted at the first available nil position
 	in the collection, and the collection is expanded as needed."
 
-	^ backgroundPipelines ifNil: [backgroundPipelines _ OrderedCollection new]
+	^ backgroundPipelines ifNil: [backgroundPipelines := OrderedCollection new]
 
 
 ]
@@ -496,14 +496,14 @@ CommandShell >> backgroundPipelines [
 CommandShell >> backgroundPipelines: anObject [
 	"Set the value of backgroundPipelines"
 
-	backgroundPipelines _ anObject
+	backgroundPipelines := anObject
 ]
 
 { #category : #accessing }
 CommandShell >> backgroundProxies [
 	"All of my process proxies that are being evaluated in the background."
 
-	backgroundProxies ifNil: [backgroundProxies _ OrderedCollection new].
+	backgroundProxies ifNil: [backgroundProxies := OrderedCollection new].
 	^ backgroundProxies
 ]
 
@@ -511,7 +511,7 @@ CommandShell >> backgroundProxies [
 CommandShell >> backgroundProxies: aCollection [
 	"All of my process proxies that are being evaluated in the background."
 
-	backgroundProxies _ aCollection
+	backgroundProxies := aCollection
 
 ]
 
@@ -524,12 +524,12 @@ CommandShell >> builtinCommandProxyFor: aCommandString input: in output: out err
 	| args command commandAndArgs |
 	^ (self isBuiltInCommand: aCommandString)
 		ifTrue:
-			[commandAndArgs _ self shellSyntax
+			[commandAndArgs := self shellSyntax
 									programNameAndArgumentsFrom: aCommandString
 									inDirectoryPath: nil
 									findExecutable: false.
-			command _ self builtinCommands at: commandAndArgs first.
-			args _ commandAndArgs last.
+			command := self builtinCommands at: commandAndArgs first.
+			args := commandAndArgs last.
 			^ ShellBuiltinEvaluator
 				command: command
 				withArguments: args
@@ -544,13 +544,13 @@ CommandShell >> builtinCommandProxyFor: aCommandString input: in output: out err
 { #category : #accessing }
 CommandShell >> builtinCommands [
 
-	^ builtinCommands ifNil: [builtinCommands _ Dictionary new]
+	^ builtinCommands ifNil: [builtinCommands := Dictionary new]
 ]
 
 { #category : #accessing }
 CommandShell >> builtinCommands: aCommandDictionary [
 
-	builtinCommands _ aCommandDictionary
+	builtinCommands := aCommandDictionary
 ]
 
 { #category : #testing }
@@ -560,7 +560,7 @@ CommandShell >> canAccessOSProcess [
 	"CommandShell new canAccessOSProcess"
 
 	| osp |
-	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
+	^ (osp := Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
 
 ]
 
@@ -628,7 +628,7 @@ CommandShell >> command: aCommandString onFailureDo: aBlockWithZeroOrOneParamete
 		onFailureDo: ['the command failed']"
 
 	| pipelines |
-	pipelines _ self command: aCommandString.
+	pipelines := self command: aCommandString.
 	(pipelines anySatisfy: [:p | p succeeded not])
 		ifTrue:
 			[(aBlockWithZeroOrOneParameter numArgs == 0)
@@ -644,14 +644,14 @@ CommandShell >> commandHistory [
 	"Automatically trim the history list, and answer the resulting list."
 
 	| trimIncrement |
-	trimIncrement _ 1.	"Could be a larger number to copy the collection less often"
+	trimIncrement := 1.	"Could be a larger number to copy the collection less often"
 	commandHistory isNil
 		ifTrue:
-			[commandHistory _ OrderedCollection new]
+			[commandHistory := OrderedCollection new]
 		ifFalse:
 			[(commandHistory size > (self historyDepth * 2 + (trimIncrement * 2) - 2))
 				ifTrue:
-					[commandHistory _ commandHistory
+					[commandHistory := commandHistory
 						copyFrom: (trimIncrement * 2 + 1) to: commandHistory size]].
 	^ commandHistory
 ]
@@ -662,7 +662,7 @@ CommandShell >> commandLineProcesses [
 	track of them here so that they can be conveniently terminated if something gets
 	out of whack and needs cleaning up."
 
-	commandLineProcesses ifNil: [commandLineProcesses _ OrderedCollection new].
+	commandLineProcesses ifNil: [commandLineProcesses := OrderedCollection new].
 	^ commandLineProcesses
 
 ]
@@ -671,7 +671,7 @@ CommandShell >> commandLineProcesses [
 CommandShell >> commandLineProcesses: anObject [
 	"Set the value of commandLineProcesses"
 
-	commandLineProcesses _ anObject
+	commandLineProcesses := anObject
 ]
 
 { #category : #'event handling' }
@@ -681,7 +681,7 @@ CommandShell >> copyAllErrorFrom: aProxy [
 
 	| s |
 	self readSyncSemaphore critical:
-		[s _ aProxy errorUpToEnd.
+		[s := aProxy errorUpToEnd.
 		s isEmpty ifFalse:
 			[[self errorStream nextPutAll: s]
 				on: Error
@@ -700,7 +700,7 @@ CommandShell >> copyAllOutputFrom: aProxy [
 
 	| s |
 	self readSyncSemaphore critical:
-		[s _ aProxy upToEnd.
+		[s := aProxy upToEnd.
 		s isEmpty ifFalse:
 			[[self outputStream nextPutAll: s]
 				on: Error
@@ -719,7 +719,7 @@ CommandShell >> copyErrorToEofFrom: aProxy [
 
 	| s |
 	self readSyncSemaphore critical:
-		[s _ aProxy errorUpToEndOfFile.
+		[s := aProxy errorUpToEndOfFile.
 		s isEmpty ifFalse:
 			[[self errorStream nextPutAll: s]
 				on: Error
@@ -738,7 +738,7 @@ CommandShell >> copyOutputToEofFrom: aProxy [
 
 	| s |
 	self readSyncSemaphore critical:
-		[s _ aProxy upToEndOfFile.
+		[s := aProxy upToEndOfFile.
 		s isEmpty ifFalse:
 			[[self outputStream nextPutAll: s]
 				on: Error
@@ -782,10 +782,10 @@ CommandShell >> doInterrupt [
 	"Interrupt character detected, do interrupt stuff."
 
 	| msgStrm children answer |
-	children _ self externalChildren collect: [:e | e processProxy].
+	children := self externalChildren collect: [:e | e processProxy].
 	(children size > 0)
 		ifTrue:
-			[msgStrm _ WriteStream on: String new.
+			[msgStrm := WriteStream on: String new.
 			(children size > 1)
 				ifTrue: [msgStrm nextPutAll: 'kill processes']
 				ifFalse: [msgStrm nextPutAll: 'kill process'].
@@ -793,7 +793,7 @@ CommandShell >> doInterrupt [
 			msgStrm nextPut: $?.
 			self readSyncSemaphore critical:
 				[self pauseStProcesses.
-				answer _ self confirm: msgStrm contents.
+				answer := self confirm: msgStrm contents.
 				self unpauseStProcesses.
 				answer ifTrue:
 					[children reverseDo: [:e | e sigkill].
@@ -834,7 +834,7 @@ CommandShell >> endOfFileCharacterValue [
 CommandShell >> environment [
 
 	^ environment ifNil:
-		[environment _ Smalltalk at: #OSProcess ifPresent:
+		[environment := Smalltalk at: #OSProcess ifPresent:
 			[:osp | osp thisOSProcess environment deepCopy]].
 
 ]
@@ -843,7 +843,7 @@ CommandShell >> environment [
 CommandShell >> environment: anObject [
 	"Set the value of environment"
 
-	environment _ anObject
+	environment := anObject
 ]
 
 { #category : #accessing }
@@ -857,7 +857,7 @@ CommandShell >> errorStream [
 CommandShell >> errorStream: anObject [
 	"Set the value of errorStream"
 
-	errorStream _ anObject
+	errorStream := anObject
 ]
 
 { #category : #'command line parsing' }
@@ -874,7 +874,7 @@ CommandShell >> evaluateOrMakePipelinesFrom: aCommandString [
 		ifTrue:
 			[^ #()]
 		ifFalse:
-			[process _ self tryEvaluatingAsSmalltalk: aCommandString.
+			[process := self tryEvaluatingAsSmalltalk: aCommandString.
 			(process exitStatus == #success)
 				ifTrue: "aCommandString was successfully evaluated as a Smalltalk expression"
 					[self outputStream nextPutAll: process upToEnd.
@@ -899,7 +899,7 @@ CommandShell >> evaluatePipeline: aPipeline [
 	self registerErrorEventsFor: aPipeline.
 	aPipeline background
 		ifTrue:
-			[index _ self registerBackgroundPipeline: aPipeline.
+			[index := self registerBackgroundPipeline: aPipeline.
 			self registerBackgroundCompletionEventsFor: aPipeline
 				commandIndex: index.
 			self backgroundProxies addAll: aPipeline.
@@ -930,10 +930,10 @@ CommandShell >> evaluatePipelines: aPipelineCollection [
 				outputOn: nil errorOn: nil)"
 
 	| lastForegroundPipeline |
-	lastForegroundPipeline _ nil.
+	lastForegroundPipeline := nil.
 	aPipelineCollection isEmpty
 		ifFalse:
-			[lastForegroundPipeline _ aPipelineCollection reversed
+			[lastForegroundPipeline := aPipelineCollection reversed
 				detect: [:p | p background not]
 				ifNone: [].
 			lastForegroundPipeline ifNotNilDo: [:p | self registerPromptEventFor: p].
@@ -960,7 +960,7 @@ CommandShell >> evaluationProxyFor: aCommandString input: in output: out error: 
 	"CommandShell new evaluationProxyFor: 'BOGUS' input: nil output: nil error: nil"
 
 	| proxy |
-	proxy _ ExpressionEvaluator
+	proxy := ExpressionEvaluator
 				command: aCommandString
 				pipeFrom: in
 				pipeTo: out
@@ -1020,7 +1020,7 @@ CommandShell >> foregroundPipelineComplete: aPipeline [
 CommandShell >> foregroundProxies [
 	"All of my process proxies that are being evaluated in the foreground."
 
-	^ foregroundProxies ifNil: [foregroundProxies _ OrderedCollection new]
+	^ foregroundProxies ifNil: [foregroundProxies := OrderedCollection new]
 
 ]
 
@@ -1028,7 +1028,7 @@ CommandShell >> foregroundProxies [
 CommandShell >> foregroundProxies: aCollection [
 	"All of my process proxies that are being evaluated in the foreground."
 
-	foregroundProxies _ aCollection
+	foregroundProxies := aCollection
 
 ]
 
@@ -1036,12 +1036,12 @@ CommandShell >> foregroundProxies: aCollection [
 CommandShell >> historyAt: anInteger [
 
 	| bufferSize index |
-	bufferSize _ commandHistory size / 2.
+	bufferSize := commandHistory size / 2.
 	(anInteger > 0)
 		ifTrue:
-			[index _ bufferSize + 1 - historyIndex + anInteger * 2]
+			[index := bufferSize + 1 - historyIndex + anInteger * 2]
 		ifFalse:
-			[index _ bufferSize + anInteger * 2].
+			[index := bufferSize + anInteger * 2].
 	((index > commandHistory size) | (index < 1))
 		ifTrue: [^ '']
 		ifFalse: [^ commandHistory at: index]
@@ -1058,7 +1058,7 @@ CommandShell >> historyDepth [
 { #category : #accessing }
 CommandShell >> historyIndex [
 
-	historyIndex ifNil: [historyIndex _ 1].
+	historyIndex ifNil: [historyIndex := 1].
 	^ historyIndex
 
 ]
@@ -1096,7 +1096,7 @@ CommandShell >> if: aCommandStringOrScript then: successBlock else: failureBlock
 		else: [:p | 'the script failed ', p printString]"
 
 	| pipelines |
-	pipelines _ self script: aCommandStringOrScript
+	pipelines := self script: aCommandStringOrScript
 		onFailureDo: [:p | (failureBlock numArgs == 0)
 						ifTrue: [^ failureBlock value]
 						ifFalse: [^ failureBlock value: p]].
@@ -1201,7 +1201,7 @@ CommandShell >> isOneWordCommentString: aCommandString [
 	"CommandShell new isOneWordCommentString: ''"
 
 	| s |
-	s _ aCommandString withBlanksTrimmed.
+	s := aCommandString withBlanksTrimmed.
 	^ s isEmpty
 		or: [(s first == self shellSyntax commentChar)
 			and: [(Scanner new scanTokens: s) size == 1]]
@@ -1228,7 +1228,7 @@ CommandShell >> keyboardConnector: aWriteStreamOrNil [
 	process, then reconnected to its normal functions when the external process
 	is complete."
 
-	keyboardConnector _ aWriteStreamOrNil
+	keyboardConnector := aWriteStreamOrNil
 
 ]
 
@@ -1310,7 +1310,7 @@ CommandShell >> outputStream [
 CommandShell >> outputStream: anObject [
 	"Set the value of outputStream"
 
-	outputStream _ anObject
+	outputStream := anObject
 ]
 
 { #category : #'process proxy creation' }
@@ -1324,7 +1324,7 @@ CommandShell >> pipeableProxyFor: aCommandString input: in output: out error: er
 	"(CommandShell new pipeableProxyFor: 'cat /etc/hosts' input: nil output: nil error: nil predecessorProxy: nil) value upToEnd"
 
 	| errorPipelineStream |
-	errorPipelineStream _ lastProxy ifNotNil: [lastProxy errorPipeForNextProxy].
+	errorPipelineStream := lastProxy ifNotNil: [lastProxy errorPipeForNextProxy].
 	^ ((self doItProxyFor: aCommandString
 			input: in
 			output: out
@@ -1350,8 +1350,8 @@ CommandShell >> pipeline: aCommand [
 	"CommandShell new pipeline: 'ls NOSUCHFILE * | dd | cat'"
 
 	| sema pipeline |
-	sema _ Semaphore new.
-	pipeline _ ProxyPipeline fromString: aCommand shell: self.
+	sema := Semaphore new.
+	pipeline := ProxyPipeline fromString: aCommand shell: self.
 	pipeline when: #complete send: #signal to: sema.
 	pipeline value.
 	sema wait.
@@ -1367,15 +1367,15 @@ CommandShell >> pipelineCollectionFrom: aCommandString [
 	"CommandShell new pipelineCollectionFrom: 'who | cat | wc; ps -aef | cat& pwd | cat'"
 
 	| str pipelineCollection tokens strm cmd cmdWithTerm pipeline lastProxy |
-	str _ aCommandString withBlanksTrimmed.
-	pipelineCollection _ OrderedCollection new.
+	str := aCommandString withBlanksTrimmed.
+	pipelineCollection := OrderedCollection new.
 	(self shellSyntax isComment: str)
 		ifFalse:
-			[tokens _ str findTokens: ';&' keep: ';&'.
-			strm _ ReadStream on: tokens.
+			[tokens := str findTokens: ';&' keep: ';&'.
+			strm := ReadStream on: tokens.
 			[strm atEnd]
 				whileFalse:
-					[cmd _ strm next withBlanksTrimmed.
+					[cmd := strm next withBlanksTrimmed.
 					(self shellSyntax isComment: cmd)
 						ifFalse:
 							[strm atEnd
@@ -1383,18 +1383,18 @@ CommandShell >> pipelineCollectionFrom: aCommandString [
 									[((cmd size == 1) and: [((cmd at: 1) == $;) | ((cmd at: 1) == $&)])
 										ifTrue:
 											["Special case, user has entered ';<cr>' or '&<cr>'"
-											cmd _ cmdWithTerm _ '']
+											cmd := cmdWithTerm := '']
 										ifFalse:
-											[cmdWithTerm _ cmd]]
+											[cmdWithTerm := cmd]]
 								ifFalse:
-									[cmdWithTerm _ cmd, strm peek].
+									[cmdWithTerm := cmd, strm peek].
 							self saveInHistoryList: cmdWithTerm.
 							(cmdWithTerm size > 0)
 								ifTrue:
-									[pipeline _ ProxyPipeline fromString: cmd shell: self.
+									[pipeline := ProxyPipeline fromString: cmd shell: self.
 									pipeline background:
 										(strm next = self shellSyntax noWaitToken).
-									lastProxy _ pipeline last.
+									lastProxy := pipeline last.
 									lastProxy ifNil:
 										[self inform: 'cannot access system'.
 										^ nil].
@@ -1448,7 +1448,7 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 		ifFalse:
 			["Answer a doIt proxy with an error message. Call it this way to make sure that
 			the error streams get wired up correctly"
-			p _ self pipeableProxyFor: 'String new: 0 ! '
+			p := self pipeableProxyFor: 'String new: 0 ! '
 					input: in
 					output: out
 					error: err
@@ -1458,7 +1458,7 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 			^ p].
 	((in isNil or: [lastProxy isNil]) or: [in isPipe not])
 		ifTrue:
-			[input _ in]
+			[input := in]
 		ifFalse:
 			["Input from a command pipeline"
 			(in isKindOf: InternalPipe)
@@ -1466,12 +1466,12 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 					["The input stream is not an external OS pipe. Need to create one,
 					and move the contents of the in stream into the new OSPipe prior
 					to starting the external OS process."
-					newInputPipe _ PipeJunction externalPipeClass blockingPipe.
+					newInputPipe := PipeJunction externalPipeClass blockingPipe.
 					lastProxy replaceOutputStreamWith: newInputPipe writer.
-					input _ newInputPipe reader]
+					input := newInputPipe reader]
 				ifFalse:
-					[input _ in reader]].
-	errorPipelineStream _ lastProxy ifNotNil: [lastProxy errorPipeForNextProxy].
+					[input := in reader]].
+	errorPipelineStream := lastProxy ifNotNil: [lastProxy errorPipeForNextProxy].
 	^ PipeableOSProcess
 		commandNoEvaluate: aCommandString
 		environment: self environment
@@ -1488,7 +1488,7 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 CommandShell >> promptString [
 	"The primary command prompt string, equivalent to $PS1 in a Unix shell"
 
-	^ promptString ifNil: [promptString _ self defaultPromptString]
+	^ promptString ifNil: [promptString := self defaultPromptString]
 
 ]
 
@@ -1496,7 +1496,7 @@ CommandShell >> promptString [
 CommandShell >> promptString: aString [
 	"The primary command prompt string, equivalent to $PS1 in a Unix shell"
 
-	promptString _ aString
+	promptString := aString
 
 ]
 
@@ -1504,7 +1504,7 @@ CommandShell >> promptString: aString [
 CommandShell >> promptStringTwo [
 	"The secondary command prompt string, equivalent to $PS2 in a Unix shell"
 
-	^ promptStringTwo ifNil: [promptStringTwo _ self defaultPromptStringTwo]
+	^ promptStringTwo ifNil: [promptStringTwo := self defaultPromptStringTwo]
 
 ]
 
@@ -1512,7 +1512,7 @@ CommandShell >> promptStringTwo [
 CommandShell >> promptStringTwo: aString [
 	"The secondary command prompt string, equivalent to $PS2 in a Unix shell"
 
-	promptStringTwo _ aString
+	promptStringTwo := aString
 
 ]
 
@@ -1527,7 +1527,7 @@ CommandShell >> promptWhenComplete: aPipeline [
 CommandShell >> readSyncSemaphore [
 	"Used in MVC to pause the screen output when presenting a dialogue to the user"
 
-	readSyncSemaphore ifNil: [readSyncSemaphore _ Semaphore forMutualExclusion].
+	readSyncSemaphore ifNil: [readSyncSemaphore := Semaphore forMutualExclusion].
 	^ readSyncSemaphore
 ]
 
@@ -1535,7 +1535,7 @@ CommandShell >> readSyncSemaphore [
 CommandShell >> readSyncSemaphore: aSemaphore [
 	"Used in MVC to pause the screen output when presenting a dialogue to the user"
 
-	readSyncSemaphore _ aSemaphore
+	readSyncSemaphore := aSemaphore
 ]
 
 { #category : #'process proxy creation' }
@@ -1552,20 +1552,20 @@ CommandShell >> redirectedPipeableProxyFor: aCommandString predecessorProxy: las
 							predecessorProxy: nil) value upToEnd"
 
 	| redirectedCommand nextProxy input |
-	redirectedCommand _ self shellSyntax
+	redirectedCommand := self shellSyntax
 								redirectIOFor: aCommandString
 								inDirectoryPath: self workingDirectory.
 	lastProxy isNil
 		ifTrue:
-			[input _ redirectedCommand at: 2]
+			[input := redirectedCommand at: 2]
 		ifFalse:
 			[(redirectedCommand at: 2) isNil
 				ifTrue:
-					[input _ lastProxy outputPipeForNextProxy]
+					[input := lastProxy outputPipeForNextProxy]
 				ifFalse:
 					[lastProxy replaceOutputStreamWith: nil.
-					input _ redirectedCommand at: 2]].
-	nextProxy _ self pipeableProxyFor: (redirectedCommand at: 1)
+					input := redirectedCommand at: 2]].
+	nextProxy := self pipeableProxyFor: (redirectedCommand at: 1)
 		input: input
 		output: (redirectedCommand at: 3)
 		error: (redirectedCommand at: 4)
@@ -1594,7 +1594,7 @@ CommandShell >> registerBackgroundPipeline: aPipeline [
 	aPipeline background
 		ifTrue:
 			["Find available slot in registry, expanding if needed"
-			index _ self backgroundPipelines identityIndexOf: nil.
+			index := self backgroundPipelines identityIndexOf: nil.
 			(index > 0)
 				ifTrue:
 					[self backgroundPipelines at: index put: aPipeline.
@@ -1679,7 +1679,7 @@ CommandShell >> safeToExit [
 	a snapshot command and an exit command. This prevents the user from entering a command
 	such as 'snapshot; exit' which would cause the image to immediately exit when next restarted."
 
-	^ safeToExit ifNil: [safeToExit _ true]
+	^ safeToExit ifNil: [safeToExit := true]
 
 ]
 
@@ -1689,7 +1689,7 @@ CommandShell >> safeToExit: trueOrFalse [
 	a snapshot command and an exit command. This prevents the user from entering a command
 	such as 'snapshot; exit' which would cause the image to immediately exit when next restarted."
 
-	safeToExit _ trueOrFalse
+	safeToExit := trueOrFalse
 
 ]
 
@@ -1699,7 +1699,7 @@ CommandShell >> saveInHistoryList: aCommandString [
 	((aCommandString size == 0) or: [self isExcludedFromHistory: aCommandString])
 		ifFalse:
 			[self commandHistory add: self historyIndex printString; add: aCommandString.
-			historyIndex _ historyIndex + 1]
+			historyIndex := historyIndex + 1]
 
 ]
 
@@ -1760,14 +1760,14 @@ CommandShell >> script: aScriptString onFailureDo: aBlockWithZeroOrOneParameter 
 		onFailureDo: ['the pipeline collection failed']"
 
 	| commandStream pipelines |
-	commandStream _ ReadStream on:
+	commandStream := ReadStream on:
 						(aScriptString
 							copyReplaceAll: Character lf asString
 							with: Character cr asString).
-	pipelines _ nil.
+	pipelines := nil.
 	[commandStream atEnd]
 		whileFalse:
-			[pipelines _ self
+			[pipelines := self
 				command: commandStream nextLine
 				onFailureDo:
 					[:p | (aBlockWithZeroOrOneParameter numArgs == 0)
@@ -1792,13 +1792,13 @@ CommandShell >> scriptDoAll: aScriptString [
 				help'"
 
 	| commandStream lastPipelineCollection |
-	commandStream _ ReadStream on:
+	commandStream := ReadStream on:
 						(aScriptString
 							copyReplaceAll: Character lf asString
 							with: Character cr asString).
 	[commandStream atEnd]
 		whileFalse:
-			[lastPipelineCollection _ self command: commandStream nextLine].
+			[lastPipelineCollection := self command: commandStream nextLine].
 	^ lastPipelineCollection
 
 
@@ -1816,14 +1816,14 @@ CommandShell >> setHomeDirectory [
 CommandShell >> shellSyntax [
 	"A pluggable instance of a command processing syntax"
 
-	^ shellSyntax ifNil: [shellSyntax _ ShellSyntax new]
+	^ shellSyntax ifNil: [shellSyntax := ShellSyntax new]
 ]
 
 { #category : #accessing }
 CommandShell >> shellSyntax: aSyntax [
 	"A pluggable instance of a command processing syntax"
 
-	shellSyntax _ aSyntax
+	shellSyntax := aSyntax
 ]
 
 { #category : #'command support' }
@@ -1842,7 +1842,7 @@ CommandShell >> startUpInNewSession [
 
 	self clearSemaphore.
 	self terminateCommandLineProcesses.
-	foregroundProxies _ backgroundProxies _ backgroundPipelines _ nil.
+	foregroundProxies := backgroundProxies := backgroundPipelines := nil.
 	self keyboardConnector: nil
 
 ]
@@ -1852,7 +1852,7 @@ CommandShell >> terminateCommandLineProcesses [
 
 	(self commandLineProcesses reject: [:e | e == Processor activeProcess])
 		do: [:p | p terminate].
-	commandLineProcesses _ nil
+	commandLineProcesses := nil
 
 ]
 
@@ -1870,7 +1870,7 @@ CommandShell >> tryEvaluatingAsSmalltalk: aCommandString [
 	"CommandShell new tryEvaluatingAsSmalltalk: '#oneWordCommentShouldFail'"
 
 	| process |
-	process _ self evaluationProxyFor: aCommandString input: nil output: nil error: nil.
+	process := self evaluationProxyFor: aCommandString input: nil output: nil error: nil.
 	process value.
 	process closeErrorPipeline. "Last process in pipeline, so it can be closed."
 	^ process
@@ -1892,11 +1892,11 @@ CommandShell >> waitForCommand: aCommandString [
 
 	| sema pipelines lastPipeline |
 	self show: aCommandString; cr.
-	pipelines _ self evaluateOrMakePipelinesFrom: aCommandString.
+	pipelines := self evaluateOrMakePipelinesFrom: aCommandString.
 	pipelines isEmpty ifFalse:
-		[lastPipeline _ pipelines last.
+		[lastPipeline := pipelines last.
 		lastPipeline isComplete ifFalse:
-			[sema _ Semaphore new.
+			[sema := Semaphore new.
 			lastPipeline when: #complete
 				send: #signal
 				to: sema.
