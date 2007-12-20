@@ -349,7 +349,7 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 	"ShellSyntax new findExecutablePathFor: 'a' inDirectoryPath: nil"
 	"ShellSyntax new findExecutablePathFor: 'sqcat' inDirectoryPath: '/home/lewis/bin'"
 
-	| delimiter path localNames fd fullName dir |
+	| delimiter path localNames fd fullName fileExists |
 	self canAccessOSProcess ifFalse: [^ nil].
 	delimiter := FileDirectory pathNameDelimiter.
 	path := (pathString
@@ -388,20 +388,19 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 				ifTrue:
 					["Name was not expanded, so use the unmodified value of aString"
 					localNames := Array with: aString].
-			dir := (self pathEntriesInDirectoryPath: path)
-				detect: [:pathName |
-					(localNames
-						detect: [:fileName |
-							fullName := pathName, FileDirectory slash, fileName.
-							((fd fileExists: fullName) and: [self isExecutable: fullName])
-								ifTrue: [^ fullName].
-						false]
-						ifNone: [nil]) notNil]
-				ifNone: [nil].
-			dir isNil
-				ifTrue: [^ nil]
-				ifFalse: [self error: 'should be nil']]
-
+			(self pathEntriesInDirectoryPath: path)
+				do: [:pathName | | thisDirectory |
+					thisDirectory := FileDirectory on: pathName.
+					localNames
+						do: [:fileName |
+							fileExists := [thisDirectory fileExists: fileName]
+											on: InvalidDirectoryError
+											do: [:e | false].
+							fileExists ifTrue:
+								[fullName := pathName, FileDirectory slash, fileName.
+								(self isExecutable: fullName)
+									ifTrue: [^ fullName]]]].
+			^ nil]
 ]
 
 { #category : #'path name expansion' }
