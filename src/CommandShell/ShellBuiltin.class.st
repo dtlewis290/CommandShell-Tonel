@@ -471,7 +471,8 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 							c].
 					commandShell scheduleToEvaluate: [controllers last open]]
 				ifTrue:
-					[controllers do: [:e | e openInWorld]]]
+					[controllers do: [:e |
+						WorldState addDeferredUIMessage: [e openInWorld] fixTemps]]]
 
 ]
 
