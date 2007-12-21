@@ -411,7 +411,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.1.3'
+	^'4.2'
 ]
 
 { #category : #'window color' }
@@ -923,29 +923,20 @@ CommandShell >> evaluatePipelines: aPipelineCollection [
 	"Evaluate the process proxies in aPipelineCollection, and process their output and error
 	streams. Answer aPipelineCollection."
 
-	"CommandShell new
-		evaluatePipelinesIn:
-			(CommandShell new
-				pipelinesFrom: 'ls NOSUCHFILE * | cat | dd | cat | wc; ps -aef | cat& pwd | cat'
-				outputOn: nil errorOn: nil)"
-
-	| lastForegroundPipeline |
+	| lastForegroundPipeline completionSemaphore |
 	lastForegroundPipeline := nil.
-	aPipelineCollection isEmpty
-		ifFalse:
-			[lastForegroundPipeline := aPipelineCollection reversed
-				detect: [:p | p background not]
-				ifNone: [].
-			lastForegroundPipeline ifNotNilDo: [:p | self registerPromptEventFor: p].
-			aPipelineCollection
-				inject: Semaphore new
-				into: [:completionSemaphore :pipeline |
-					pipeline background
-						ifTrue: [completionSemaphore signal "no wait"]
-						ifFalse: [pipeline when: #complete send: #signal to: completionSemaphore].
-					self evaluatePipeline: pipeline.
-					completionSemaphore wait.
-					Semaphore new]].
+	aPipelineCollection isEmpty ifFalse:
+		[lastForegroundPipeline := aPipelineCollection reversed
+			detect: [:p | p background not]
+			ifNone: [].
+		lastForegroundPipeline ifNotNilDo: [:p | self registerPromptEventFor: p].
+		aPipelineCollection do: [:pipeline |
+			completionSemaphore := Semaphore new.
+			pipeline background
+				ifTrue: [completionSemaphore signal "no wait"]
+				ifFalse: [pipeline when: #complete send: #signal to: completionSemaphore].
+			self evaluatePipeline: pipeline.
+			completionSemaphore wait]].
 	lastForegroundPipeline ifNil: [self notifyPrompt].
 	self resetSafeToExitFlag.
 	^ aPipelineCollection
