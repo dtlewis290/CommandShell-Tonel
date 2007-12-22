@@ -93,8 +93,7 @@ ProxyPipeline >> closePipes [
 
 	self do: [:e | e closePipes].
 	self unregisterEvents.
-	self isEmpty ifFalse:
-		[self pipeFromOutput close]
+	self pipeFromOutput ifNotNilDo: [:p | p close]
 
 ]
 

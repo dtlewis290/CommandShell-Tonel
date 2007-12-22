@@ -828,7 +828,8 @@ ShellSyntax >> redirectIOFor: commandString inDirectoryPath: dirPathString [
 				ifTrue: ["Do input redirection"
 					target := self firstExpandedArgument: tokenStream next
 								inDirectoryPath: dirPathString.
-					input := FileStream readOnlyFileNamed: target.
+					"Use StandardFileStream to prevent multi-byte interpretation."
+					input := StandardFileStream readOnlyFileNamed: target.
 					input
 						ifNil: [self inform: 'Cannot open ' , target , ', using default stdin']]
 				ifFalse: [tok == #outputRedirect
