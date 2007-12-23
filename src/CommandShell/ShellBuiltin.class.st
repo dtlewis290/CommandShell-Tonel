@@ -802,6 +802,14 @@ ShellBuiltin >> slsHelp [
 
 ]
 
+{ #category : #private }
+ShellBuiltin >> snapshot: save andQuit: quit [
+	"After Squeak version 3.6, #snapshot:andQuit: was moved to SmalltalkImage "
+
+	^ ((Smalltalk classNamed: 'SmalltalkImage')
+		ifNil: [^ Smalltalk snapshot: save andQuit: quit]) current snapshot: save andQuit: quit
+]
+
 { #category : #implementations }
 ShellBuiltin >> snapshotCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Save the image"
@@ -813,7 +821,7 @@ ShellBuiltin >> snapshotCommand: myProxy shell: commandShell input: stdin output
 		commandShell safeToExit: false.
 		stdout nextPutAll: self imageName; nextPut: Character lf.
 		ws addDeferredUIMessage:
-			[Smalltalk snapshot: true andQuit: false.
+			[self snapshot: true andQuit: false.
 			s ifNotNil: [s signal] "s is nil when resuming after snapshot"].
 		s ifNotNil: [s wait]]
 
