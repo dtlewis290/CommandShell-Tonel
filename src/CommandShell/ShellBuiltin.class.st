@@ -604,6 +604,14 @@ ShellBuiltin >> historyHelp [
 
 ]
 
+{ #category : #private }
+ShellBuiltin >> imageName [ 
+	"After Squeak version 3.6, #imageName was moved to SmalltalkImage "
+
+	^ ((Smalltalk classNamed: 'SmalltalkImage')
+		ifNil: [^ Smalltalk imageName]) current imageName
+]
+
 { #category : #implementations }
 ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output: stdout error: stderr arguments: argArray [
 	"Open a Smalltalk inspector on the contents of stdin, or the file(s) named on the
@@ -803,7 +811,7 @@ ShellBuiltin >> snapshotCommand: myProxy shell: commandShell input: stdin output
 		[:ws |
 		s := Semaphore new.
 		commandShell safeToExit: false.
-		stdout nextPutAll: Smalltalk imageName; nextPut: Character lf.
+		stdout nextPutAll: self imageName; nextPut: Character lf.
 		ws addDeferredUIMessage:
 			[Smalltalk snapshot: true andQuit: false.
 			s ifNotNil: [s signal] "s is nil when resuming after snapshot"].
