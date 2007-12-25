@@ -225,8 +225,7 @@ CommandShellTranscript >> isEndOfFileEvent: keystrokeEvent [
 
 	^ keystrokeEvent keyValue == 4
 		or: [keystrokeEvent keyCharacter = $d
-				and: [keystrokeEvent controlKeyPressed
-						or: [keystrokeEvent commandKeyPressed]]]
+				and: [keystrokeEvent controlKeyPressed]]
 ]
 
 { #category : #'input character filtering' }
@@ -237,8 +236,7 @@ CommandShellTranscript >> isInterruptEvent: keystrokeEvent [
 
 	^ keystrokeEvent keyValue == 3
 		or: [keystrokeEvent keyCharacter = $c
-				and: [keystrokeEvent controlKeyPressed
-						or: [keystrokeEvent commandKeyPressed]]]
+				and: [keystrokeEvent controlKeyPressed]]
 ]
 
 { #category : #accessing }
