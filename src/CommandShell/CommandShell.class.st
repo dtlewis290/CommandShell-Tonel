@@ -369,6 +369,38 @@ CommandShell class >> overview [
 
 ]
 
+{ #category : #'proxy creation' }
+CommandShell class >> pipeableProxyFor: commandString [ 
+	"Create a new proxy for a PipeJunction. The proxy may be any type
+	of PipeJunction, such as a PipeableOSProcess or ExpressionEvaluator.
+	Send #value to evaluate the newly created proxy."
+
+	"(CommandShell pipeableProxyFor: 'ls -l') value upToEndOfFile"
+	"(CommandShell pipeableProxyFor: 'Array new: 4 !') value upToEndOfFile"
+	"(CommandShell pipeableProxyFor: 'help') value upToEndOfFile"
+
+	^ self new
+		pipeableProxyFor: commandString
+		input: nil
+		output: nil
+		error: nil
+		predecessorProxy: nil
+]
+
+{ #category : #'proxy creation' }
+CommandShell class >> pipeline: aCommand [
+	"Find the individual commands in a command pipeline string, and evaluate
+	them as a command pipeline. Answer a ProxyPipeline collection of processes
+	in the pipeline."
+
+	"(CommandShell pipeline: 'ps | grep ps | wc') upToEndOfFile"
+	"(CommandShell pipeline: 'ls NOSUCHFILE * | dd | cat') errorUpToEndOfFile"
+	"(CommandShell pipeline: 'ls NOSUCHFILE * | dd | cat') upToEndOfFile"
+
+	^ self new pipeline: aCommand
+
+]
+
 { #category : #documentation }
 CommandShell class >> raceConditions [
 
