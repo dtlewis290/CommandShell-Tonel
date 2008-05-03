@@ -326,14 +326,6 @@ ProxyPipeline >> printOn: aStream [
 	aStream nextPutAll: self class name, ' for "', self commandLine asString, '"'
 ]
 
-{ #category : #finalization }
-ProxyPipeline >> registerFinalization [
-	"Arrange for finalization at garbage collection time"
-
-	self finalizationRegistry add: self
-
-]
-
 { #category : #'initialize - release' }
 ProxyPipeline >> release [
 
@@ -354,14 +346,6 @@ ProxyPipeline >> succeeded [
 ProxyPipeline >> unregisterEvents [
 
 	self isEmpty ifFalse: [self last removeDependent: self]
-
-]
-
-{ #category : #finalization }
-ProxyPipeline >> unregisterFinalization [
-	"FIXME: Move this to Object"
-
-	WeakArray removeFromFinalizationRegistry: self
 
 ]
 
