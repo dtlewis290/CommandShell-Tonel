@@ -865,11 +865,10 @@ CommandShell >> endOfFileCharacterValue [
 { #category : #accessing }
 CommandShell >> environment [
 
-	^ environment
-		ifNil: [environment _ (Smalltalk
-						at: #OSProcess
-						ifPresent: [:osp | osp thisOSProcess environment deepCopy])
-						ifNil: [Dictionary new]]
+	^ environment ifNil:
+		[environment := (Smalltalk at: #OSProcess ifPresent:
+			[:osp | osp thisOSProcess environment deepCopy]) ifNil: [Dictionary new]].
+
 ]
 
 { #category : #accessing }
