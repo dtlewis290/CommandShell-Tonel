@@ -443,7 +443,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.2.3'
+	^'4.3'
 ]
 
 { #category : #'window color' }
@@ -1346,21 +1346,26 @@ CommandShell >> pipeableProxyFor: aCommandString input: in output: out error: er
 	"(CommandShell new pipeableProxyFor: 'help' input: nil output: nil error: nil predecessorProxy: nil) value upToEnd"
 	"(CommandShell new pipeableProxyFor: 'cat /etc/hosts' input: nil output: nil error: nil predecessorProxy: nil) value upToEnd"
 
-	| errorPipelineStream |
+	| errorPipelineStream cmd |
 	errorPipelineStream := lastProxy ifNotNil: [lastProxy errorPipeForNextProxy].
-	^ ((self doItProxyFor: aCommandString
+	^ (((self doItProxyFor: aCommandString						"try entire line as a Smalltalk expression"
 			input: in
 			output: out
 			error: (err ifNil: [errorPipelineStream]))
-		ifNil: [self builtinCommandProxyFor: aCommandString
+		ifNil: [self builtinCommandProxyFor: aCommandString	"is it a shell builtin?"
 				input: in
 				output: out
 				error: (err ifNil: [errorPipelineStream])])
-			ifNil: [self processProxyFor: aCommandString
+			ifNil: [self processProxyFor: aCommandString			"then it must be an external command"
 					input: in
 					output: out
 					error: err
-					predecessorProxy: lastProxy]
+					predecessorProxy: lastProxy])
+				ifNil: [cmd := (aCommandString findTokens: ' ') first.		"otherwise create evaluator to print error message"
+					self evaluationProxyFor: 'stderr nextPutAll: ''sqsh: ', cmd, ': command not found''; cr. self fail'
+						input: in
+						output: out
+						error: err]
 
 ]
 
@@ -1466,7 +1471,7 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 
 	"CommandShell new processProxyFor: '/bin/sh' input: nil output: nil error: nil predecessorProxy: nil"
 
-	| input newInputPipe errorPipelineStream p |
+	| input newInputPipe errorPipelineStream p proxy |
 	self canAccessOSProcess
 		ifFalse:
 			["Answer a doIt proxy with an error message. Call it this way to make sure that
@@ -1495,7 +1500,7 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 				ifFalse:
 					[input := in reader]].
 	errorPipelineStream := lastProxy ifNotNil: [lastProxy errorPipeForNextProxy].
-	^ PipeableOSProcess
+	proxy := PipeableOSProcess
 		commandNoEvaluate: aCommandString
 		environment: self environment
 		workingDir: self workingDirectory
@@ -1503,7 +1508,10 @@ CommandShell >> processProxyFor: aCommandString input: in output: out error: err
 		output: out
 		error: err
 		errorPipelineStream: errorPipelineStream
-		shellSyntax: self shellSyntax
+		shellSyntax: self shellSyntax.
+	(proxy isNil and: [newInputPipe notNil])
+		ifTrue: [newInputPipe closeReader]. "replacement pipe will not be read, so close its output"
+	^ proxy
 
 ]
 

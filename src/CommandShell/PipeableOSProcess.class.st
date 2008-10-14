@@ -146,13 +146,13 @@ PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironment
 				programNameAndArgumentsFrom: aString
 				inDirectoryPath: pathString
 				findExecutable: true].
-	^ self
-		new: (nameAndArgs at: 1)
-		arguments: (nameAndArgs at: 2)
-		environment: anEnvironmentDictionary
-		descriptors: (Array with: inputStream with: outputStream with: errorStream)
-		workingDir: pathString
-		errorPipelineStream: anErrorWriteStream
+	^ nameAndArgs ifNotNil:
+		[self new: (nameAndArgs at: 1)
+			arguments: (nameAndArgs at: 2)
+			environment: anEnvironmentDictionary
+			descriptors: (Array with: inputStream with: outputStream with: errorStream)
+			workingDir: pathString
+			errorPipelineStream: anErrorWriteStream]
 
 
 ]

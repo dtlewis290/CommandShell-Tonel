@@ -355,35 +355,20 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 	path := (pathString
 				ifNil: [self workingDirectory])
 					ifNil: [FileDirectory default pathName].
+	fd := FileDirectory on: path.
 	"Unix compatibility note: If aString contains wildcard characters,
 	it is expanded in the context of the current working directory. Expansion
 	does not take place in the context of the PATH directories."
-	localNames := self glob: aString.
-	fd := FileDirectory default.
-
 	(aString includes: delimiter)
 		ifTrue:
 			["A fully or partially qualified path, do not search PATH"
-			(self isAbsolutePath: aString)
-				ifTrue:
-					["Fully qualified path from the file system root"
-					^ localNames
-						detect:
-							[:fileName |
-							((fd fileExists: fileName) and: [self isExecutable: fileName])
-								ifTrue: [^ fileName]]
-						ifNone: [nil]]
-				ifFalse:
-					["A path relative to the current directory, pathString"
-					^ localNames
-						detect:
-							[:fileName |
-							fullName := path, FileDirectory slash, aString.
-							((fd fileExists: fullName) and: [self isExecutable: fullName])
-								ifTrue: [^ fullName]]
-						ifNone: [nil]]]
+			^ (self expandedPathsFrom: aString beginningAt: pathString)
+				detect: [:fileName |
+					(fd fileExists: fileName) and: [self isExecutable: fileName]]
+				ifNone: [nil]]
 		ifFalse:
 			["Look for the file in the PATH locations"
+			localNames := self glob: aString inDirectory: path.
 			(localNames size == 0)
 				ifTrue:
 					["Name was not expanded, so use the unmodified value of aString"
@@ -450,7 +435,7 @@ ShellSyntax >> glob: aString [
 	"ShellSyntax new glob: 'rEADmE.TXT'"
 	"ShellSyntax new glob: 'R*dM?.txt'"
 
-	^ self glob: aString inDirectory: FileDirectory default
+	^ self glob: aString inDirectory: self workingDirectory
 
 ]
 
@@ -787,9 +772,9 @@ ShellSyntax >> programNameAndArgumentsFrom: aString inDirectoryPath: pathString 
 		expandArgumentsFrom: (tokens copyFrom: 2 to: tokens size)
 		inDirectoryPath: pathString.
 	exe := expandExePath
-		ifTrue: [(self findExecutablePathFor: tok inDirectoryPath: pathString) ifNil: [tok]]
+		ifTrue: [self findExecutablePathFor: tok inDirectoryPath: pathString]
 		ifFalse: [tok].
-	^ Array with: exe with: args
+	^ exe ifNotNil: [Array with: exe with: args]
 
 ]
 
