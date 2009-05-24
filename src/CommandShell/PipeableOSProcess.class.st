@@ -20,6 +20,50 @@ Class {
 	#category : #'CommandShell-Piping'
 }
 
+{ #category : #examples }
+PipeableOSProcess class >> addTwoPlusTwoInChildSqueak [
+	"Fork a headless child Squeak. Send three objects to the child, and read one object
+	returned from the child. The child Squeak uses the three objects to compute a result,
+	which it sends back to its parent Squeak before exiting."
+
+	"PipeableOSProcess addTwoPlusTwoInChildSqueak"
+
+	| childBlock in out rcv op param result childProxy writer sum s inputStream |
+	"Create block to be evaluated in a Squeak child process."
+	childBlock := ["First set standard input to blocking. This avoids a delay to wait for
+		data to be available, but note that it is dangerous to do this unless you
+		are certain that you know in advance that the correct number of characters
+		will be available on the input. If this is not the case, then the VM will block
+		on the read and lock up the child squeak process."
+		OSProcess thisOSProcess stdIn setBlocking.
+		in := ReferenceStream on: OSProcess thisOSProcess stdIn.
+		out := ReferenceStream on: OSProcess thisOSProcess stdOut.
+		"read three objects"
+		rcv := in next.
+		op := in next.
+		param := in next.
+		"add two plus two"
+		result := rcv perform: op with: param.
+		"answer the result"
+		out nextPut: result].
+	"Fork a child Squeak that will evaluate the childBlock then exit"
+	childProxy := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit: childBlock.
+	"Write three objects to the child Squeak process"
+	writer := ReferenceStream on: childProxy pipeToInput writer.
+	writer nextPut: 2.
+	writer nextPut: #+.
+	writer nextPut: 2.
+	"Read the result object from the child Squeak process"
+	s := RWBinaryOrTextStream with: childProxy pipeFromOutput upToEndOfFile.
+	s reset.
+	inputStream := ReferenceStream on: s.
+	sum := inputStream next.
+	"show result of 2 + 2 evaluated in the child Squeak"
+	self inform: '2 + 2 equals ', sum asString.
+	^ sum
+
+]
+
 { #category : #utility }
 PipeableOSProcess class >> bash [
 	"Start a Gnu bash command interpreter (enhanced Unix shell)"
@@ -183,6 +227,70 @@ PipeableOSProcess class >> forkAndExec: executableFile arguments: arrayOfStrings
 			errorPipelineStream: anErrorStream) value; yourself]
 		ifFalse:
 			[self notify: 'OSProcess not available or OSProcess plugin not functioning']
+
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkHeadlessSqueakAndDoThenQuit: aBlock [
+	"Start a new headless Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	"| child |
+	child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
+		[OSProcess thisOSProcess stdOut
+			nextPutAll: 'hello from headless Squeak child ',
+				OSProcess thisOSProcess pid asString].
+	child upToEndOfFile"
+	
+	^ self forkSqueakAndDoThenQuit: aBlock
+		errorPipelineStream: InternalPipe nonBlockingPipe
+		headless: true
+
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock [
+	"Start a new instance of Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	"PipeableOSProcess forkSqueakAndDoThenQuit:
+		[Object inform: 'Hi, I am the child Squeak process. Click OK to exit the child Squeak.']"
+	
+	^ self forkSqueakAndDoThenQuit: aBlock
+		errorPipelineStream: InternalPipe nonBlockingPipe
+		headless: false
+
+
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: anErrorStream headless: headless [
+	"Start a new instance of Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	| pp proc parentVmProcess blockWithRedirection |
+	pp := super new.
+	pp createPipes.
+	pp pipeFromOutput setBufferedReader.
+	blockWithRedirection := [
+		pp pipeToInput reader setNonBlocking.
+		OSProcess thisOSProcess redirectStdInTo: pp pipeToInput reader.
+		OSProcess thisOSProcess redirectStdOutTo: pp pipeFromOutput writer.
+		OSProcess thisOSProcess redirectStdErrTo: pp pipeFromError writer.
+		aBlock value].	
+	parentVmProcess := OSProcess thisOSProcess.
+	proc := headless
+				ifTrue: [parentVmProcess forkHeadlessSqueakAndDoThenQuit: blockWithRedirection]
+				ifFalse: [parentVmProcess forkSqueakAndDoThenQuit: blockWithRedirection].
+	proc pid = parentVmProcess pid
+		ifTrue: ["child Squeak - this branch is never reached"]
+		ifFalse: ["parent Squeak - set the child Squeak as the process proxy"
+			pp errorPipelineStream: anErrorStream.
+			pp initialize.
+			^ pp processProxy: proc]
 
 ]
 
@@ -959,7 +1067,7 @@ PipeableOSProcess >> update: aParameter [
 			[processProxy isComplete
 				ifTrue:
 					[self pipeFromError
-						ifNotNilDo: [:err | self addToErrorPipeline: err upToEndOfFile].
+						ifNotNilDo: [:err | self addToErrorPipeline: err upToEnd].
 					self complete.
 					self changed: aParameter]
 				ifFalse:
