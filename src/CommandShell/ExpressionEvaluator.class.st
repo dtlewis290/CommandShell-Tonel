@@ -187,7 +187,7 @@ ExpressionEvaluator >> compile [
 					for: self
 					notifying: self
 					logged: false]
-				on: Error
+				on: Error, UndeclaredVariableReference
 				do: [:e |
 					self errorPipelineStream
 						nextPutAll: 'Compiler: invalid Smalltalk expression ', self blockString;
