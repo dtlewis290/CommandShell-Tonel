@@ -443,7 +443,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.4.1'
+	^'4.4.2'
 ]
 
 { #category : #'window color' }
@@ -1177,7 +1177,7 @@ CommandShell >> isBuiltInCommand: aCommandString [
 	"CommandShell new initialize isBuiltInCommand: 'help this should answer true'"
 	"CommandShell new initialize isBuiltInCommand: 'this should answer false'"
 
-	^ self builtinCommands includesKey: (aCommandString upTo: Character space)
+	^ self builtinCommands includesKey: (aCommandString copyUpTo: Character space)
 ]
 
 { #category : #'input character filtering' }
