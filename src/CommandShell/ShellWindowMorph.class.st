@@ -86,7 +86,8 @@ ShellWindowMorph >> setText: aText [
 ShellWindowMorph >> textStyle [
 	"A fixed width font for the text morph"
 
-	^ TextStyle named: 'Atlanta'
+	^ (TextStyle named: 'DefaultFixedTextStyle')
+		ifNil: [TextStyle default]
 ]
 
 { #category : #updating }
