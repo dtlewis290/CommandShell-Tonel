@@ -125,9 +125,11 @@ CrLfFileEditor class >> initialize [
 
 	"CrLfFileEditor initialize"
 
-	Preferences 
-		setWindowColorFor: #CrLfFileEditor 
-		to: (Color colorFrom: self windowColorSpecification pastelColor)
+	(Smalltalk at: #Preferences) ifNotNilDo: [ :preferencesClass |
+		"note: Pharo deprecates Preference in favor of some other mechanism"
+		preferencesClass 
+			setWindowColorFor: #CrLfFileEditor 
+			to: (Color colorFrom: self windowColorSpecification pastelColor)]
 
 ]
 
@@ -195,7 +197,10 @@ CrLfFileEditor class >> openOn: aString withLabel: aLabelString inDirectory: aDi
 CrLfFileEditor class >> windowColorSpecification [
 	"Answer a WindowColorSpec object that declares my preference"
 
-	^ WindowColorSpec
+	| windowColorSpec |
+	windowColorSpec := Smalltalk at: #WindowColorSpec.
+	windowColorSpec ifNil: [self error: 'this image does not support WindowColorSpec'].
+	^ windowColorSpec
 		classSymbol: self name
 		wording: 'Squeak Shell File Editor'
 		brightColor: Color lightOrange
