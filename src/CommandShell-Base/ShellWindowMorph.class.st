@@ -33,7 +33,7 @@ ShellWindowMorph >> appendEntry [
 		self selectInvisiblyFrom: 1 to: textMorph asText size // 2.
 		self replaceSelectionWith: Text new].
 	self selectInvisiblyFrom: textMorph asText size + 1 to: textMorph asText size.
-	str _ model contents.
+	str := model contents.
 	(str size > 0) ifTrue:
 		[self replaceSelectionWith: (Text
 			string: str
@@ -59,10 +59,10 @@ ShellWindowMorph >> positionAfterPromptString [
 	input."
 
 	| t loc |
-	t _ self text.
+	t := self text.
 	(1 to: (t size - model promptString size))
 		reverseDo: [:i |
-			((loc _ t findString: model promptString startingAt: i) ~= 0)
+			((loc := t findString: model promptString startingAt: i) ~= 0)
 				ifTrue: [^ loc + model promptString size]].
 	^ 1
 
@@ -72,7 +72,7 @@ ShellWindowMorph >> positionAfterPromptString [
 ShellWindowMorph >> setText: aText [
 	scrollBar setValue: 0.0.
 	textMorph
-		ifNil: [textMorph _ TtyTextMorphForEditView new
+		ifNil: [textMorph := TtyTextMorphForEditView new
 						contents: aText wrappedTo: self innerBounds width-6.
 				textMorph setEditView: self.
 				textMorph setTextStyle: self textStyle.
@@ -86,7 +86,8 @@ ShellWindowMorph >> setText: aText [
 ShellWindowMorph >> textStyle [
 	"A fixed width font for the text morph"
 
-	^ TextStyle named: 'Atlanta'
+	^ (TextStyle named: 'DefaultFixedTextStyle')
+		ifNil: [TextStyle default]
 ]
 
 { #category : #updating }

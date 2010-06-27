@@ -20,11 +20,56 @@ Class {
 	#category : #'CommandShell-Piping'
 }
 
+{ #category : #examples }
+PipeableOSProcess class >> addTwoPlusTwoInChildSqueak [
+	"Fork a headless child Squeak. Send three objects to the child, and read one object
+	returned from the child. The child Squeak uses the three objects to compute a result,
+	which it sends back to its parent Squeak before exiting."
+
+	"PipeableOSProcess addTwoPlusTwoInChildSqueak"
+
+	| childBlock in out rcv op param result childProxy writer sum s inputStream |
+	"Create block to be evaluated in a Squeak child process."
+	childBlock := ["First set standard input to blocking. This avoids a delay to wait for
+		data to be available, but note that it is dangerous to do this unless you
+		are certain that you know in advance that the correct number of characters
+		will be available on the input. If this is not the case, then the VM will block
+		on the read and lock up the child squeak process."
+		OSProcess thisOSProcess stdIn setBlocking.
+		in := ReferenceStream on: OSProcess thisOSProcess stdIn.
+		out := ReferenceStream on: OSProcess thisOSProcess stdOut.
+		"read three objects"
+		rcv := in next.
+		op := in next.
+		param := in next.
+		"add two plus two"
+		result := rcv perform: op with: param.
+		"answer the result"
+		out nextPut: result].
+	"Fork a child Squeak that will evaluate the childBlock then exit"
+	childProxy := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit: childBlock.
+	"Write three objects to the child Squeak process"
+	writer := ReferenceStream on: childProxy pipeToInput writer.
+	writer nextPut: 2.
+	writer nextPut: #+.
+	writer nextPut: 2.
+	"Read the result object from the child Squeak process"
+	s := RWBinaryOrTextStream with: childProxy pipeFromOutput upToEndOfFile.
+	s reset.
+	inputStream := ReferenceStream on: s.
+	sum := inputStream next.
+	"show result of 2 + 2 evaluated in the child Squeak"
+	self inform: '2 + 2 equals ', sum asString.
+	^ sum
+
+]
+
 { #category : #utility }
 PipeableOSProcess class >> bash [
 	"Start a Gnu bash command interpreter (enhanced Unix shell)"
 
 	"self bash"
+	"self bash exec: 'ls'; exec: 'who'; close; upToEnd"
 
 	self externalProxyClass ifNotNilDo:
 		[:proxyClass | ^ self command: proxyClass bashShellPath].
@@ -65,7 +110,7 @@ PipeableOSProcess class >> command: aString [
 { #category : #'external command processing' }
 PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream errorPipelineStream: anErrorWriteStream [
 
-	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)) output"
+	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself)) output"
 
 	^ self command: aString
 		environment: anEnvironmentDictionary
@@ -81,7 +126,7 @@ PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary
 { #category : #'external command processing' }
 PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream errorPipelineStream: anErrorWriteStream shellSyntax: aSyntaxProcessor [
 
-	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil) output"
+	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil) output"
 
 	| nameAndArgs proxyClass |
 	nameAndArgs := aSyntaxProcessor isNil
@@ -128,7 +173,7 @@ PipeableOSProcess class >> command: aCommandString pipeFrom: aPipeStream errorPi
 PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream errorPipelineStream: anErrorWriteStream shellSyntax: aSyntaxProcessor [
 	"Set up the command but do not actually fork the child process."
 
-	"PipeableOSProcess commandNoEvaluate: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil"
+	"PipeableOSProcess commandNoEvaluate: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil"
 
 	| nameAndArgs proxyClass |
 	nameAndArgs := aSyntaxProcessor isNil
@@ -145,13 +190,13 @@ PipeableOSProcess class >> commandNoEvaluate: aString environment: anEnvironment
 				programNameAndArgumentsFrom: aString
 				inDirectoryPath: pathString
 				findExecutable: true].
-	^ self
-		new: (nameAndArgs at: 1)
-		arguments: (nameAndArgs at: 2)
-		environment: anEnvironmentDictionary
-		descriptors: (Array with: inputStream with: outputStream with: errorStream)
-		workingDir: pathString
-		errorPipelineStream: anErrorWriteStream
+	^ nameAndArgs ifNotNil:
+		[self new: (nameAndArgs at: 1)
+			arguments: (nameAndArgs at: 2)
+			environment: anEnvironmentDictionary
+			descriptors: (Array with: inputStream with: outputStream with: errorStream)
+			workingDir: pathString
+			errorPipelineStream: anErrorWriteStream]
 
 
 ]
@@ -170,7 +215,7 @@ PipeableOSProcess class >> forkAndExec: executableFile arguments: arrayOfStrings
 	"Run a program in an external OS process, and answer an instance of myself
 	which represents the external process."
 
-	"PipeableOSProcess forkAndExec: '/bin/ls' arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil descriptors: nil workingDir: '/etc' errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
+	"PipeableOSProcess forkAndExec: '/bin/ls' arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil descriptors: nil workingDir: '/etc' errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself)"
 
 	^ self canAccessOSProcess
 		ifTrue:
@@ -186,13 +231,77 @@ PipeableOSProcess class >> forkAndExec: executableFile arguments: arrayOfStrings
 ]
 
 { #category : #'instance creation' }
+PipeableOSProcess class >> forkHeadlessSqueakAndDoThenQuit: aBlock [
+	"Start a new headless Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	"| child |
+	child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
+		[OSProcess thisOSProcess stdOut
+			nextPutAll: 'hello from headless Squeak child ',
+				OSProcess thisOSProcess pid asString].
+	child upToEndOfFile"
+	
+	^ self forkSqueakAndDoThenQuit: aBlock
+		errorPipelineStream: InternalPipe nonBlockingPipe
+		headless: true
+
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock [
+	"Start a new instance of Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	"PipeableOSProcess forkSqueakAndDoThenQuit:
+		[Object inform: 'Hi, I am the child Squeak process. Click OK to exit the child Squeak.']"
+	
+	^ self forkSqueakAndDoThenQuit: aBlock
+		errorPipelineStream: InternalPipe nonBlockingPipe
+		headless: false
+
+
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: anErrorStream headless: headless [
+	"Start a new instance of Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	| pp proc parentVmProcess blockWithRedirection |
+	pp := super new.
+	pp createPipes.
+	pp pipeFromOutput setBufferedReader.
+	blockWithRedirection := [
+		pp pipeToInput reader setNonBlocking.
+		OSProcess thisOSProcess redirectStdInTo: pp pipeToInput reader.
+		OSProcess thisOSProcess redirectStdOutTo: pp pipeFromOutput writer.
+		OSProcess thisOSProcess redirectStdErrTo: pp pipeFromError writer.
+		aBlock value].	
+	parentVmProcess := OSProcess thisOSProcess.
+	proc := headless
+				ifTrue: [parentVmProcess forkHeadlessSqueakAndDoThenQuit: blockWithRedirection]
+				ifFalse: [parentVmProcess forkSqueakAndDoThenQuit: blockWithRedirection].
+	proc pid = parentVmProcess pid
+		ifTrue: ["child Squeak - this branch is never reached"]
+		ifFalse: ["parent Squeak - set the child Squeak as the process proxy"
+			pp errorPipelineStream: anErrorStream.
+			pp initialize.
+			^ pp processProxy: proc]
+
+]
+
+{ #category : #'instance creation' }
 PipeableOSProcess class >> new: executableFile arguments: arrayOfStrings environment: stringDictionary descriptors: arrayOf3Streams workingDir: pathString errorPipelineStream: anErrorStream [
 	"Prepare to run a program in an external OS process, and answer an instance of
 	myself which will represent the external process."
 
-	"PipeableOSProcess new: '/bin/ls' arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil descriptors: nil workingDir: '/etc' errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
+	"PipeableOSProcess new: '/bin/ls' arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil descriptors: nil workingDir: '/etc' errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself)"
 
-	"PipeableOSProcess new: 'sol' arguments: nil environment: nil descriptors: nil workingDir: nil errorPipelineStream: ((WriteStream on: '') nextPutAll: 'this is the error stream '; yourself)"
+	"PipeableOSProcess new: 'sol' arguments: nil environment: nil descriptors: nil workingDir: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself)"
 
 	| pp proc s |
 	pp := super new.
@@ -286,6 +395,7 @@ PipeableOSProcess class >> shell [
 	"Start a Unix shell"
 
 	"self shell"
+	"self shell exec: 'ls'; exec: 'who'; close; upToEnd"
 
 	self externalProxyClass ifNotNilDo:
 		[:proxyClass | ^ self command: proxyClass defaultShellPath].
@@ -354,7 +464,7 @@ PipeableOSProcess class >> xon: remoteSystem command: aCommandString [
 	"Convenience method for running an X program on a remote system and displaying its window
 	on the local display."
 
-	"self xon: 'micron' command: 'xeyes'"
+	"self xon: 'someRemoteHost' command: 'xeyes'"
 
 	^ self command: 'xon ', remoteSystem, ' ', aCommandString
 
@@ -367,6 +477,16 @@ PipeableOSProcess class >> xterm: aCommandString [
 	"self xterm: 'top -d 2'"
 
 	^ self command: 'xterm -T ''', aCommandString, ''' -e ', aCommandString
+]
+
+{ #category : #examples }
+PipeableOSProcess class >> xtermExample [
+	"Open an external xterm window running a 'top' command. Works on unix
+	X window platforms."
+
+	"self xtermExample"
+
+	^ self xterm: 'top -d 2'
 ]
 
 { #category : #'command pipelines - private' }
@@ -548,8 +668,7 @@ PipeableOSProcess >> exec: aString [
 PipeableOSProcess >> flush [
 	"Flush output to the standard input stream of my external process."
 
-	(pipeToInput notNil and: [pipeToInput closed not])
-		ifTrue: [pipeToInput flush]
+	pipeToInput ifNotNilDo: [:p | p flush]
 ]
 
 { #category : #'initialize - release' }
@@ -948,7 +1067,7 @@ PipeableOSProcess >> update: aParameter [
 			[processProxy isComplete
 				ifTrue:
 					[self pipeFromError
-						ifNotNilDo: [:err | self addToErrorPipeline: err upToEndOfFile].
+						ifNotNilDo: [:err | self addToErrorPipeline: err upToEnd].
 					self complete.
 					self changed: aParameter]
 				ifFalse:
@@ -989,8 +1108,7 @@ PipeableOSProcess >> value [
 		"The external child process now owns its own copy of the pipe handles. We no
 		longer need our copies of these handles, so close the ones that are not needed."
 		p ifNotNil:
-			[p closeInitialStdIn.
-			self keepInitialStdOutOpen ifFalse: [p closeInitialStdOut].
+			[self keepInitialStdOutOpen ifFalse: [p closeInitialStdOut].
 			self keepInitialStdErrOpen ifFalse: [p closeInitialStdErr]]]
 
 ]

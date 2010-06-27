@@ -1,7 +1,7 @@
 "
 My instances implement parsing of strings in a manner similar to a simple Unix command shell. I provide path name expansion in the context of an external file system, and support the syntax required for IO redirection. All file name globbing and PATH searching are implemented in Smalltalk rather than in C library functions or an external command shell.
 
-Most of my syntax is applicable for any operating system. Where needed, platform specific methods are in my ""platform dependent"" category. Currently, Unix and Windows are supported, and other platforms have not been testing. The primary difference between Unix and Windows support is that device names (such as 'C:') are used in Windows path strings. Separate current working directory strings are maintained for all Windows device names. For Unix, a single current working directory path is used. On Windows, this permits the CommandShell 'cd' command to support changing directories to another device without losing track of the current working directory for the previous device.
+Most of my syntax is applicable for any operating system. Where needed, platform specific methods are in my ""platform dependent"" category. Currently, Unix and Windows are supported, and other platforms have not been tested. The primary difference between Unix and Windows support is that device names (such as 'C:') are used in Windows path strings. Separate current working directory strings are maintained for all Windows device names. For Unix, a single current working directory path is used. On Windows, this permits the CommandShell 'cd' command to support changing directories to another device without losing track of the current working directory for the previous device.
 
 Command pipeline syntax is not supported here. See CommandShell for the implementation of command pipelines.
 
@@ -29,10 +29,10 @@ ShellSyntax >> appendPath: aPathString toPath: startingPathString [
 		inject: startingPathString
 		into: [:dirPath :nextPart | 
 			nextPart = '..'
-				ifTrue: [newPath _ self upOneDirectoryLevel: dirPath]
+				ifTrue: [newPath := self upOneDirectoryLevel: dirPath]
 				ifFalse: [nextPart = '.'
-						ifTrue: [newPath _ dirPath]
-						ifFalse: [newPath _ (self isAtFileSystemRoot: dirPath)
+						ifTrue: [newPath := dirPath]
+						ifFalse: [newPath := (self isAtFileSystemRoot: dirPath)
 										ifTrue: [dirPath , nextPart]
 										ifFalse: [dirPath , FileDirectory slash , nextPart]]].
 			newPath]
@@ -55,7 +55,7 @@ ShellSyntax >> canAccessOSProcess [
 	"ShellSyntax new canAccessOSProcess"
 
 	| osp |
-	^ (osp _ Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
+	^ (osp := Smalltalk at: #OSProcess ifAbsent: []) notNil and: [osp accessor canAccessSystem]
 
 ]
 
@@ -88,7 +88,7 @@ ShellSyntax >> containsExpansionTokens: aString [
 ShellSyntax >> cwdDictionary [
 	"Current working directory paths indexed by device or file system name"
 
-	^ cwdDictionary ifNil: [cwdDictionary _ Dictionary new]
+	^ cwdDictionary ifNil: [cwdDictionary := Dictionary new]
 
 ]
 
@@ -96,7 +96,7 @@ ShellSyntax >> cwdDictionary [
 ShellSyntax >> cwdIndex [
 	"Key to current cwd path name in cwdDictionary"
 
-	^ cwdIndex ifNil: [cwdIndex _ self cwdIndexFor: FileDirectory default pathName]
+	^ cwdIndex ifNil: [cwdIndex := self cwdIndexFor: FileDirectory default pathName]
 
 ]
 
@@ -104,7 +104,7 @@ ShellSyntax >> cwdIndex [
 ShellSyntax >> cwdIndex: aSymbol [
 	"Key to current cwd path name in cwdDictionary"
 
-	cwdIndex _ aSymbol
+	cwdIndex := aSymbol
 
 ]
 
@@ -113,7 +113,7 @@ ShellSyntax >> cwdIndexFor: aPathStringWithPrefix [
 	"Answer key to use for aPathStringWithPrefix"
 
 	| prefix |
-	prefix _ (self splitLocationPrefixFromPath: aPathStringWithPrefix) first.
+	prefix := (self splitLocationPrefixFromPath: aPathStringWithPrefix) first.
 	^ prefix isEmpty
 		ifTrue: [#default]
 		ifFalse: [prefix]
@@ -132,7 +132,7 @@ ShellSyntax >> doItStringFrom: aCommandString [
 	"Answer a string which can be evaluated as Smalltalk doIt, or nil."
 
 	| s |
-	s _ aCommandString withoutTrailingBlanks.
+	s := aCommandString withoutTrailingBlanks.
 	s last == $!
 		ifTrue: [^ aCommandString copyUpToLast: $!]
 		ifFalse: [^ nil]
@@ -163,13 +163,13 @@ ShellSyntax >> expandArgument: aString inDirectoryPath: aDefaultFileDirectoryPat
 
 	| dirPath pathNames newArgs |
 	aString ifNil: [^ Array new: 0].
-	dirPath _ (aDefaultFileDirectoryPath
+	dirPath := (aDefaultFileDirectoryPath
 				ifNil: [self workingDirectory])
 					ifNil: [FileDirectory default pathName].
-	pathNames _ (self containsExpansionTokens: aString)
+	pathNames := (self containsExpansionTokens: aString)
 				ifTrue: [self expandedPathsFrom: aString beginningAt: dirPath]
 				ifFalse: [OrderedCollection new].
-	newArgs _ pathNames collect:
+	newArgs := pathNames collect:
 				[:p | (aDefaultFileDirectoryPath notNil and: [p beginsWith: aDefaultFileDirectoryPath, FileDirectory slash])
 					ifTrue: [(ReadStream on: p) next: aDefaultFileDirectoryPath size + FileDirectory slash size; upToEnd]
 					ifFalse: [p]].
@@ -194,7 +194,7 @@ ShellSyntax >> expandArgumentsFrom: argArray inDirectoryPath: aDefaultFileDirect
 		inDirectoryPath: nil"
 
 	| newArgs |
-	newArgs _ OrderedCollection new.
+	newArgs := OrderedCollection new.
 	argArray do:
 		[:arg |
 		(self isFlagParameter: arg)
@@ -216,31 +216,31 @@ ShellSyntax >> expandPathParts: pathParts beginningAt: root [
 		ifTrue:
 			["Should never get here, but just in case"
 			^ Array with: root].
-	firstPart _ pathParts first.
-	remainder _ pathParts allButFirst.
+	firstPart := pathParts first.
+	remainder := pathParts allButFirst.
 	(firstPart = '.')
 		ifTrue: "Stay at the current directory level"
-			[dirPaths _ Array with: root]
+			[dirPaths := Array with: root]
 		ifFalse:
 			[(firstPart = '..') "Move up a directory level if possible"
 				ifTrue:
-					[dirPaths _ Array with: (self upOneDirectoryLevel: root)]
+					[dirPaths := Array with: (self upOneDirectoryLevel: root)]
 				ifFalse: "Normal case, a directory name"
 					[remainder isEmpty
 						ifTrue:
 							["This condition terminates recursion"
-							names _ self glob: firstPart inDirectory: (FileDirectory on: root).
+							names := self glob: firstPart inDirectory: (FileDirectory on: root).
 							^ (root = FileDirectory slash)
 								ifTrue: [^ names collect: [:n | root, n]]
 								ifFalse: [^ names collect: [:n | root, FileDirectory slash, n]]]
 						ifFalse:
 							["Continue recursion until no more elements"
-							dirNames _ self glob: firstPart
+							dirNames := self glob: firstPart
 											names: (FileDirectory on: root) directoryNames.
 							(('*', FileDirectory slash) match: root)
-								ifTrue: [basePath _ root]
-								ifFalse: [basePath _ root, FileDirectory slash].
-							dirPaths _ dirNames collect: [:d | basePath, d]]]].
+								ifTrue: [basePath := root]
+								ifFalse: [basePath := root, FileDirectory slash].
+							dirPaths := dirNames collect: [:d | basePath, d]]]].
 		^ dirPaths
 			inject: OrderedCollection new
 			into: [:result :dir |
@@ -299,12 +299,12 @@ ShellSyntax >> expandedPathsFromAbsolutePath: anAbsolutePathString [
 	 "ShellSyntax new expandedPathsFromAbsolutePath: 'C:\CONFIG.*'"
 
 	| result pathParts a prefix dirPathString root |
-	result _ OrderedCollection new.
-	a _ self splitLocationPrefixFromPath: anAbsolutePathString.
-	prefix _ a at: 1.
-	dirPathString _ a at: 2.
-	pathParts _ dirPathString findTokens: FileDirectory slash.
-	root _ prefix, FileDirectory slash.
+	result := OrderedCollection new.
+	a := self splitLocationPrefixFromPath: anAbsolutePathString.
+	prefix := a at: 1.
+	dirPathString := a at: 2.
+	pathParts := dirPathString findTokens: FileDirectory slash.
+	root := prefix, FileDirectory slash.
 	result addAll: (self expandPathParts: pathParts beginningAt: root).
 	^ result
 
@@ -326,9 +326,9 @@ ShellSyntax >> expandedPathsFromRelativePath: aPathString beginningAt: firstPart
 	 "ShellSyntax new expandedPathsFromRelativePath: '*.*' beginningAt: 'C:\WINDOWS'"
 
 	| result pathParts root |
-	result _ OrderedCollection new.
-	pathParts _ aPathString findTokens: FileDirectory slash.
-	root _ firstPartOfPath isNil
+	result := OrderedCollection new.
+	pathParts := aPathString findTokens: FileDirectory slash.
+	root := firstPartOfPath isNil
 				ifTrue: [FileDirectory default pathName]
 				ifFalse: [firstPartOfPath].
 	result addAll: (self expandPathParts: pathParts beginningAt: root).
@@ -349,59 +349,43 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 	"ShellSyntax new findExecutablePathFor: 'a' inDirectoryPath: nil"
 	"ShellSyntax new findExecutablePathFor: 'sqcat' inDirectoryPath: '/home/lewis/bin'"
 
-	| delimiter path localNames fd fullName dir |
+	| delimiter path localNames fd fullName fileExists |
 	self canAccessOSProcess ifFalse: [^ nil].
-	delimiter _ FileDirectory pathNameDelimiter.
-	path _ (pathString
+	delimiter := FileDirectory pathNameDelimiter.
+	path := (pathString
 				ifNil: [self workingDirectory])
 					ifNil: [FileDirectory default pathName].
+	fd := FileDirectory on: path.
 	"Unix compatibility note: If aString contains wildcard characters,
 	it is expanded in the context of the current working directory. Expansion
 	does not take place in the context of the PATH directories."
-	localNames _ self glob: aString.
-	fd _ FileDirectory default.
-
 	(aString includes: delimiter)
 		ifTrue:
 			["A fully or partially qualified path, do not search PATH"
-			(self isAbsolutePath: aString)
-				ifTrue:
-					["Fully qualified path from the file system root"
-					^ localNames
-						detect:
-							[:fileName |
-							((fd fileExists: fileName) and: [self isExecutable: fileName])
-								ifTrue: [^ fileName]]
-						ifNone: [nil]]
-				ifFalse:
-					["A path relative to the current directory, pathString"
-					^ localNames
-						detect:
-							[:fileName |
-							fullName _ path, FileDirectory slash, aString.
-							((fd fileExists: fullName) and: [self isExecutable: fullName])
-								ifTrue: [^ fullName]]
-						ifNone: [nil]]]
+			^ (self expandedPathsFrom: aString beginningAt: pathString)
+				detect: [:fileName |
+					(fd fileExists: fileName) and: [self isExecutable: fileName]]
+				ifNone: [nil]]
 		ifFalse:
 			["Look for the file in the PATH locations"
+			localNames := self glob: aString inDirectory: path.
 			(localNames size == 0)
 				ifTrue:
 					["Name was not expanded, so use the unmodified value of aString"
-					localNames _ Array with: aString].
-			dir _ (self pathEntriesInDirectoryPath: path)
-				detect: [:pathName |
-					(localNames
-						detect: [:fileName |
-							fullName _ pathName, FileDirectory slash, fileName.
-							((fd fileExists: fullName) and: [self isExecutable: fullName])
-								ifTrue: [^ fullName].
-						false]
-						ifNone: [nil]) notNil]
-				ifNone: [nil].
-			dir isNil
-				ifTrue: [^ nil]
-				ifFalse: [self error: 'should be nil']]
-
+					localNames := Array with: aString].
+			(self pathEntriesInDirectoryPath: path)
+				do: [:pathName | | thisDirectory |
+					thisDirectory := FileDirectory on: pathName.
+					localNames
+						do: [:fileName |
+							fileExists := [thisDirectory fileExists: fileName]
+											on: InvalidDirectoryError
+											do: [:e | false].
+							fileExists ifTrue:
+								[fullName := pathName, FileDirectory slash, fileName.
+								(self isExecutable: fullName)
+									ifTrue: [^ fullName]]]].
+			^ nil]
 ]
 
 { #category : #'path name expansion' }
@@ -422,9 +406,9 @@ ShellSyntax >> firstExpandedArgument: aString inDirectoryPath: aPath [
 
 	| expanded path trimmedString |
 	aString ifNil: [^ ''].
-	trimmedString _ aString withBlanksTrimmed.
-	expanded _ self expandArgument: trimmedString inDirectoryPath: aPath.
-	path _ expanded isEmpty
+	trimmedString := aString withBlanksTrimmed.
+	expanded := self expandArgument: trimmedString inDirectoryPath: aPath.
+	path := expanded isEmpty
 			ifTrue: [trimmedString]
 			ifFalse: [expanded first].
 	^ self newPathFor: path fromDefault: aPath
@@ -435,7 +419,7 @@ ShellSyntax >> firstExpandedArgument: aString inDirectoryPath: aPath [
 ShellSyntax >> getCwdForPath: aPathString [
 
 	| prefix |
-	prefix _ (self splitLocationPrefixFromPath: aPathString) first.
+	prefix := (self splitLocationPrefixFromPath: aPathString) first.
 	^ prefix isEmpty
 		ifTrue: [self workingDirectory]
 		ifFalse: [self cwdDictionary at: prefix ifAbsentPut: [self defaultPathFor: aPathString]]
@@ -451,7 +435,7 @@ ShellSyntax >> glob: aString [
 	"ShellSyntax new glob: 'rEADmE.TXT'"
 	"ShellSyntax new glob: 'R*dM?.txt'"
 
-	^ self glob: aString inDirectory: FileDirectory default
+	^ self glob: aString inDirectory: self workingDirectory
 
 ]
 
@@ -481,7 +465,7 @@ ShellSyntax >> glob: aString names: fileNameArray [
 	provided by a FileDirectory query."
 
 	| tokens |
-	tokens _ self globTokensFrom: aString.
+	tokens := self globTokensFrom: aString.
 	^ fileNameArray
 		select: [:n |
 			self tokenStream: (ReadStream on: tokens)
@@ -497,16 +481,16 @@ ShellSyntax >> globRangeFrom: aString tokenStream: aTokenStream [
 
 	| r w c t |
 	(aString includes: $-) ifFalse: [^ aString]. "Simple case"
-	r _ ReadStream on: aString.
-	w _ WriteStream on: ''.
+	r := ReadStream on: aString.
+	w := WriteStream on: ''.
 	(r peek == $!) ifTrue:
 		[r next.
 		aTokenStream nextPut: #not].
 	[r atEnd] whileFalse: [
-		c _ r next.
+		c := r next.
 		(r peek == $-)
 			ifTrue: [r next.
-					t _ r next.
+					t := r next.
 					(c asciiValue to: t asciiValue) do:
 						[:e | w nextPut: (Character value: e)]]
 			ifFalse: [w nextPut: c]].
@@ -520,13 +504,13 @@ ShellSyntax >> globTokensFrom: aString [
 	"ShellSyntax new globTokensFrom: 'abc?def\ghi\?jkl*mno\*pqr[hello]there[Xa-eY]Z[!A-Z]end'"
 
 	| lastToken r w t |
-	lastToken _ nil.
-	r _ ReadStream on: aString.
-	w _ WriteStream on: #().
+	lastToken := nil.
+	r := ReadStream on: aString.
+	w := WriteStream on: #().
 	[r atEnd] whileFalse:
-		[t _ self nextGlobToken: r lastToken: lastToken tokenStream: w.
+		[t := self nextGlobToken: r lastToken: lastToken tokenStream: w.
 		(t ~~ #escape) ifTrue: [w nextPut: t].
-		lastToken _ t].
+		lastToken := t].
 	^ w contents
 
 ]
@@ -546,8 +530,8 @@ ShellSyntax >> isAbsolutePath: aPathString [
 
 	| prefixAndPath path |
 	^ ((((FileDirectory slash, '*') match: aPathString)
-		or:	[prefixAndPath _ self splitLocationPrefixFromPath: aPathString.
-			(FileDirectory slash, '*') match: (path _ prefixAndPath last)])
+		or:	[prefixAndPath := self splitLocationPrefixFromPath: aPathString.
+			(FileDirectory slash, '*') match: (path := prefixAndPath last)])
 				or: [prefixAndPath first isEmpty not and: [path isEmpty]]) "One above the root of a Win32 file system tree"
 
 ]
@@ -581,9 +565,9 @@ ShellSyntax >> isDirectoryPath: aPathString [
 
 	| fullPath localName entry |
 	^ (('*', FileDirectory slash) match: aPathString) or:
-		[fullPath _ FileDirectory default fullNameFor: aPathString.
-		localName _ FileDirectory localNameFor: fullPath.
-		entry _ (FileDirectory on: (FileDirectory dirPathFor: fullPath)) entries
+		[fullPath := FileDirectory default fullNameFor: aPathString.
+		localName := FileDirectory localNameFor: fullPath.
+		entry := (FileDirectory on: (FileDirectory dirPathFor: fullPath)) entries
 			detect: [:e | e name = localName] ifNone: [nil].
 		entry notNil and: [entry isDirectory]]
 
@@ -669,7 +653,7 @@ ShellSyntax >> nextGlobToken: aStream lastToken: aToken tokenStream: aTokenStrea
 		ifTrue:
 			[^ aStream next]
 		ifFalse:
-			[c _ aStream next.
+			[c := aStream next.
 			(c == $[)
 				ifTrue:
 					["character range"
@@ -732,7 +716,7 @@ ShellSyntax >> pathRoot: aPathString [
 	conditional code for other platforms."
 
 	| prefix |
-	prefix _ (self splitLocationPrefixFromPath: aPathString) first.
+	prefix := (self splitLocationPrefixFromPath: aPathString) first.
 	^ prefix, FileDirectory slash
 
 ]
@@ -780,17 +764,17 @@ ShellSyntax >> programNameAndArgumentsFrom: aString inDirectoryPath: pathString 
 		findExecutable: true"
 
 	| tokens tok args exe |
-	tokens _ self argsFromCommand: aString.
+	tokens := self argsFromCommand: aString.
 	tokens size == 0
-		ifTrue: [tok _ '']
-		ifFalse: [tok _ tokens at: 1].
-	args _ self
+		ifTrue: [tok := '']
+		ifFalse: [tok := tokens at: 1].
+	args := self
 		expandArgumentsFrom: (tokens copyFrom: 2 to: tokens size)
 		inDirectoryPath: pathString.
-	exe _ expandExePath
-		ifTrue: [(self findExecutablePathFor: tok inDirectoryPath: pathString) ifNil: [tok]]
+	exe := expandExePath
+		ifTrue: [self findExecutablePathFor: tok inDirectoryPath: pathString]
 		ifFalse: [tok].
-	^ Array with: exe with: args
+	^ exe ifNotNil: [Array with: exe with: args]
 
 ]
 
@@ -818,52 +802,53 @@ ShellSyntax >> redirectIOFor: commandString inDirectoryPath: dirPathString [
 		inDirectoryPath: nil"
 
 	| cmd tokenStream tok target input output error |
-	cmd _ nil.
-	input _ output _ error _ nil.
+	cmd := nil.
+	input := output := error := nil.
 	"Default to nil unless overridden by commandString."
-	tokenStream _ ReadStream on: (self tokenizeForRedirect: commandString).
+	tokenStream := ReadStream on: (self tokenizeForRedirect: commandString).
 	[tokenStream atEnd]
 		whileFalse:
-			[tok _ tokenStream next.
+			[tok := tokenStream next.
 			tok == #inputRedirect
 				ifTrue: ["Do input redirection"
-					target _ self firstExpandedArgument: tokenStream next
+					target := self firstExpandedArgument: tokenStream next
 								inDirectoryPath: dirPathString.
-					input _ FileStream readOnlyFileNamed: target.
+					"Use StandardFileStream to prevent multi-byte interpretation."
+					input := StandardFileStream readOnlyFileNamed: target.
 					input
 						ifNil: [self inform: 'Cannot open ' , target , ', using default stdin']]
 				ifFalse: [tok == #outputRedirect
 						ifTrue: ["Do output redirection"
-							target _ self firstExpandedArgument: tokenStream next
+							target := self firstExpandedArgument: tokenStream next
 										inDirectoryPath: dirPathString.
-							output _ self truncatedOutputFile: target.
+							output := self truncatedOutputFile: target.
 							output ifNil:
 									[self inform: 'Cannot open ' , target , ', using default stdout']]
 						ifFalse: [tok == #outputAppendRedirect
 								ifTrue: ["Do output redirection, appended to existing output file if any."
-									target _ self firstExpandedArgument: tokenStream next
+									target := self firstExpandedArgument: tokenStream next
 												inDirectoryPath: dirPathString.
-									output _ FileStream fileNamed: target.
+									output := FileStream fileNamed: target.
 									output isNil
 										ifTrue: [self inform: 'Cannot open ' , target , ', using default stdout']
 										ifFalse: [output setToEnd]]
 								ifFalse: [tok == #errorRedirect
 										ifTrue: ["Do error redirection"
-											target _ self firstExpandedArgument: tokenStream next
+											target := self firstExpandedArgument: tokenStream next
 														inDirectoryPath: dirPathString.
-											error _ self truncatedOutputFile: target.
+											error := self truncatedOutputFile: target.
 											error ifNil:
 													[self inform: 'Cannot open ' , target , ', using default stdout']]
 										ifFalse: [tok == #errorAppendRedirect
 												ifTrue: ["Do error redirection, appended to existing error file if any. "
-													target _ self firstExpandedArgument: tokenStream next
+													target := self firstExpandedArgument: tokenStream next
 																inDirectoryPath: dirPathString.
-													error _ FileStream fileNamed: target.
+													error := FileStream fileNamed: target.
 													error isNil
 														ifTrue: [self inform: 'Cannot open ' , target , ', using default stdout']
 														ifFalse: [error setToEnd]]
 												ifFalse: [cmd isNil
-														ifTrue: [cmd _ tok]
+														ifTrue: [cmd := tok]
 														ifFalse: [self inform: 'Ack! Pfft! IO redirection parsing error.']]]]]]].
 	^ Array
 		with: cmd
@@ -877,7 +862,7 @@ ShellSyntax >> setCwdIndexFrom: aPathString [
 	"Set the current working directory index to a string (Win32 device name) or to #default."
 
 	| prefix |
-	prefix _ (self splitLocationPrefixFromPath: aPathString) first.
+	prefix := (self splitLocationPrefixFromPath: aPathString) first.
 	prefix isEmpty
 		ifTrue: [self cwdIndex: #default]
 		ifFalse: [self cwdIndex: prefix]
@@ -901,16 +886,16 @@ ShellSyntax >> splitLocationPrefixFromPath: aPathString [
 		ifTrue:
 			[((aPathString at: 2 ifAbsent: []) == $:)
 				ifTrue:
-					[prefix _ (String new: 2).
+					[prefix := (String new: 2).
 					prefix at: 1 put: (aPathString at: 1) asUppercase.
 					prefix at: 2 put: $:.
-					path _ aPathString copyAfter: $:]
+					path := aPathString copyAfter: $:]
 				ifFalse:
-					[prefix _ ''.
-					path _ aPathString]]
+					[prefix := ''.
+					path := aPathString]]
 		ifFalse:
-			[prefix _ ''.
-			path _ aPathString].
+			[prefix := ''.
+			path := aPathString].
 	^ Array with: prefix with: path
 
 ]
@@ -932,16 +917,16 @@ ShellSyntax >> stringTokensFrom: aString [
 	escaped by the backslash character to prevent this interpretation."
 
 	| result r w errorMessage quoteEnabled t |
-	result _ OrderedCollection new.
-	r _ ReadStream on: aString.
-	w _ WriteStream on: String new.
-	errorMessage _ nil.
-	(quoteEnabled _ r peek == self quoteChar) ifTrue: [r next].
+	result := OrderedCollection new.
+	r := ReadStream on: aString.
+	w := WriteStream on: String new.
+	errorMessage := nil.
+	(quoteEnabled := r peek == self quoteChar) ifTrue: [r next].
 	[r atEnd] whileFalse:
-		[t _ r next.
+		[t := r next.
 		(t == self quoteChar)
 			ifTrue:
-				[quoteEnabled _ quoteEnabled not]
+				[quoteEnabled := quoteEnabled not]
 			ifFalse:
 				[quoteEnabled
 					ifTrue:
@@ -950,7 +935,7 @@ ShellSyntax >> stringTokensFrom: aString [
 						[(t == self escapeChar)
 							ifTrue:
 								["An escaped character is treated as a literal character."
-								t _ r next.
+								t := r next.
 								t isNil
 									ifTrue: ["FIXME: This would indicate an escaped end of line"]
 									ifFalse: [w nextPut: t]]
@@ -959,11 +944,11 @@ ShellSyntax >> stringTokensFrom: aString [
 									ifTrue:
 										["Whitespace delimits tokens."
 										(w isEmpty) ifFalse: [result add: w contents].
-										w _ WriteStream on: String new.
+										w := WriteStream on: String new.
 										[r peek notNil and: [r peek isSeparator]] whileTrue: [r next].]
 									ifFalse:
 										[w nextPut: t]]]]].
-	quoteEnabled ifTrue: [errorMessage _ 'unbalanced quotes'].
+	quoteEnabled ifTrue: [errorMessage := 'unbalanced quotes'].
 	(w isEmpty) ifFalse: [result add: w contents].
 	^ Array with: result with: errorMessage
 
@@ -988,11 +973,11 @@ ShellSyntax >> tokenStream: aTokenStream matches: aCharacterStream [
 	[aCharacterStream atEnd]
 		whileFalse: [aTokenStream atEnd
 				ifTrue: [^ false].
-			c _ aCharacterStream peek.
-			tok _ aTokenStream next.
+			c := aCharacterStream peek.
+			tok := aTokenStream next.
 			tok == #not
 				ifTrue: ["A negated character range follows"
-					tok _ aTokenStream next.
+					tok := aTokenStream next.
 					(self character: c matches: tok)
 						ifTrue: [^ false].
 					aCharacterStream next]
@@ -1022,22 +1007,22 @@ ShellSyntax >> tokenizeForRedirect: aString [
 	"ShellSyntax new tokenizeForRedirect: 'one > two < three 2> four five six 2>> seven eight > nine ten >> eleven twelve 2 > thirteen'"
 
 	| oc rs ws c redirectToken tok |
-	oc _ OrderedCollection new.
-	rs _ ReadStream on: aString.
-	ws _ WriteStream on: ''.
+	oc := OrderedCollection new.
+	rs := ReadStream on: aString.
+	ws := WriteStream on: ''.
 	[rs atEnd]
 		whileFalse:
-			[c _ rs next.
+			[c := rs next.
 			((c == $2) and: [rs peek == $>])
 				ifTrue:
 					[rs next.
 					(rs peek == $>)
 						ifTrue:
 							[rs next.
-							redirectToken _ #errorAppendRedirect]
+							redirectToken := #errorAppendRedirect]
 						ifFalse:
-							[redirectToken _ #errorRedirect].
-					c _ ws contents.
+							[redirectToken := #errorRedirect].
+					c := ws contents.
 					(c size > 0)
 						ifTrue:
 							[oc add: c.
@@ -1049,10 +1034,10 @@ ShellSyntax >> tokenizeForRedirect: aString [
 							[(rs peek == $>)
 								ifTrue:
 									[rs next.
-									redirectToken _ #outputAppendRedirect]
+									redirectToken := #outputAppendRedirect]
 								ifFalse:
-									[redirectToken _ #outputRedirect].
-							c _ ws contents.
+									[redirectToken := #outputRedirect].
+							c := ws contents.
 							(c size > 0)
 								ifTrue:
 									[oc add: c.
@@ -1061,14 +1046,14 @@ ShellSyntax >> tokenizeForRedirect: aString [
 						ifFalse:
 							[(c == $<)
 								ifTrue:
-									[c _ ws contents.
+									[c := ws contents.
 									(c size > 0)
 										ifTrue:
 											[oc add: c.
 											ws resetContents].
 									oc add: #inputRedirect]
 								ifFalse: [ws nextPut: c]]]].
-	tok _ ws contents.
+	tok := ws contents.
 	(tok size > 0) ifTrue: [oc add: tok].
 	^ oc
 
@@ -1083,7 +1068,7 @@ ShellSyntax >> truncatedOutputFile: fileName [
 	"ShellSyntax new truncatedOutputFile: '/dev/null'"
 
 	| strm |
-	[strm _ FileStream concreteStream forceNewFileNamed: fileName]
+	[strm := FileStream concreteStream forceNewFileNamed: fileName]
 		on: Error
 		do: [:ex | ^ FileStream fileNamed: fileName].
 	^ strm
@@ -1105,9 +1090,9 @@ ShellSyntax >> upOneDirectoryLevel: aPathName [
 	 "ShellSyntax new upOneDirectoryLevel: ''"
 
 	| prefixAndPath prefix path newPath |
-	prefixAndPath _ self splitLocationPrefixFromPath: aPathName.
-	prefix _ prefixAndPath at: 1.
-	path _ prefixAndPath at: 2.
+	prefixAndPath := self splitLocationPrefixFromPath: aPathName.
+	prefix := prefixAndPath at: 1.
+	path := prefixAndPath at: 2.
 	(self isAtFileSystemRoot: aPathName)
 		ifTrue:
 			[(self isAbsolutePath: aPathName)
@@ -1123,7 +1108,7 @@ ShellSyntax >> upOneDirectoryLevel: aPathName [
 					as a sytax error."
 					^ '..']]
 		ifFalse:
-			[newPath _ (path includes: FileDirectory pathNameDelimiter)
+			[newPath := (path includes: FileDirectory pathNameDelimiter)
 				ifTrue: [path copyUpToLast: FileDirectory pathNameDelimiter]
 				ifFalse: [''].
 			^ newPath isEmpty

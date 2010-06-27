@@ -29,7 +29,7 @@ TtyPluggableTextController >> accept [
 TtyPluggableTextController >> acceptOnCr [
 	"If true, notify my view to accept whenever a <cr> is input"
 
-	acceptOnCr ifNil: [acceptOnCr _ false].
+	acceptOnCr ifNil: [acceptOnCr := false].
 	^ acceptOnCr
 ]
 
@@ -37,7 +37,7 @@ TtyPluggableTextController >> acceptOnCr [
 TtyPluggableTextController >> acceptOnCr: trueOrFalse [
 	"If true, notify my view to accept whenever a <cr> is input"
 
-	acceptOnCr _ trueOrFalse
+	acceptOnCr := trueOrFalse
 ]
 
 { #category : #callbacks }
@@ -53,14 +53,14 @@ TtyPluggableTextController >> callbackQueue [
 	can place a block in this queue, and the block will later be evaluated
 	in my control loop."
 
-	^ callbackQueue ifNil: [callbackQueue _ SharedQueue new]
+	^ callbackQueue ifNil: [callbackQueue := SharedQueue new]
 ]
 
 { #category : #accessing }
 TtyPluggableTextController >> closed [
 	"True after user enters an 'exit' command"
 
-	closed ifNil: [closed _ false].
+	closed ifNil: [closed := false].
 	^ closed
 
 ]
@@ -69,7 +69,7 @@ TtyPluggableTextController >> closed [
 TtyPluggableTextController >> closed: trueOrFalse [
 	"True after user enters an 'exit' command"
 
-	closed _ trueOrFalse
+	closed := trueOrFalse
 
 ]
 

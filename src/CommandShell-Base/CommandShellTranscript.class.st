@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'cliShell',
 		'lastPromptString',
-		'activeController'
+		'activeController',
+		'labelStringBlock'
 	],
 	#category : #'CommandShell-UI'
 }
@@ -118,7 +119,7 @@ CommandShellTranscript >> clear [
 CommandShellTranscript >> cliShell [
 	"Answer the value of cliShell"
 
-	^ cliShell
+	^ cliShell ifNil: [cliShell := CommandShell new]
 ]
 
 { #category : #accessing }
@@ -163,11 +164,29 @@ CommandShellTranscript >> confirmBeforeKilling: externalProxies [
 
 ]
 
+{ #category : #'model protocol' }
+CommandShellTranscript >> defaultLabelStringBlock [
+
+	^ [ | directoryString |
+	directoryString := self cliShell workingDirectory.
+	directoryString isEmpty ifTrue: [directoryString := self cliShell shellSyntax nullDirectoryString].
+	self class defaultWindowName, ': ', directoryString]
+
+]
+
 { #category : #'stream extensions' }
 CommandShellTranscript >> endEntry [
 	"Display all the characters since the last endEntry, and reset the stream"
 	self changed: #appendEntry.
 	self reset
+]
+
+{ #category : #'input character filtering' }
+CommandShellTranscript >> filterAndForward: aCharacter [
+	"Filter aCharacter, taking special action if needed. If a child process is active,
+	forward aCharacter to the child and answer nil. Otherwise answer aCharacter."
+
+	^ self cliShell filterAndForward: aCharacter
 ]
 
 { #category : #'input character filtering' }
@@ -206,8 +225,7 @@ CommandShellTranscript >> isEndOfFileEvent: keystrokeEvent [
 
 	^ keystrokeEvent keyValue == 4
 		or: [keystrokeEvent keyCharacter = $d
-				and: [keystrokeEvent controlKeyPressed
-						or: [keystrokeEvent commandKeyPressed]]]
+				and: [keystrokeEvent controlKeyPressed]]
 ]
 
 { #category : #'input character filtering' }
@@ -218,8 +236,7 @@ CommandShellTranscript >> isInterruptEvent: keystrokeEvent [
 
 	^ keystrokeEvent keyValue == 3
 		or: [keystrokeEvent keyCharacter = $c
-				and: [keystrokeEvent controlKeyPressed
-						or: [keystrokeEvent commandKeyPressed]]]
+				and: [keystrokeEvent controlKeyPressed]]
 ]
 
 { #category : #accessing }
@@ -231,11 +248,22 @@ CommandShellTranscript >> keyboardConnector [
 { #category : #'model protocol' }
 CommandShellTranscript >> labelString [
 
-	| directoryString |
-	directoryString := self cliShell workingDirectory.
-	directoryString isEmpty ifTrue: [directoryString := self cliShell shellSyntax nullDirectoryString].
-	^ self class defaultWindowName, ': ', directoryString
+	^ self labelStringBlock value
 
+]
+
+{ #category : #accessing }
+CommandShellTranscript >> labelStringBlock [
+	"Answer a block that when evaluated answers a string to be used
+	as the window label."
+
+	^ labelStringBlock ifNil: [labelStringBlock := self defaultLabelStringBlock]
+]
+
+{ #category : #accessing }
+CommandShellTranscript >> labelStringBlock: aBlockAnsweringAString [
+
+	labelStringBlock := aBlockAnsweringAString
 ]
 
 { #category : #accessing }
@@ -255,7 +283,7 @@ CommandShellTranscript >> lastPromptString: anObject [
 { #category : #'stream extensions' }
 CommandShellTranscript >> nextPut: anObject [ 
 
-	self cliShell scheduleToEvaluate:
+	self scheduleToEvaluate:
 		[super nextPut: anObject]
 ]
 
@@ -263,7 +291,7 @@ CommandShellTranscript >> nextPut: anObject [
 CommandShellTranscript >> nextPutAll: characters [
 	"Convert line terminators to cr. Note that #nextPut: does not do this conversion."
 
-	self cliShell scheduleToEvaluate:
+	self scheduleToEvaluate:
 		[characters isEmpty ifFalse:
 			[super nextPutAll: (characters copyReplaceAll: String lf with: String cr).
 			self flush]]
@@ -272,7 +300,7 @@ CommandShellTranscript >> nextPutAll: characters [
 { #category : #'initialize-release' }
 CommandShellTranscript >> open [
 
-	^ self openLabel: self class defaultWindowName
+	^ self openLabel: nil "invoke default label setting block"
 ]
 
 { #category : #'initialize-release' }
@@ -280,7 +308,7 @@ CommandShellTranscript >> openAsMorphLabel: labelString [
 	"Build a morph viewing this stream"
 
 	| window textMorph |
-	window := (SystemWindow labelled: labelString) model: self.
+	window := SystemWindow new model: self.
 	textMorph := ShellWindowMorph
 					on: self
 					text: nil
@@ -290,6 +318,7 @@ CommandShellTranscript >> openAsMorphLabel: labelString [
 	textMorph acceptOnCR: true.
 	window addMorph: textMorph frame: (0@0 corner: 1@1).
 	self prompt.
+	labelString ifNotNil: [self labelStringBlock: [labelString]].
 	self changed: #relabel.
 	^ window
 ]
@@ -302,6 +331,7 @@ CommandShellTranscript >> openLabel: aString [
 	| topView codeView |
 	Smalltalk isMorphic ifTrue: [^ (self openAsMorphLabel: aString) openInWorld].
 
+	aString ifNotNil: [self labelStringBlock: [aString]].
 	topView := StandardSystemView new.
 	topView model: self;
 			controller: DeferredActionStandardSystemController new;
@@ -353,7 +383,7 @@ CommandShellTranscript >> processCommand: aCommandString [
 { #category : #'command prompt' }
 CommandShellTranscript >> prompt [
 
-	self cliShell scheduleToEvaluate:
+	self scheduleToEvaluate:
 		[self show: self cliShell promptString.
 		self restoreSelectionMarker]
 ]
@@ -388,8 +418,20 @@ CommandShellTranscript >> restoreSelectionMarker [
 	Smalltalk isMorphic
 		ifFalse:
 			[c := self activeController.
-			self cliShell scheduleToEvaluate: [c initializeSelection] fixTemps]
+			self scheduleToEvaluate: [c initializeSelection] fixTemps]
 
+]
+
+{ #category : #evaluation }
+CommandShellTranscript >> scheduleToEvaluate: aBlock [
+	"Evaluate aBlock, typically to create a new scheduled window. Make it work in
+	both Morphic and MVC. In Morphic, just evaluate aBlock, but in MVC, put it in
+	a queue for evaluation within a control loop. This method may be sent from
+	a process running independent of MVC controller scheduling."
+
+	Smalltalk isMorphic
+		ifTrue: [WorldState addDeferredUIMessage: aBlock]
+		ifFalse: [self activeController ifNotNil: [activeController addDeferredUIMessage: aBlock]]
 ]
 
 { #category : #'stream extensions' }

@@ -34,7 +34,7 @@ ExpressionEvaluator class >> command: aString pipeFrom: inputStream errorPipelin
 
 	"(self command: 'stdout nextPutAll: stdin upToEnd'
 		pipeFrom: (ReadStream on: 'Here is some input text')
-		errorPipelineStream: (WriteStream on: ''))
+		errorPipelineStream: InternalPipe nonBlockingPipe)
 			value upToEnd"
 
 	^ self command: aString pipeFrom: inputStream pipeTo: nil errorPipelineStream: errorStream
@@ -46,7 +46,7 @@ ExpressionEvaluator class >> command: aString pipeFrom: inputStream pipeTo: outp
 	"(self command: 'stdout nextPutAll: stdin contents'
 		pipeFrom: (ReadStream on: 'Here is some input text')
 		pipeTo: nil
-		errorPipelineStream: (WriteStream on: ''))
+		errorPipelineStream: InternalPipe nonBlockingPipe)
 			value upToEnd"
 
 	^ super new
@@ -187,7 +187,7 @@ ExpressionEvaluator >> compile [
 					for: self
 					notifying: self
 					logged: false]
-				on: Error
+				on: Error, UndeclaredVariableReference
 				do: [:e |
 					self errorPipelineStream
 						nextPutAll: 'Compiler: invalid Smalltalk expression ', self blockString;

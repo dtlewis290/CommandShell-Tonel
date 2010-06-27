@@ -34,7 +34,7 @@ ShellBuiltinEvaluator >> commandShell [
 { #category : #accessing }
 ShellBuiltinEvaluator >> commandShell: aCommandShell [
 
-	commandShell _ aCommandShell
+	commandShell := aCommandShell
 
 ]
 
@@ -63,7 +63,7 @@ ShellBuiltinEvaluator >> shellBuiltin [
 { #category : #accessing }
 ShellBuiltinEvaluator >> shellBuiltin: aShellBuiltin [
 
-	shellBuiltin _ aShellBuiltin
+	shellBuiltin := aShellBuiltin
 ]
 
 { #category : #evaluating }
@@ -73,12 +73,12 @@ ShellBuiltinEvaluator >> value [
 		[self success. "Hope for the best, send #fail if something goes wrong"
 		self running.
 		self ensurePipeFromOutput.
-		[self shellBuiltin
+		self shellBuiltin
 				performWith: self argumentArray
 				evaluator: self
 				shell: self commandShell
 				input: self pipeToInput
 				output: self pipeFromOutput
-				error: self errorPipelineStream] fork]
+				error: self errorPipelineStream]
 
 ]
