@@ -1437,8 +1437,15 @@ CommandShellTestCase >> testPipeline65 [
 	"(CommandShellTestCase selector: #testPipeline65) run"
 
 	| procs p o last |
-	last := (Smalltalk asArray first: 300) last printString.
-	procs := shell pipeline: 'Smalltalk asArray first: 300! | copyToOutput'.
+	(Smalltalk respondsTo: #asArray)
+		ifTrue: ["traditional system dictionary"
+			last := (Smalltalk asArray first: 300) last printString.
+			procs := shell pipeline: 'Smalltalk asArray first: 300! | copyToOutput']
+		ifFalse: ["newer image with refactored system dictionary"
+			(Smalltalk respondsTo: #globals)
+				ifFalse: [self error: 'unknown system dictionary organization'].
+			last := (Smalltalk globals asArray first: 300) last printString.
+			procs := shell pipeline: 'Smalltalk globals asArray first: 300! | copyToOutput'].
 	p := procs last.
 	self should: [p class == ShellBuiltinEvaluator].
 	o := procs output.
@@ -1460,8 +1467,15 @@ CommandShellTestCase >> testPipeline66 [
 
 	| procs p o last count |
 	count := 150. "<== Make this smaller if you get a deadlock"
-	last := (Smalltalk asArray first: count) last printString.
-	procs := shell pipeline: 'Smalltalk asArray first: ', count printString, '! | cat'.
+	(Smalltalk respondsTo: #asArray)
+		ifTrue: ["traditional system dictionary"
+			last := (Smalltalk asArray first: count) last printString.
+			procs := shell pipeline: 'Smalltalk asArray first: ', count printString, '! | cat']
+		ifFalse: ["newer image with refactored system dictionary"
+			(Smalltalk respondsTo: #globals)
+				ifFalse: [self error: 'unknown system dictionary organization'].
+			last := (Smalltalk globals asArray first: count) last printString.
+			procs := shell pipeline: 'Smalltalk globals asArray first: ', count printString, '! | cat'].
 	p := procs last.
 	self should: [p class == PipeableOSProcess].
 	o := procs output.
