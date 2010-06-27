@@ -311,12 +311,17 @@ CommandShell class >> initialize [
 	"CommandShell initialize"
 
 	Smalltalk addToStartUpList: self after: ImageSegment.
-	Preferences 
-		setWindowColorFor: #CommandShell 
-		to: (Color colorFrom: self windowColorSpecification pastelColor).
+	(Smalltalk at: #Preferences) ifNotNilDo: [ :preferencesClass |
+		(preferencesClass respondsTo: #setWindowColorFor:to: )
+			ifTrue: ["Squeak"
+				preferencesClass 
+					setWindowColorFor: #CommandShell 
+					to: (Color colorFrom: self windowColorSpecification pastelColor)]
+			ifFalse: ["Pharo images use some other preferences protocol"]].
 	(TheWorldMenu respondsTo: #registerOpenCommand:)
-		ifTrue: [TheWorldMenu registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}].
-	self open processCommand: 'help'
+		ifTrue: [TheWorldMenu registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}]
+		ifFalse: ["Pharo menu registration uses pragmas, would break on Squeak 3.8, do not use it here"].
+	self openWithHelp
 
 ]
 
@@ -349,6 +354,14 @@ CommandShell class >> openLabel: aString [
 	"CommandShell openLabel: self defaultWindowName"
 
 	^ self new openLabel: aString
+
+]
+
+{ #category : #'instance creation' }
+CommandShell class >> openWithHelp [
+	"CommandShell openWithHelp"
+
+	self open processCommand: 'help'
 
 ]
 
@@ -443,14 +456,17 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.4.4'
+	^'4.4.5'
 ]
 
 { #category : #'window color' }
 CommandShell class >> windowColorSpecification [
 	"Answer a WindowColorSpec object that declares my preference"
 
-	^ WindowColorSpec
+	| windowColorSpec |
+	windowColorSpec := Smalltalk at: #WindowColorSpec.
+	windowColorSpec ifNil: [self error: 'this image does not support WindowColorSpec'].
+	^ windowColorSpec
 		classSymbol: self name
 		wording: 'Squeak Shell'
 		brightColor: (Color lightGray lighter paler)
