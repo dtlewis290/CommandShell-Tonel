@@ -56,7 +56,10 @@ CommandShellTranscript class >> openLabel: aString [
 CommandShellTranscript class >> windowColorSpecification [
 	"Answer a WindowColorSpec object that declares my preference"
 
-	^ WindowColorSpec
+	| windowColorSpec |
+	windowColorSpec := Smalltalk at: #WindowColorSpec.
+	windowColorSpec ifNil: [self error: 'this image does not support WindowColorSpec'].
+	^ windowColorSpec
 		classSymbol: self name
 		wording: 'Squeak Shell'
 		brightColor: (Color lightGray lighter paler)
