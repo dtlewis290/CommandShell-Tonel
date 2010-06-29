@@ -198,8 +198,9 @@ CrLfFileEditor class >> windowColorSpecification [
 	"Answer a WindowColorSpec object that declares my preference"
 
 	| windowColorSpec |
-	windowColorSpec := Smalltalk at: #WindowColorSpec.
-	windowColorSpec ifNil: [self error: 'this image does not support WindowColorSpec'].
+	windowColorSpec := Smalltalk
+				at: #WindowColorSpec
+				ifAbsent: [^self error: 'this image does not support WindowColorSpec'].
 	^ windowColorSpec
 		classSymbol: self name
 		wording: 'Squeak Shell File Editor'
