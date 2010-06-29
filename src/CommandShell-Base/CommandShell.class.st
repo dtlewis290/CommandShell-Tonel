@@ -312,6 +312,7 @@ CommandShell class >> initialize [
 
 	Smalltalk addToStartUpList: self after: ImageSegment.
 	(Smalltalk at: #Preferences) ifNotNilDo: [ :preferencesClass |
+		"Pharo deprecates Preference in favor of some other mechanism"
 		(preferencesClass respondsTo: #setWindowColorFor:to: )
 			ifTrue: ["Squeak"
 				preferencesClass 
@@ -320,8 +321,7 @@ CommandShell class >> initialize [
 			ifFalse: ["Pharo images use some other preferences protocol"]].
 	(TheWorldMenu respondsTo: #registerOpenCommand:)
 		ifTrue: [TheWorldMenu registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}]
-		ifFalse: ["Pharo menu registration uses pragmas, would break on Squeak 3.8, do not use it here"].
-	self openWithHelp
+		ifFalse: ["Pharo menu registration uses pragmas, would break on Squeak 3.8, do not use it here"]
 
 ]
 
