@@ -325,6 +325,18 @@ CommandShell class >> initialize [
 
 ]
 
+{ #category : #'version testing' }
+CommandShell class >> isMorphic [
+	"Squeak traditionally used #isMorphic to distinguish between Morphic
+	and MVC user interfaces. In newer Squeak images, the current project
+	knows its active user interface, so requests are vectored through the
+	current project. Pharo images pretend to be unaware of the fact that
+	they are running Morphic, refusing to respond to #isMorphic. This 
+	implementation does reasonable things in any of the above scenarios."
+
+	^(Smalltalk respondsTo: #isMorphic) not or: [Smalltalk isMorphic]
+]
+
 { #category : #'VM building' }
 CommandShell class >> makeVmIn: buildDirectoryPathName [
 	"Rebuild the virtual machine and plugins in the buildDirectoryPathName
@@ -456,7 +468,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.4.5'
+	^'4.4.6'
 ]
 
 { #category : #'window color' }
@@ -1756,9 +1768,13 @@ CommandShell >> scheduleToEvaluate: aBlock [
 	"Evaluate aBlock, typically to create a new scheduled window. Make it work in
 	both Morphic and MVC. In Morphic, just evaluate aBlock, but in MVC, put it in
 	a queue for evaluation within a control loop. This method may be sent from
-	a process running independent of MVC controller scheduling."
+	a process running independent of MVC controller scheduling.
+	
+	Newer Squeak images implement #addDeferredUIMessage in the current
+	project, eliminating the need for an #isMorphic test. This mechanism is not
+	available for older images or for Pharo."
 
-	Smalltalk isMorphic
+	CommandShell isMorphic
 		ifTrue: [WorldState addDeferredUIMessage: aBlock]
 		ifFalse: [ScheduledControllers activeController addDeferredUIMessage: aBlock]
 ]
