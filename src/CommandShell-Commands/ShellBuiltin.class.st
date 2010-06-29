@@ -413,15 +413,15 @@ ShellBuiltin >> dirEntryString: aDirectoryEntry [
 
 	| folderString nameStr dateStr sizeStr |
 	folderString := ' [...]'.
-	nameStr := (aDirectoryEntry at: 4)
-		ifTrue: [aDirectoryEntry first , folderString]
-		ifFalse: [aDirectoryEntry first].
-	dateStr := ((Date fromSeconds: (aDirectoryEntry at: 3) )
+	nameStr := aDirectoryEntry isDirectory
+		ifTrue: [aDirectoryEntry name , folderString]
+		ifFalse: [aDirectoryEntry name].
+	dateStr := ((Date fromSeconds: aDirectoryEntry modificationTime )
 					printFormat: #(3 2 1 $. 1 1 2)) , ' ' ,
 				(String streamContents: [:s |
-					(Time fromSeconds: (aDirectoryEntry at: 3) \\ 86400)
+					(Time fromSeconds: aDirectoryEntry modificationTime \\ 86400)
 						print24: true on: s]).
-	sizeStr := (aDirectoryEntry at: 5) asStringWithCommas.
+	sizeStr := aDirectoryEntry fileSize asStringWithCommas.
 	^ nameStr , '    (' , dateStr , ' ' , sizeStr , ')'
 
 ]
@@ -542,7 +542,7 @@ ShellBuiltin >> helpCommand: myProxy shell: commandShell input: stdin output: st
 			[cacheStream := WriteStream on: ''.
 			(commandShell builtinCommands
 				collect: [:c | c helpSelector] thenSelect: [:s | s notNil])
-					asSortedArray do:
+					asArray sort do:
 						[:sel | cacheStream nextPutAll: (self perform: sel);
 								nextPut: Character lf].
 			cacheStream
@@ -768,7 +768,7 @@ ShellBuiltin >> slsCommand: myProxy shell: commandShell input: stdin output: std
 	filePatterns do: [:pat | names addAll: (commandShell shellSyntax glob: pat inDirectory: d)].
 	dirs := OrderedCollection new.
 	files := OrderedCollection new.
-	names asSortedArray do:
+	names asArray sort do:
 		[:n |
 		entry := entries detect: [:e | e name = n].
 		entry isDirectory
