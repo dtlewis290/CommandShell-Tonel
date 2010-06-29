@@ -460,7 +460,7 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 									firstExpandedArgument: arg
 									inDirectoryPath: commandShell shellSyntax workingDirectory.
 				CrLfFileEditor fileNamed: expandedName withLabel: arg].
-			Smalltalk isMorphic
+			CommandShell isMorphic
 				ifFalse:
 					[controllers
 						inject: nil

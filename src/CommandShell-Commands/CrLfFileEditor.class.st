@@ -167,7 +167,7 @@ CrLfFileEditor class >> openForFileNamed: pathName [
 	"CrLfFileEditor openForFileNamed: '/NO/SUCH/FILE'"
 	"CrLfFileEditor openForFileNamed: '/etc/NOSUCHFILE'"
 
-	^ Smalltalk isMorphic
+	^ CommandShell isMorphic
 		ifTrue: [(self fileNamed: pathName) openInWorld]
 		ifFalse: [(self fileNamed: pathName) open]
 
@@ -259,7 +259,7 @@ CrLfFileEditor >> controllerForAccept [
 	"Find the controller or morph which expects the #accept message"
 
 	| controller view |
-	Smalltalk isMorphic
+	CommandShell isMorphic
 		ifTrue:
 			[controller := dependents detect: [:e | e respondsTo: #accept] ifNone: [nil]]
 		ifFalse:
@@ -299,7 +299,7 @@ CrLfFileEditor >> directory: aDirectory [
 CrLfFileEditor >> exit [
 
 	self changed: #accept.
-	Smalltalk isMorphic
+	CommandShell isMorphic
 		ifTrue:
 			[dependents do: [:d | (d respondsTo: #closeBoxHit) ifTrue: [d closeBoxHit]]]
 		ifFalse:
@@ -484,7 +484,7 @@ CrLfFileEditor >> lineEndConvention: aSymbol [
 CrLfFileEditor >> mvcWithLabel: aLabelString [
 
 	| topView fileContentsView |
-	Smalltalk isMorphic ifTrue:
+	CommandShell isMorphic ifTrue:
 		[^ self error: 'this method should be used only for MVC'].
 	topView := StandardSystemView new.
 	topView
@@ -524,7 +524,7 @@ CrLfFileEditor >> openAsMorphLabel: aLabelString [
 { #category : #'initialize-release' }
 CrLfFileEditor >> openLabel: aLabelString [
 
-	Smalltalk isMorphic
+	CommandShell isMorphic
 		ifTrue:
 			[^ (self openAsMorphLabel: aLabelString) openInWorld]
 		ifFalse:
@@ -644,7 +644,7 @@ CrLfFileEditor >> viewStyle: aSymbol [
 CrLfFileEditor >> withLabel: aLabelString [
 	"Same as #openLabel: but does not open the window in MVC"
 
-	Smalltalk isMorphic
+	CommandShell isMorphic
 		ifTrue:
 			[^ self openAsMorphLabel: aLabelString]
 		ifFalse:
