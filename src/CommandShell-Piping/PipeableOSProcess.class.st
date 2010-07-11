@@ -1081,8 +1081,10 @@ PipeableOSProcess >> update: aParameter [
 PipeableOSProcess >> updateErrorPipelineStream [
 	"Ensure that all available error output is placed into errorPipelineStream."
 
-	accessProtect critical:
-		[pipeFromError ifNotNilDo: [:err | self addToErrorPipeline: err upToEnd]].
+	self pipeFromError ifNotNilDo: [:p | | s |
+		s := p upToEnd. "must be outside the critical block, race condition on #update:"
+		accessProtect critical: [errorPipelineStream nextPutAll: s]]
+
 
 ]
 
@@ -1090,11 +1092,11 @@ PipeableOSProcess >> updateErrorPipelineStream [
 PipeableOSProcess >> updateErrorPipelineStreamToEndOfFile [
 	"Move all error output up to end of file to the errorPipelineStream."
 
-	accessProtect
-		critical: [self pipeFromError
-				ifNotNilDo: [:p |
-					errorPipelineStream nextPutAll: p upToEndOfFile.
-					p close]]
+	self pipeFromError ifNotNilDo: [:p | | s |
+		s := p upToEndOfFile. "must be outside the critical block, race condition on #update:"
+		accessProtect critical: [errorPipelineStream nextPutAll: s].
+		p close]
+
 ]
 
 { #category : #evaluating }
