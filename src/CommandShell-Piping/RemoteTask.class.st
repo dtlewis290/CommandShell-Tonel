@@ -46,8 +46,11 @@ RemoteTask >> result [
 	"Answer the result of a previously started task. The child Squeak sends one
 	result object back to its parent Squeak before exiting."
 
-	| s responseObject responseStream |
-	"Read the result object from the child Squeak process"
+	| s responseObject responseStream pollingDelay |
+	"Wait for child to complete. Prevents this image from looping on empty stream."
+	pollingDelay := Delay forMilliseconds: 50.
+	[childProxy isComplete] whileFalse: [pollingDelay wait].
+	"Read the result object from the child Squeak process."
 	s := RWBinaryOrTextStream with: childProxy pipeFromOutput upToEndOfFile.
 	s reset.
 	responseStream := ReferenceStream on: s.
