@@ -310,15 +310,16 @@ CommandShell class >> initialize [
 
 	"CommandShell initialize"
 
+	| preferencesClass |
 	Smalltalk addToStartUpList: self after: ImageSegment.
-	(Smalltalk at: #Preferences) ifNotNilDo: [ :preferencesClass |
-		"Pharo deprecates Preference in favor of some other mechanism"
-		(preferencesClass respondsTo: #setWindowColorFor:to: )
-			ifTrue: ["Squeak"
-				preferencesClass 
-					setWindowColorFor: #CommandShell 
-					to: (Color colorFrom: self windowColorSpecification pastelColor)]
-			ifFalse: ["Pharo images use some other preferences protocol"]].
+	(preferencesClass := Smalltalk at: #Preferences)
+		ifNotNil: ["Pharo deprecates Preference in favor of some other mechanism"
+			(preferencesClass respondsTo: #setWindowColorFor:to: )
+				ifTrue: ["Squeak"
+					preferencesClass 
+						setWindowColorFor: #CommandShell 
+						to: (Color colorFrom: self windowColorSpecification pastelColor)]
+				ifFalse: ["Pharo images use some other preferences protocol"]].
 	(TheWorldMenu respondsTo: #registerOpenCommand:)
 		ifTrue: [TheWorldMenu registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}]
 		ifFalse: ["Pharo menu registration uses pragmas, would break on Squeak 3.8, do not use it here"]
@@ -468,7 +469,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.4.8'
+	^'4.4.9'
 ]
 
 { #category : #'window color' }
@@ -834,7 +835,9 @@ CommandShell >> defaultPromptStringTwo [
 CommandShell >> doEndOfFile [
 	"EOF character detected, close stdin to pipeline."
 
-	self keyboardConnector ifNotNilDo: [:pipelineInput | pipelineInput closeWriter]
+	| pipelineInput |
+	(pipelineInput := self keyboardConnector)
+		ifNotNil: [pipelineInput closeWriter]
 
 ]
 
@@ -990,7 +993,7 @@ CommandShell >> evaluatePipelines: aPipelineCollection [
 		[lastForegroundPipeline := aPipelineCollection reversed
 			detect: [:p | p background not]
 			ifNone: [].
-		lastForegroundPipeline ifNotNilDo: [:p | self registerPromptEventFor: p].
+		lastForegroundPipeline ifNotNil: [self registerPromptEventFor: lastForegroundPipeline].
 		aPipelineCollection do: [:pipeline |
 			completionSemaphore := Semaphore new.
 			pipeline background
