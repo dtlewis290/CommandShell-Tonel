@@ -83,7 +83,10 @@ ExternalCommandShell class >> shutDown: quitting [
 	ExternalCommandShell appears after ThisOSProcess in the system startup
 	list."
 
-	quitting ifTrue: [self default ifNotNilDo: [:shell | shell shutdownInOldSession]]
+	| shell |
+	quitting
+		ifTrue: [(shell := self default)
+			ifNotNil: [shell shutdownInOldSession]]
 
 ]
 
@@ -99,8 +102,10 @@ ExternalCommandShell class >> start [
 { #category : #'system startup' }
 ExternalCommandShell class >> startUp: resuming [
 
+	| shell |
 	resuming ifTrue:
-		[self default ifNotNilDo: [:shell | shell startUpInNewSession]]
+		[(shell := self default)
+			ifNotNil: [shell startUpInNewSession]]
 ]
 
 { #category : #'start-stop' }
@@ -301,7 +306,7 @@ ExternalCommandShell >> promptTwo [
 { #category : #'initialize-release' }
 ExternalCommandShell >> release [
 
-	self cliShell ifNotNilDo: [:shell | shell removeDependent: self].
+	cliShell ifNotNil: [cliShell removeDependent: self].
 	super release
 
 ]
@@ -433,7 +438,7 @@ ExternalCommandShell >> stop [
 
 	self disableInputProcessing.
 	self stopHandlingInterruptSignal.
-	self cliShell ifNotNilDo: [:shell | shell removeDependent: self].
+	cliShell ifNotNil: [cliShell removeDependent: self].
 	self isRunning: false
 ]
 
