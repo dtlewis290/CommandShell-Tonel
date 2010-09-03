@@ -125,14 +125,15 @@ CrLfFileEditor class >> initialize [
 
 	"CrLfFileEditor initialize"
 
-	(Smalltalk at: #Preferences) ifNotNilDo: [ :preferencesClass |
-		"Pharo deprecates Preference in favor of some other mechanism"
-		(preferencesClass respondsTo: #setWindowColorFor:to: )
-			ifTrue: ["Squeak"
-				preferencesClass 
-					setWindowColorFor: #CrLfFileEditor 
-					to: (Color colorFrom: self windowColorSpecification pastelColor)]
-			ifFalse: ["Pharo images use some other preferences protocol"]]
+	| preferencesClass |
+	(preferencesClass := Smalltalk at: #Preferences)
+		ifNotNil: ["Pharo deprecates Preference in favor of some other mechanism"
+			(preferencesClass respondsTo: #setWindowColorFor:to: )
+				ifTrue: ["Squeak"
+					preferencesClass 
+						setWindowColorFor: #CrLfFileEditor 
+						to: (Color colorFrom: self windowColorSpecification pastelColor)]
+				ifFalse: ["Pharo images use some other preferences protocol"]]
 
 ]
 
