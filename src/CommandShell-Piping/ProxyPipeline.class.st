@@ -91,9 +91,10 @@ ProxyPipeline >> close [
 { #category : #'initialize - release' }
 ProxyPipeline >> closePipes [
 
+	| p |
 	self do: [:e | e closePipes].
 	self unregisterEvents.
-	self pipeFromOutput ifNotNilDo: [:p | p close]
+	(p := self pipeFromOutput) ifNotNil: [p close]
 
 ]
 
@@ -207,20 +208,22 @@ ProxyPipeline >> handleCompletionWhenSignaled: aSemaphore [
 	"Answer a process that will complete processing the the last proxy has
 	signaled its completion."
 
-	^ [aSemaphore wait.
+	| lastProxy proc |
+	proc := [aSemaphore wait.
 		self waitForAllToComplete.
-		self last
-			ifNotNilDo: [:last | 
-				last closeErrorPipeline.
-				self triggerEvent: #complete]] fork
+		(lastProxy := self last)
+			ifNotNil: [lastProxy closeErrorPipeline.
+					self triggerEvent: #complete]] newProcess.
+	^ proc resume
 ]
 
 { #category : #'event handling' }
 ProxyPipeline >> handleRunstateChange [
 
-	self last
-		ifNotNilDo: [:last | last isComplete
-				ifTrue: [self completionSemaphore signal]]
+	| lastProxy |
+	(lastProxy := self last)
+		ifNotNil: [lastProxy isComplete
+					ifTrue: [self completionSemaphore signal]]
 ]
 
 { #category : #testing }

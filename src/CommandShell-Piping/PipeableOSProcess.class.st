@@ -71,8 +71,9 @@ PipeableOSProcess class >> bash [
 	"self bash"
 	"self bash exec: 'ls'; exec: 'who'; close; upToEnd"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | ^ self command: proxyClass bashShellPath].
+	| proxyClass |
+	(proxyClass := self externalProxyClass) ifNotNil:
+		[^ self command: proxyClass bashShellPath].
 	^ self notify: 'OSProcess not available'
 
 ]
@@ -303,11 +304,10 @@ PipeableOSProcess class >> new: executableFile arguments: arrayOfStrings environ
 
 	"PipeableOSProcess new: 'sol' arguments: nil environment: nil descriptors: nil workingDir: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself)"
 
-	| pp proc s |
+	| pp proc proxyClass s |
 	pp := super new.
-	proc := self externalProxyClass ifNotNilDo:
-		[:proxyClass |
-		proxyClass
+	(proxyClass := self externalProxyClass) ifNotNil:
+		[proc := proxyClass
 			programName: executableFile
 			arguments: arrayOfStrings
 			initialEnvironment: stringDictionary].
@@ -351,9 +351,9 @@ PipeableOSProcess class >> remoteShell: remoteSystemName [
 
 	"self remoteShell: 'localhost'"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | 
-		^ self
+	| proxyClass |
+	(proxyClass := self externalProxyClass) ifNotNil:
+		[^ self
 			forkAndExec: proxyClass remoteShellPath
 			arguments: (Array with: remoteSystemName with: 'sh')
 			environment: nil
@@ -397,8 +397,9 @@ PipeableOSProcess class >> shell [
 	"self shell"
 	"self shell exec: 'ls'; exec: 'who'; close; upToEnd"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | ^ self command: proxyClass defaultShellPath].
+	| proxyClass |
+	(proxyClass := self externalProxyClass) ifNotNil:
+		[^ self command: proxyClass defaultShellPath].
 	^ self notify: 'OSProcess not available'
 
 ]
@@ -451,10 +452,11 @@ PipeableOSProcess class >> waitForCommand: aCommandString [
 PipeableOSProcess class >> wish [
 	"Start a Tk/Tcl command interpreter"
 
-	"self shell"
+	"self wish"
 
-	self externalProxyClass ifNotNilDo:
-		[:proxyClass | ^ self command: proxyClass tkShellPath].
+	| proxyClass |
+	(proxyClass := self externalProxyClass) ifNotNil:
+		[^ self command: proxyClass tkShellPath].
 	^ self notify: 'OSProcess not available'
 
 ]
@@ -508,7 +510,9 @@ PipeableOSProcess >> atEnd [
 { #category : #'initialize - release' }
 PipeableOSProcess >> closeOutput [
 
-	self pipeFromOutput ifNotNilDo: [:p | p removeDependent: self; close]
+	| p |
+	(p := self pipeFromOutput)
+		ifNotNil: [p removeDependent: self; close]
 
 ]
 
@@ -526,11 +530,11 @@ PipeableOSProcess >> closePipes [
 	"Replace the output and error pipe streams with internal pipes, and close
 	all input and output pipes."
 
-	| output out err |
+	| output out err p |
 	self keepInitialStdOutOpen
 		ifTrue:
 			["The pipe stream will be closed by the next process in the command pipeline"
-			pipeFromOutput ifNotNilDo: [:p | p triggerDataReady]]
+			(p := pipeFromOutput) ifNotNil: [p triggerDataReady]]
 		ifFalse:
 			[(output := self pipeFromOutput)
 				ifNotNil:
@@ -600,7 +604,9 @@ PipeableOSProcess >> enableErrorStreamTriggers [
 	"Set the error stream to be event driven if possible, and answer true
 	if event driven output is supported, otherwise false."
 
-	pipeFromError ifNotNilDo: [:err | ^ err setBufferedReader].
+	| err |
+	(err := pipeFromError)
+		ifNotNil: [^ err setBufferedReader].
 	^ false
 ]
 
@@ -668,7 +674,8 @@ PipeableOSProcess >> exec: aString [
 PipeableOSProcess >> flush [
 	"Flush output to the standard input stream of my external process."
 
-	pipeToInput ifNotNilDo: [:p | p flush]
+	| p |
+	(p := pipeToInput) ifNotNil: [p flush]
 ]
 
 { #category : #'initialize - release' }
@@ -856,7 +863,7 @@ PipeableOSProcess >> pipeFromError [
 PipeableOSProcess >> pipeFromError: aPipeStream [
 
 	(pipeFromError := aPipeStream)
-		ifNotNilDo: [:p | p addDependent: self]
+		ifNotNil: [pipeFromError addDependent: self]
 
 ]
 
@@ -877,9 +884,10 @@ PipeableOSProcess >> prepareOutputForInternalReader [
 	"Output stream will be used directly by a Smalltalk process. Set output stream
 	characteristics accordingly."
 
+	| err |
 	super prepareOutputForInternalReader.
 	self setKeepInitialStdOutOpen.
-	self pipeFromError ifNotNilDo: [:err | err setNonBlocking]
+	(err := self pipeFromError) ifNotNil: [err setNonBlocking]
 
 ]
 
@@ -1057,6 +1065,7 @@ PipeableOSProcess >> update: aParameter [
 	"Clean up after processProxy exits. Remove myself as a dependent of processProxy,
 	and close pipes."
 
+	| err |
 	(aParameter == pipeFromError)
 		ifTrue:
 			[accessProtect critical: [self addToErrorPipeline: pipeFromError upToEnd].
@@ -1066,8 +1075,8 @@ PipeableOSProcess >> update: aParameter [
 		ifTrue:
 			[processProxy isComplete
 				ifTrue:
-					[self pipeFromError
-						ifNotNilDo: [:err | self addToErrorPipeline: err upToEnd].
+					[(err := self pipeFromError)
+						ifNotNil: [self addToErrorPipeline: err upToEnd].
 					self complete.
 					self changed: aParameter]
 				ifFalse:
@@ -1081,7 +1090,8 @@ PipeableOSProcess >> update: aParameter [
 PipeableOSProcess >> updateErrorPipelineStream [
 	"Ensure that all available error output is placed into errorPipelineStream."
 
-	self pipeFromError ifNotNilDo: [:p | | s |
+	| p |
+	(p := self pipeFromError) ifNotNil: [ | s |
 		s := p upToEnd. "must be outside the critical block, race condition on #update:"
 		accessProtect critical: [errorPipelineStream nextPutAll: s]]
 
@@ -1092,7 +1102,8 @@ PipeableOSProcess >> updateErrorPipelineStream [
 PipeableOSProcess >> updateErrorPipelineStreamToEndOfFile [
 	"Move all error output up to end of file to the errorPipelineStream."
 
-	self pipeFromError ifNotNilDo: [:p | | s |
+	| p |
+	(p := self pipeFromError) ifNotNil: [ | s |
 		s := p upToEndOfFile. "must be outside the critical block, race condition on #update:"
 		accessProtect critical: [errorPipelineStream nextPutAll: s].
 		p close]

@@ -70,14 +70,14 @@ PipeJunction >> close [
 { #category : #'initialize - release' }
 PipeJunction >> closeErrorPipeline [
 
-	self errorPipelineStream ifNotNilDo: [:p | p close]
+	self errorPipelineStream ifNotNil: [errorPipelineStream close]
 
 ]
 
 { #category : #'initialize - release' }
 PipeJunction >> closeOutput [
 
-	self pipeFromOutput ifNotNilDo: [:p | p close]
+	self pipeFromOutput ifNotNil: [pipeFromOutput close]
 
 ]
 
@@ -232,12 +232,12 @@ PipeJunction >> handleRedirectedOutputOf: predecessorProxy [
 	predecessorProxy ifNotNil:
 		[(predecessorProxy canProvideOutputPipe not
 			and: [self inputHasBeenRedirected not]) ifTrue:
-				[self pipeToInput ifNotNilDo:
-					[:inputPipe |
-					predecessorProxy
-						when: #complete
-						send: #close
-						to: inputPipe writer]]]
+				[self pipeToInput
+					ifNotNil:
+						[predecessorProxy
+							when: #complete
+							send: #close
+							to: pipeToInput writer]]]
 
 ]
 
@@ -371,7 +371,7 @@ PipeJunction >> pipeFromOutput [
 PipeJunction >> pipeFromOutput: aPipeStream [
 
 	(pipeFromOutput := aPipeStream)
-		ifNotNilDo: [:p | p addDependent: self]
+		ifNotNil: [pipeFromOutput addDependent: self]
 
 ]
 
