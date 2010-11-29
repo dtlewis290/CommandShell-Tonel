@@ -7,7 +7,7 @@ CommandShell classSide >> menuCommandOn: aBuilder [
 	and earlier, and MVC is broken in later images. Since CommandShell is designed
 	to work with MVC, use of pragmas is unacceptable here."
  	<worldMenu>
-	(aBuilder item: #'Squeak shell')
+	(aBuilder item: #'Command shell')
 		parent: #Tools;
 		action:[self new open]
 ]
