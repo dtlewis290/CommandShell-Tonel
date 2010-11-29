@@ -459,7 +459,7 @@ CommandShellTranscript >> update: event [
 	event == #exit
 		ifTrue: [^ self close].
 	event == #clearText
-		ifTrue: [^ self clear; restorePrompt].
+		ifTrue: [^ self clear].
 	event == #interruptCharacter
 		ifTrue: [^ self handleInterruptCharacterEvent].
 	event == #relabel
