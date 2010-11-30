@@ -83,5 +83,5 @@ InternalPipeTestCase >> writeStuffOnThenClose: aPipe [
 		(Delay forMilliseconds: 100) wait].
 	(aPipe respondsTo: #writer)
 		ifTrue: [aPipe writer close]
-		ifFalse: [aPipe close]] fixTemps forkAt: Processor userInterruptPriority
+		ifFalse: [aPipe close]] forkAt: Processor userInterruptPriority
 ]
