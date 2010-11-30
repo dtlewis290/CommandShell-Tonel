@@ -422,7 +422,7 @@ CommandShellTranscript >> restoreSelectionMarker [
 	CommandShell isMorphic
 		ifFalse:
 			[c := self activeController.
-			self scheduleToEvaluate: [c initializeSelection] fixTemps]
+			self scheduleToEvaluate: [c initializeSelection]]
 
 ]
 
