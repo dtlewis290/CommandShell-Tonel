@@ -51,7 +51,7 @@ ShellWindowView >> update: something [
 				addDeferredUIMessage:
 					[controller controlTerminate.
 					self topView controller closeAndUnschedule.
-					ScheduledControllers restore] fixTemps].
+					ScheduledControllers restore]].
 	^ super update: something
 
 ]
