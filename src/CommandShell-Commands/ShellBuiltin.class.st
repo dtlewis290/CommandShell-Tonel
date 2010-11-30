@@ -451,7 +451,7 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 									ifTrue: ['']
 									ifFalse: [commandShell commandHistory last])
 					inDirectory: (FileDirectory on: commandShell workingDirectory)
-					defaultFileName: 'buffer.txt'] fixTemps]
+					defaultFileName: 'buffer.txt']]
 		ifFalse:
 			[controllers := argArray collect:
 				[:arg |
@@ -467,12 +467,12 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 						into:
 							[:prev :c |
 							prev ifNotNil:
-								[c addDeferredUIMessage: [prev open] fixTemps].
+								[c addDeferredUIMessage: [prev open]].
 							c].
 					commandShell scheduleToEvaluate: [controllers last open]]
 				ifTrue:
 					[controllers do: [:e |
-						WorldState addDeferredUIMessage: [e openInWorld] fixTemps]]]
+						WorldState addDeferredUIMessage: [e openInWorld]]]]
 
 ]
 
@@ -651,7 +651,7 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 									[(fs contentsOfEntireFile
 									replaceAll: Character lf
 									with: Character cr) inspect.
-									fs close] fixTemps]]]]
+									fs close]]]]]
 
 ]
 
@@ -848,7 +848,7 @@ ShellBuiltin >> sqshCommand: myProxy shell: commandShell input: stdin output: st
 				first ifFalse: [ws nextPut: Character space].
 				ws nextPutAll: each.
 				false].
-			commandShell scheduleToEvaluate: [commandShell class openLabel: ws contents] fixTemps]
+			commandShell scheduleToEvaluate: [commandShell class openLabel: ws contents]]
 
 ]
 
