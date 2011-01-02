@@ -848,7 +848,7 @@ PipeableOSProcess >> notifyError [
 		(errText size ~= 0)
 			ifTrue:
 				[self inform:
-					self programName, ' exit status ',
+					self processProxy programName, ' exit status ',
 					processProxy exitStatus printString, ', error message: ',
 					errText]
 			ifFalse:
