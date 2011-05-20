@@ -41,11 +41,7 @@ ExternalCommandShell class >> initialize [
 	ExternalShell ifNotNil:
 		[ExternalShell stop.
 		ExternalShell := nil].
-	Smalltalk
-		addToStartUpList: self
-		after: (Smalltalk at: #ThisOSProcess
-			ifAbsent: [Smalltalk at: #SmalltalkImage
-				ifAbsent: [nil]])
+	Smalltalk addToStartUpList: self
 
 ]
 

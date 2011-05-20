@@ -311,7 +311,7 @@ CommandShell class >> initialize [
 	"CommandShell initialize"
 
 	| preferencesClass |
-	Smalltalk addToStartUpList: self after: ImageSegment.
+	Smalltalk addToStartUpList: self.
 	(Smalltalk hasClassNamed: #Preferences)
 		ifTrue: ["Pharo deprecates Preference in favor of pragma registration mechanism"
 			preferencesClass := Smalltalk at: #Preferences.
@@ -480,7 +480,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.4.14'
+	^'4.4.15'
 ]
 
 { #category : #'window color' }
