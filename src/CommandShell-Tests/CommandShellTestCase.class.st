@@ -1441,19 +1441,20 @@ CommandShellTestCase >> testPipeline65 [
 	| procs p o last |
 	(Smalltalk respondsTo: #asArray)
 		ifTrue: ["traditional system dictionary"
-			last := (Smalltalk asArray first: 300) last printString.
+			last := (Smalltalk asArray first: 300) printString last: 20.
 			procs := shell pipeline: 'Smalltalk asArray first: 300! | copyToOutput']
 		ifFalse: ["newer image with refactored system dictionary"
 			(Smalltalk respondsTo: #globals)
 				ifFalse: [self error: 'unknown system dictionary organization'].
-			last := (Smalltalk globals asArray first: 300) last printString.
+			last := (Smalltalk globals asArray first: 300) printString last: 20.
 			procs := shell pipeline: 'Smalltalk globals asArray first: 300! | copyToOutput'].
 	p := procs last.
 	self should: [p class == ShellBuiltinEvaluator].
 	o := procs output.
 	self should: [o isKindOf: String].
 	self shouldnt: [o isEmpty].
-	self should: [((o copyFrom: (o size - (last size + 1)) to: o size) allButLast allButLast) = last]
+	"n.b. remove trailing line terminator from command output"
+	self should: (o last: 21) allButLast = last
 
 ]
 
