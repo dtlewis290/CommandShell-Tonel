@@ -80,9 +80,11 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueak [
 
 	| openFileCount child |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
-		[OSProcess thisOSProcess stdOut
-			nextPutAll: 'hello from headless Squeak child'].
+	self shouldnt:
+			[child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
+				[OSProcess thisOSProcess stdOut
+					nextPutAll: 'hello from headless Squeak child']]
+		raise: Warning.
 	self should: child upToEndOfFile = 'hello from headless Squeak child'.
 	self should: [self isNumberOfOpenFiles: openFileCount]
 
@@ -95,10 +97,12 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueak2 [
 
 	| openFileCount child response in |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
-		[(Delay forMilliseconds: 100) wait. "wait for data to arrive"
-		in := OSProcess thisOSProcess stdIn upToEnd.
-		OSProcess thisOSProcess stdOut nextPutAll: in].
+	self shouldnt:
+			[child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
+				[(Delay forMilliseconds: 100) wait. "wait for data to arrive"
+				in := OSProcess thisOSProcess stdIn upToEnd.
+				OSProcess thisOSProcess stdOut nextPutAll: in]]
+		raise: Warning.
 	child nextPutAll: 'hello'.
 	child pipeToInput close.
 	response := child upToEndOfFile.
@@ -118,17 +122,19 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueakReadAndWriteReferenceStream [
 
 	| openFileCount child refStream inputStream result s anObject objectStreamToChild |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkSqueakAndDoThenQuit:
-		["First set standard input to blocking. This avoids a delay to wait for
-		data to be available, but note that it is dangerous to do this unless you
-		are certain that you know in advance that the correct number of characters
-		will be available on the input. If this is not the case, then the VM will block
-		on the read and lock up the child squeak process."
-		OSProcess thisOSProcess stdIn setBlocking.
-		inputStream := ReferenceStream on: OSProcess thisOSProcess stdIn.
-		anObject := inputStream next. "read one object expected to have been sent by parent"
-		refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
-		refStream nextPut: anObject "echo the object back to the parent Squeak"].
+	self shouldnt:
+			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
+				["First set standard input to blocking. This avoids a delay to wait for
+				data to be available, but note that it is dangerous to do this unless you
+				are certain that you know in advance that the correct number of characters
+				will be available on the input. If this is not the case, then the VM will block
+				on the read and lock up the child squeak process."
+				OSProcess thisOSProcess stdIn setBlocking.
+				inputStream := ReferenceStream on: OSProcess thisOSProcess stdIn.
+				anObject := inputStream next. "read one object expected to have been sent by parent"
+				refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
+				refStream nextPut: anObject "echo the object back to the parent Squeak"]]
+		raise: Warning.
 	objectStreamToChild := ReferenceStream on: child pipeToInput writer.
 	objectStreamToChild nextPut: Smalltalk. "send a complex object to the child"
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
@@ -150,9 +156,11 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueakReferenceStream [
 
 	| openFileCount child refStream inputStream result s |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
-		[refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
-		refStream nextPut: Smalltalk].
+	self shouldnt:
+			[child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
+				[refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
+				refStream nextPut: Smalltalk]]
+		raise: Warning.
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := ReferenceStream on: s.
@@ -169,10 +177,12 @@ PipeableOSProcessTestCase >> testForkSqueak [
 
 	| openFileCount child response in |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkSqueakAndDoThenQuit:
-		[(Delay forMilliseconds: 100) wait. "wait for data to arrive"
-		in := OSProcess thisOSProcess stdIn upToEnd.
-		OSProcess thisOSProcess stdOut nextPutAll: in].
+	self shouldnt:
+			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
+				[(Delay forMilliseconds: 100) wait. "wait for data to arrive"
+				in := OSProcess thisOSProcess stdIn upToEnd.
+				OSProcess thisOSProcess stdOut nextPutAll: in]]
+		raise: Warning.
 	child nextPutAll: 'hello'.
 	child pipeToInput close.
 	response := child upToEndOfFile.
@@ -192,17 +202,19 @@ PipeableOSProcessTestCase >> testForkSqueakReadAndWriteReferenceStream [
 
 	| openFileCount child refStream inputStream result s anObject objectStreamToChild |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkSqueakAndDoThenQuit:
-		["First set standard input to blocking. This avoids a delay to wait for
-		data to be available, but note that it is dangerous to do this unless you
-		are certain that you know in advance that the correct number of characters
-		will be available on the input. If this is not the case, then the VM will block
-		on the read and lock up the child squeak process."
-		OSProcess thisOSProcess stdIn setBlocking.
-		inputStream := ReferenceStream on: OSProcess thisOSProcess stdIn.
-		anObject := inputStream next. "read one object expected to have been sent by parent"
-		refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
-		refStream nextPut: anObject "echo the object back to the parent Squeak"].
+	self shouldnt:
+			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
+				["First set standard input to blocking. This avoids a delay to wait for
+				data to be available, but note that it is dangerous to do this unless you
+				are certain that you know in advance that the correct number of characters
+				will be available on the input. If this is not the case, then the VM will block
+				on the read and lock up the child squeak process."
+				OSProcess thisOSProcess stdIn setBlocking.
+				inputStream := ReferenceStream on: OSProcess thisOSProcess stdIn.
+				anObject := inputStream next. "read one object expected to have been sent by parent"
+				refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
+				refStream nextPut: anObject "echo the object back to the parent Squeak"]]
+		raise: Warning.
 	objectStreamToChild := ReferenceStream on: child pipeToInput writer.
 	objectStreamToChild nextPut: Smalltalk. "send a complex object to the child"
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
@@ -224,9 +236,11 @@ PipeableOSProcessTestCase >> testForkSqueakReferenceStream [
 
 	| openFileCount child refStream inputStream result s |
 	openFileCount := self numberOfOpenFiles.
-	child := PipeableOSProcess forkSqueakAndDoThenQuit:
-		[refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
-		refStream nextPut: Smalltalk].
+	self shouldnt:
+			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
+				[refStream := ReferenceStream on: OSProcess thisOSProcess stdOut.
+				refStream nextPut: Smalltalk]]
+		raise: Warning.
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := ReferenceStream on: s.
