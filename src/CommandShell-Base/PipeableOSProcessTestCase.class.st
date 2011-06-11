@@ -68,7 +68,8 @@ PipeableOSProcessTestCase >> testCommandEcho [
 	"(PipeableOSProcessTestCase selector: #testCommandEcho) debug"
 
 	| p result |
-	p := PipeableOSProcess command: '/bin/echo this is a test'.
+	self shouldnt: [p := PipeableOSProcess command: '/bin/echo this is a test']
+		raise: Warning.
 	result := p output.
 	self assert: ('this is a test*' match: result)
 ]
