@@ -114,7 +114,7 @@ CommandShell class >> htmlOverview [
 
 <h3>How to use CommandShell</h3>
   Evaluate "CommandShell open" or, if you have loaded the change set to put CommandShell
-  in your world menu, just select "squeak shell" from the "open..." menu entry.
+  in your world menu, just select "Squeak Shell" from the "open..." menu entry.
   To use the command shell window, enter commands on the command line (after
   the "$ " command prompt, followed by cr to accept the command. The "help" command
   gives some clues as to what can be done. In general, just try any command which
@@ -325,7 +325,8 @@ CommandShell class >> initialize [
 		class class methodDict at: #registerOpenCommand: ifPresent: [ :method |
 			(method sendsSelector: #deprecated:)
 				ifTrue: ["Pharo issues deprecation and tells you to do it their way. Ignore the warning."]
-				ifFalse: [ class registerOpenCommand: {'Squeak shell'. {CommandShell . #open}}]]]
+				ifFalse: [ class unregisterOpenCommand: 'Squeak shell'. "if previously registered"
+					class registerOpenCommand: {'Squeak Shell'. {CommandShell . #open}}]]]
 
 ]
 
@@ -480,7 +481,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.4.17'
+	^'4.4.18'
 ]
 
 { #category : #'window color' }
