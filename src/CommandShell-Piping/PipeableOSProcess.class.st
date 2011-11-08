@@ -109,6 +109,25 @@ PipeableOSProcess class >> command: aString [
 ]
 
 { #category : #'external command processing' }
+PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary [
+
+	"| env path |
+	env := OSProcess thisOSProcess environment copy.
+	path := (env at: #PATH), ':/opt/local/bin/'.
+	env at: #PATH put: path.
+	(PipeableOSProcess command: 'echo $PATH' environment: env) output"
+
+	^ self command: aString
+		environment: anEnvironmentDictionary
+		workingDir: nil
+		input: nil
+		output: nil
+		error: nil
+		errorPipelineStream: nil
+
+]
+
+{ #category : #'external command processing' }
 PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary workingDir: pathString input: inputStream output: outputStream error: errorStream errorPipelineStream: anErrorWriteStream [
 
 	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself)) output"
