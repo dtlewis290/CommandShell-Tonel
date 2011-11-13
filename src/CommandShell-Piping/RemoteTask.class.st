@@ -1,7 +1,7 @@
 "
 RemoteTask do: [2 + 2]
 
-A RemoteTask represents a block to be evaluated in a headless Squeak child process. The results of evaluating the block are returned to the sender through a reference stream on an OS pipe.
+A RemoteTask represents a block to be evaluated in a headless Squeak child process. The results of evaluating the block are returned to the sender through a reference stream on an OS pipe. Asynchronous event notification may be used to signal completion of remote processing.
 
 The block is evaluated in a remote headless image beginning with a clone of the sender image at the time of the message send. All side effects of evaluating the task block are localized to the remote image, and have no effect on the sending image. The result object may be an object of any complexity, such as a dictionary or array of result values.
 
@@ -14,31 +14,130 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'task',
-		'childProxy'
+		'childProxy',
+		'completionBlock',
+		'aioHandler'
 	],
 	#category : #'CommandShell-Piping'
 }
 
 { #category : #evaluating }
 RemoteTask class >> do: aBlock [
-	"Start a remote task and read the result object."
+	"Start a remote task and read the result object. The image will be blocked
+	on read until completion of the remote task."
 
 	"RemoteTask do: [2 + 2]"
 
-	^(self task: aBlock) value
+	^(self new task: aBlock) value
 ]
 
 { #category : #evaluating }
-RemoteTask class >> start: aBlock [
-	"Create a remote task and start evaluation. Do not read the result object."
+RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock [
+	"Evaluate taskBlock in an image running in a separate OS process.
+	Set the completion block, a block that takes result object as its single argument.
+	Start remote processing with an AIO event notifier. Completion of the remote task
+	will result in a changed notification from the event notifier, which will activate the
+	completion block. The completion block is expected to do something useful with
+	the result of the remote task."
 
-	^(self task: aBlock) start
+	"n.b. Inspect the RemoteTask to prevent it being garbage collected and finalized
+	before processing is complete"
+
+	"(RemoteTask do: [2 + 2] whenComplete: [ :result | result inspect ]) inspect"
+	"(RemoteTask do: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect ]) inspect"
+
+	^ self new task: taskBlock whenComplete: aOneArgumentBlock
 ]
 
-{ #category : #'instance creation' }
-RemoteTask class >> task: aBlock [
+{ #category : #finalization }
+RemoteTask class >> finalize: aRemoteTask [
 
-	^ self new task: aBlock
+	aRemoteTask finalize
+]
+
+{ #category : #examples }
+RemoteTask class >> parallelPerformance [
+	"Compare performance of three tasks run in parallel versus the equivalent serial
+	processing. Results will vary depending on availability of CPU cores. On a quad core
+	machine, the parallel processing should complete in well under half the time of the
+	equivalent serial job."
+
+	"RemoteTask parallelPerformance"
+
+	| parallelExecutionTime results sema task1 task2 task3 serialExecutionTime p1 p2 p3 |
+	parallelExecutionTime := Time millisecondsToRun: [
+		results := Array new: 3.
+		sema := Semaphore new.
+		task1 := [(100000000000000000000000000000 to: 100000000000000000000000019999)
+					select: [:f | f isPrime] thenCollect: [:s | s asString]].
+		task2 := [(100000000000000000000000020000 to: 100000000000000000000000039999)
+					select: [:f | f isPrime] thenCollect: [:s | s asString]].
+		task3 := [(100000000000000000000000040000 to: 100000000000000000000000059999)
+					select: [:f | f isPrime] thenCollect: [:s | s asString]].
+		"n.b. assign to variables to prevent RemoteTask from being finalized"
+		p1 := RemoteTask do: task1 whenComplete: [:result |  results at: 1 put: result. sema signal].
+		p2 := RemoteTask do: task2 whenComplete: [:result | results at: 2 put: result. sema signal].
+		p3 := RemoteTask do: task3 whenComplete: [:result |  results at: 3 put: result. sema signal].
+		sema wait; wait; wait.
+		results].
+
+	serialExecutionTime :=  Time millisecondsToRun: [
+		(100000000000000000000000000000 to: 100000000000000000000000019999)
+					select: [:f | f isPrime] thenCollect: [:s | s asString].
+		(100000000000000000000000020000 to: 100000000000000000000000039999)
+					select: [:f | f isPrime] thenCollect: [:s | s asString].
+		(100000000000000000000000040000 to: 100000000000000000000000059999)
+					select: [:f | f isPrime] thenCollect: [:s | s asString]].
+
+	^ { #parallelExecutionTime -> parallelExecutionTime . #serialExecutionTime -> serialExecutionTime }
+
+]
+
+{ #category : #examples }
+RemoteTask class >> threeParallelTasks [
+	"Find all primes in a range of large integers. Divide the problem into
+	three tasks running the three child images, and return the results to
+	the supervisory image. Answer a tasks array and a results array, where
+	the results array will be populated on completion of the tasks."
+
+	"RemoteTask threeParallelTasks"
+
+	| p1 p2 p3 results task1 task2 task3 |
+	results := Array new: 3.
+	task1 := [(100000000000000000000000000000
+					to: 100000000000000000000000019999)
+				select: [:f | f isPrime] thenCollect: [:s | s asString]].
+	task2 := [(100000000000000000000000020000
+					to: 100000000000000000000000039999)
+				select: [:f | f isPrime] thenCollect: [:s | s asString]].
+	task3 := [(100000000000000000000000040000
+					to: 100000000000000000000000059999)
+				select: [:f | f isPrime] thenCollect: [:s | s asString]].
+	"n.b. Assign task to a variable to prevent RemoteTask from being finalized"
+	p1 := RemoteTask do: task1 whenComplete: [:result | results at: 1 put: result].
+	p2 := RemoteTask do: task2 whenComplete: [:result | results at: 2 put: result].
+	p3 := RemoteTask do: task3 whenComplete: [:result | results at: 3 put: result].
+	^ { #tasks -> { p1 . p2 . p3 } . #results -> results }
+]
+
+{ #category : #finalization }
+RemoteTask >> finalize [
+	"If garbage collected before remote processing is complete, the AIO
+	handler process should be terminated and the external process should
+	be stopped. When evaluating a #do:whenComplete: a reference should
+	be maintained to the RemoteTask in order to avoid this finalization."
+
+	aioHandler ifNotNilDo: [:aio | aio close].
+	childProxy ifNotNilDo: [:child | child terminate]
+]
+
+{ #category : #finalization }
+RemoteTask >> registerForFinalization [
+	
+	self toFinalizeSend: #finalize:
+		to: self class
+		with: self copy
+
 ]
 
 { #category : #evaluating }
@@ -46,16 +145,9 @@ RemoteTask >> result [
 	"Answer the result of a previously started task. The child Squeak sends one
 	result object back to its parent Squeak before exiting."
 
-	| s responseObject responseStream pollingDelay |
-	"Wait for child to complete. Prevents this image from looping on empty stream."
-	pollingDelay := Delay forMilliseconds: 50.
-	[childProxy isComplete] whileFalse: [pollingDelay wait].
-	"Read the result object from the child Squeak process."
-	s := RWBinaryOrTextStream with: childProxy pipeFromOutput upToEndOfFile.
-	s reset.
-	responseStream := ReferenceStream on: s.
+	| responseStream responseObject |
+	responseStream := ReferenceStream on: childProxy pipeFromOutput reader.
 	responseObject := responseStream next.
-	s close.
 	^ responseObject
 
 ]
@@ -65,6 +157,9 @@ RemoteTask >> start [
 	"Fork a headless child Squeak to evaluate my task."
 
 	| childBlock out result |
+
+	self registerForFinalization.
+
 	"Create block to be evaluated in a Squeak child process."
 	childBlock := ["First set standard input to blocking. This avoids a delay to wait for
 		data to be available, but note that it is dangerous to do this unless you
@@ -76,9 +171,15 @@ RemoteTask >> start [
 		result := [self task value]
 					on: Exception
 					do: [:e | result := 'remote task execution failed: ', e printString].
-		out nextPut: result].
+		out nextPut: result.
+		OSProcess thisOSProcess stdOut flush; close].
 	"Fork a child Squeak that will evaluate the childBlock then exit"
-	childProxy := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit: childBlock
+	childProxy := PipeableOSProcess
+					forkSqueakAndDoThenQuit: childBlock
+					errorPipelineStream: InternalPipe nonBlockingPipe
+					headless: true
+					bufferedOutput: false
+					outputNotifier: aioHandler
 
 ]
 
@@ -94,6 +195,44 @@ RemoteTask >> task: anObject [
 	"Set the value of task"
 
 	task := anObject
+]
+
+{ #category : #evaluating }
+RemoteTask >> task: taskBlock whenComplete: aOneArgumentBlock [
+	"Evaluate taskBlock in an image running in a separate OS process.
+	Set the completion block, a block that takes result object as its single argument.
+	Start remote processing with an AIO event notifier. Completion of the remote task
+	will result in a changed notification from the event notifier, which will activate the
+	completion block. The completion block is expected to do something useful with
+	the result of the remote task."
+
+	"n.b. Inspect the RemoteTask to prevent it being garbage collected and finalized
+	before processing is complete"
+
+	"(RemoteTask new task: [2 + 2] whenComplete: [ :result | result inspect]) inspect"
+	"(RemoteTask new task: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect]) inspect"
+
+	task := taskBlock.
+	completionBlock := aOneArgumentBlock.
+	aioHandler ifNotNil: [aioHandler close].
+	aioHandler := AioEventHandler new.
+	aioHandler addDependent: self.
+	self start
+
+]
+
+{ #category : #updating }
+RemoteTask >> update: anObject [
+	"An event handler has indicated availability of data on the pipe from
+	the remote process. Begin reading data until the entire result object
+	is received. The remote process will exit when complete, but possibly
+	not until data has been read from the pipe, as it may block on write
+	until the pipe has been serviced."
+
+	(anObject isKindOf: AioEventHandler)
+		ifTrue: [[completionBlock
+						ifNotNil: [completionBlock value: self result]]
+					ensure: [anObject close]]
 ]
 
 { #category : #evaluating }

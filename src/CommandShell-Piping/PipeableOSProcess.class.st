@@ -278,10 +278,10 @@ PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock [
 	"PipeableOSProcess forkSqueakAndDoThenQuit:
 		[Object inform: 'Hi, I am the child Squeak process. Click OK to exit the child Squeak.']"
 	
-	^ self forkSqueakAndDoThenQuit: aBlock
+	^ self
+		forkSqueakAndDoThenQuit: aBlock
 		errorPipelineStream: InternalPipe nonBlockingPipe
 		headless: false
-
 
 ]
 
@@ -291,10 +291,40 @@ PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: 
 	clone of this image except for the return value of this method. It does not reload the
 	image file from disk. The child image evaluates aBlock."
 
+	^ self
+		forkSqueakAndDoThenQuit: aBlock
+		errorPipelineStream: anErrorStream
+		headless: headless
+		bufferedOutput: true
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: anErrorStream headless: headless bufferedOutput: buffered [
+	"Start a new instance of Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
+	^ self
+		forkSqueakAndDoThenQuit: aBlock
+		errorPipelineStream: anErrorStream
+		headless: headless
+		bufferedOutput: buffered
+		outputNotifier: nil
+]
+
+{ #category : #'instance creation' }
+PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: anErrorStream headless: headless bufferedOutput: buffered outputNotifier: aioEventHandler [
+	"Start a new instance of Squeak running in a child OS process. The new instance is a
+	clone of this image except for the return value of this method. It does not reload the
+	image file from disk. The child image evaluates aBlock."
+
 	| pp proc parentVmProcess blockWithRedirection |
 	pp := super new.
 	pp createPipes.
-	pp pipeFromOutput setBufferedReader.
+	buffered ifTrue: [pp pipeFromOutput setBufferedReader].
+	aioEventHandler ifNotNil: [ buffered
+		ifTrue: [self error: 'buffered reader already has AIO handler']
+		ifFalse: [aioEventHandler forFileStream: pp pipeFromOutput reader]].
 	blockWithRedirection := [
 		pp pipeToInput reader setNonBlocking.
 		OSProcess thisOSProcess redirectStdInTo: pp pipeToInput reader.
