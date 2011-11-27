@@ -18,6 +18,9 @@ Class {
 		'completionBlock',
 		'aioHandler'
 	],
+	#classVars : [
+		'SerializingStrategy'
+	],
 	#category : #'CommandShell-Piping'
 }
 
@@ -53,6 +56,20 @@ RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock [
 RemoteTask class >> finalize: aRemoteTask [
 
 	aRemoteTask finalize
+]
+
+{ #category : #'class initialization' }
+RemoteTask class >> initialize [
+	"Use Fuel if present in the image, otherwise use reference stream serialization"
+
+	"RemoteTask initialize"
+	"RemoteTask useFuelSerializer"
+	"RemoteTask useReferenceStreamSerializer"
+
+	(Smalltalk hasClassNamed: #FLSerializer)
+		ifTrue: [self useFuelSerializer]
+		ifFalse: [self useReferenceStreamSerializer]
+
 ]
 
 { #category : #examples }
@@ -120,6 +137,21 @@ RemoteTask class >> threeParallelTasks [
 	^ { #tasks -> { p1 . p2 . p3 } . #results -> results }
 ]
 
+{ #category : #'class initialization' }
+RemoteTask class >> useFuelSerializer [
+	"RemoteTask useFuelSerializer"
+	"RemoteTask useReferenceStreamSerializer"
+
+	SerializingStrategy := #fuel
+]
+
+{ #category : #'class initialization' }
+RemoteTask class >> useReferenceStreamSerializer [
+	"RemoteTask useReferenceStreamSerializer"
+
+	SerializingStrategy := #referenceStream
+]
+
 { #category : #finalization }
 RemoteTask >> finalize [
 	"If garbage collected before remote processing is complete, the AIO
@@ -129,6 +161,43 @@ RemoteTask >> finalize [
 
 	aioHandler ifNotNilDo: [:aio | aio close].
 	childProxy ifNotNilDo: [:child | child terminate]
+]
+
+{ #category : #serializing }
+RemoteTask >> getResult [
+	"Materialize the result, reading serialized data from standard input"
+
+	SerializingStrategy = #referenceStream
+		ifTrue: [ | responseStream responseObject |
+			responseStream := ReferenceStream on: childProxy pipeFromOutput reader.
+			responseObject := responseStream next.
+			^ responseObject].
+
+	SerializingStrategy = #fuel
+		ifTrue: [^((Smalltalk at: #FLMaterializer ifAbsent: [self error: 'Fuel not installed'])
+		newDefault materializeFrom: childProxy pipeFromOutput reader binary) root].
+
+	self error: 'undefined strategy ', SerializingStrategy asString
+
+]
+
+{ #category : #serializing }
+RemoteTask >> put: result [
+	"Serialize the result and write to standard output"
+
+	| out |
+	SerializingStrategy = #referenceStream
+		ifTrue: [
+			out := ReferenceStream on: OSProcess thisOSProcess stdOut.
+			^out nextPut: result].
+
+	SerializingStrategy = #fuel
+		ifTrue: [
+		out := (Smalltalk at: #FLSerializer ifAbsent: [self error: 'Fuel not installed']) newDefault.
+		^out serialize: result on: OSProcess thisOSProcess stdOut binary].
+
+	self error: 'undefined strategy ', SerializingStrategy asString
+
 ]
 
 { #category : #finalization }
@@ -145,10 +214,7 @@ RemoteTask >> result [
 	"Answer the result of a previously started task. The child Squeak sends one
 	result object back to its parent Squeak before exiting."
 
-	| responseStream responseObject |
-	responseStream := ReferenceStream on: childProxy pipeFromOutput reader.
-	responseObject := responseStream next.
-	^ responseObject
+	^self getResult
 
 ]
 
@@ -156,7 +222,7 @@ RemoteTask >> result [
 RemoteTask >> start [
 	"Fork a headless child Squeak to evaluate my task."
 
-	| childBlock out result |
+	| childBlock result |
 
 	self registerForFinalization.
 
@@ -166,12 +232,11 @@ RemoteTask >> start [
 		are certain that you know in advance that the correct number of characters
 		will be available on the input. If this is not the case, then the VM will block
 		on the read and lock up the child squeak process."
-		OSProcess thisOSProcess stdIn setBlocking.
-		out := ReferenceStream on: OSProcess thisOSProcess stdOut.
 		result := [self task value]
 					on: Exception
 					do: [:e | result := 'remote task execution failed: ', e printString].
-		out nextPut: result.
+		OSProcess thisOSProcess stdIn setBlocking.
+		self put: result.
 		OSProcess thisOSProcess stdOut flush; close].
 	"Fork a child Squeak that will evaluate the childBlock then exit"
 	childProxy := PipeableOSProcess
@@ -240,7 +305,7 @@ RemoteTask >> value [
 	"Start a remote task and read the result object. The child Squeak sends one
 	result object back to its parent Squeak before exiting."
 
-	"(RemoteTask task: [2 + 2]) value"
+	"(RemoteTask new task: [2 + 2]) value"
 
 	self start.
 	^self result
