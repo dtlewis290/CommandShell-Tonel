@@ -485,13 +485,16 @@ CrLfFileEditor >> lineEndConvention: aSymbol [
 { #category : #'initialize-release' }
 CrLfFileEditor >> mvcWithLabel: aLabelString [
 
-	| topView fileContentsView |
+	| topView controllerClass fileContentsView |
 	CommandShell isMorphic ifTrue:
 		[^ self error: 'this method should be used only for MVC'].
 	topView := StandardSystemView new.
+	controllerClass := Smalltalk
+		at: #DeferredActionStandardSystemController
+		ifAbsent: [StandardSystemController].	
 	topView
 		model: self;
-		controller: DeferredActionStandardSystemController new;
+		controller: controllerClass new;
 		label: aLabelString;
 		minimumSize: 200@200.
 	topView borderWidth: 1.
