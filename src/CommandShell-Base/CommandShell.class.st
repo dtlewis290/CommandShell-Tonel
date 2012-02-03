@@ -323,7 +323,7 @@ CommandShell class >> initialize [
 				ifFalse: ["Pharo images use some other preferences protocol"]].
 	Smalltalk at: #TheWorldMenu ifPresent: [ :class |
 		class class methodDict at: #registerOpenCommand: ifPresent: [ :method |
-			(method sendsSelector: #deprecated:)
+			(method hasLiteral: #deprecated:) "n.b.  use #hasLiteral: rather than #sendsSelector: for Squeak 3.8"
 				ifTrue: ["Pharo issues deprecation and tells you to do it their way. Ignore the warning."]
 				ifFalse: [ class unregisterOpenCommand: 'Squeak shell'. "if previously registered"
 					class registerOpenCommand: {'Squeak Shell'. {CommandShell . #open}}]]]
@@ -472,7 +472,7 @@ CommandShell class >> startUp: resuming [
 CommandShell class >> unload [
 	Smalltalk at: #TheWorldMenu ifPresent: [ :class |
 		class class methodDict at: #unregisterOpenCommandWithReceiver: ifPresent: [ :method |
-			(method sendsSelector: #deprecated:) 
+			(method hasLiteral: #deprecated:) "n.b.  use #hasLiteral: rather than #sendsSelector: for Squeak 3.8"
 				ifFalse: [ class unregisterOpenCommandWithReceiver: self ] ] ]
 ]
 
@@ -481,7 +481,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.5.1'
+	^'4.5.2'
 ]
 
 { #category : #'window color' }
