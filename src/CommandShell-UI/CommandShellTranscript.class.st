@@ -332,13 +332,16 @@ CommandShellTranscript >> openLabel: aString [
 	"Open a window on this stream. This is copied from the corresponding method in
 	TranscriptStream."
 
-	| topView codeView |
+	| topView controllerClass codeView |
 	CommandShell isMorphic ifTrue: [^ (self openAsMorphLabel: aString) openInWorld].
 
 	aString ifNotNil: [self labelStringBlock: [aString]].
 	topView := StandardSystemView new.
+	controllerClass := Smalltalk
+		at: #DeferredActionStandardSystemController
+		ifAbsent: [StandardSystemController].	
 	topView model: self;
-			controller: DeferredActionStandardSystemController new;
+			controller: controllerClass new;
 			borderWidth: 1;
 			label: aString;
 			minimumSize: 100 @ 50.
