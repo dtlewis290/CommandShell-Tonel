@@ -303,10 +303,8 @@ CommandShellTestCase >> testDoCommandsInString1 [
 	shell command: command.
 	(Delay forSeconds: 1) wait.	"Allow the command to run"
 	savedResult := self class tempResult.
-	"expectedResult may have a trailing <lf>"
-	self assert: (expectedResult size - savedResult size) abs <= 1.
 	self assert: expectedResult size > 10. "not empty"
-	self assert: (savedResult intersection: expectedResult) = savedResult
+	self assert: expectedResult = savedResult
 
 ]
 
@@ -326,10 +324,8 @@ CommandShellTestCase >> testDoCommandsInString2 [
 	shell command: command.
 	(Delay forSeconds: 1) wait.	"Allow the command to run"
 	savedResult := self class tempResult.
-	"expectedResult may have a trailing <lf>"
-	self assert: (expectedResult size - savedResult size) abs <= 1.
 	self assert: expectedResult size > 10. "not empty"
-	self assert: (savedResult intersection: expectedResult) = savedResult
+	self assert: expectedResult = savedResult
 
 ]
 
