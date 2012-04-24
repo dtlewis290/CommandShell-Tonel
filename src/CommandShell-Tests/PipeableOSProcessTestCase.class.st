@@ -71,6 +71,7 @@ PipeableOSProcessTestCase >> testCommandEcho [
 	self shouldnt: [p := PipeableOSProcess command: '/bin/echo this is a test']
 		raise: Warning.
 	result := p output.
+	p closePipes.
 	self assert: ('this is a test*' match: result)
 ]
 

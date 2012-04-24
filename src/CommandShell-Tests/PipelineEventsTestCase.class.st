@@ -75,6 +75,7 @@ PipelineEventsTestCase >> testExternalPipelineEvents01 [
 	| pipeline |
 	pipeline := self threeExternalProxies.
 	self assert: pipeline dependents isEmpty.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
@@ -86,7 +87,8 @@ PipelineEventsTestCase >> testExternalPipelineEvents02 [
 
 	| pipeline |
 	pipeline := self threeExternalProxies.
-	self assert: pipeline actionMap isEmpty
+	self assert: pipeline actionMap isEmpty.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
@@ -108,6 +110,7 @@ PipelineEventsTestCase >> testExternalProxyErrorPipelineEvents [
 
 	"The error pipeline has no dependents."
 	self assert: pipeline errorPipelineStream dependents isEmpty.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
@@ -125,7 +128,8 @@ PipelineEventsTestCase >> testExternalProxyEvents01 [
 	self assert: pipeline first dependents isEmpty.
 	self assert: pipeline second dependents isEmpty.
 	self assert: pipeline third dependents size = 1.
-	self assert: pipeline third dependents first == pipeline
+	self assert: pipeline third dependents first == pipeline.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
@@ -142,6 +146,7 @@ PipelineEventsTestCase >> testExternalProxyEvents02 [
 	self assert: pipeline first actionMap isEmpty.
 	self assert: pipeline second actionMap isEmpty.
 	self assert: pipeline third actionMap isEmpty.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
@@ -168,6 +173,7 @@ PipelineEventsTestCase >> testExternalProxyEvents03 [
 	self assert: proxyThree pipeFromError dependents size = 1.
 	self assert: proxyThree pipeFromError dependents first == proxyThree.
 	self assert: proxyThree pipeFromError actionMap isEmpty.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
@@ -194,6 +200,7 @@ PipelineEventsTestCase >> testExternalProxyEvents04 [
 	self assert: proxyThree pipeFromOutput dependents size = 1.
 	self assert: proxyThree pipeFromOutput dependents first == proxyThree.
 	self assert: proxyThree pipeFromOutput actionMap isEmpty.
+	pipeline value upToEndOfFile "evaluate and allow pipes to be closed"
 
 ]
 
