@@ -393,7 +393,14 @@ ProxyPipeline >> value [
 	"(ProxyPipeline command: 'ls | cat | wc' shell: CommandShell new) value"
 
 	self completionWatcher: (self handleCompletionWhenSignaled: self completionSemaphore).
-	self do: [:proxy | proxy value]
+	self inject: true into: [:first :proxy |
+		first ifFalse:
+			["A proxy may have associated Smalltalk processes for stream handling.
+			Schedule a short delay to permit these processes to be started prior to
+			starting the next proxy in the pipeline."
+			(Delay forMilliseconds: 10) wait].
+		proxy value.
+		false]
 
 ]
 

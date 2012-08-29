@@ -70,7 +70,9 @@ PipeJunction >> close [
 { #category : #'initialize - release' }
 PipeJunction >> closeErrorPipeline [
 
-	self errorPipelineStream ifNotNil: [errorPipelineStream close]
+	self errorPipelineStream ifNotNil: [[errorPipelineStream close]
+		on: Error
+		do: ["may be called from multiple processes, so tolerate primitive failure"]]
 
 ]
 
