@@ -207,7 +207,7 @@ ExternalCommandShell >> handleInput: str [
 		whileTrue: [rs := ReadStream on: lineBuffer contents.
 			self lineBuffer: nil.
 			line := rs upTo: Character lf.
-			self cliShell command: line.
+			self cliShell command: line echo: false.
 			self lineBuffer nextPutAll: rs upToEnd]
 ]
 
@@ -471,5 +471,8 @@ ExternalCommandShell >> update: event [
 		ifTrue: [^ self error: 'FIXME'].
 	event == #interruptCharacter
 		ifTrue: [^ self doInterruptCharHandler].
-	self error: ['unexpected event']
+	"Treat anything other than the symbols above as a string to be displayed on
+	the command line in the view"
+	self show: event asString; cr.
+
 ]
