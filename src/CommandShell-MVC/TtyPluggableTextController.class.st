@@ -22,7 +22,7 @@ TtyPluggableTextController >> accept [
 		activeController: self;
 		cr;
 		flush;
-		processCommand: self commandLineInput asString
+		processCommand: self commandLineInput asString echo: false
 ]
 
 { #category : #accessing }
