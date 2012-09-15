@@ -19,7 +19,7 @@ ShellWindowMorph class >> open [
 { #category : #'menu commands' }
 ShellWindowMorph >> accept [
 
-	self model cr; flush; processCommand: self commandLineInput asString
+	self model cr; flush; processCommand: self commandLineInput asString echo: false
 
 ]
 
