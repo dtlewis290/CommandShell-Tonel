@@ -383,7 +383,17 @@ CommandShellTranscript >> processCommand: aCommandString [
 	"Evaluate aCommandString in a separate Smalltalk process. This permits the
 	user interface to remain responsive."
 
-	^ self cliShell processCommand: aCommandString
+	^ self processCommand: aCommandString echo: true
+
+]
+
+{ #category : #evaluation }
+CommandShellTranscript >> processCommand: aCommandString echo: showCommand [
+	"Evaluate aCommandString in a separate Smalltalk process. This permits the
+	user interface to remain responsive. If showCommand is true, update dependent
+	views in order to display the command."
+
+	^ self cliShell processCommand: aCommandString echo: showCommand
 
 ]
 
@@ -467,5 +477,8 @@ CommandShellTranscript >> update: event [
 		ifTrue: [^ self handleInterruptCharacterEvent].
 	event == #relabel
 		ifTrue: [^ self changed: event].
-	self error: ['unexpected event']
+	"Treat anything other than the symbols above as a string to be displayed on
+	the command line in the view"
+	self show: event asString; cr.
+
 ]

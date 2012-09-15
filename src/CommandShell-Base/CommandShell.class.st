@@ -481,7 +481,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.5.5'
+	^'4.5.6'
 ]
 
 { #category : #'window color' }
@@ -680,6 +680,17 @@ CommandShell >> command: aCommandString [
 	"CommandShell new open; command: 'sol'"
 	"CommandShell new command: 'sol'"
 
+	^self command: aCommandString echo: true
+
+]
+
+{ #category : #evaluation }
+CommandShell >> command: aCommandString echo: showCommand [
+	"Evaluate aCommandString. Answer a collection of evaluated pipelines,
+	or nil if nothing was done. If showCommand is true, update dependent
+	views in order to display the command."
+
+	showCommand ifTrue: [self changed: aCommandString].
 	^ self evaluatePipelines: (self evaluateOrMakePipelinesFrom: aCommandString)
 
 ]
@@ -1491,8 +1502,18 @@ CommandShell >> processCommand: aCommandString [
 	"Evaluate aCommandString in a separate Smalltalk process. This permits the
 	user interface to remain responsive."
 
+	^self processCommand: aCommandString echo: true
+
+]
+
+{ #category : #evaluation }
+CommandShell >> processCommand: aCommandString echo: showCommand [
+	"Evaluate aCommandString in a separate Smalltalk process. This permits the
+	user interface to remain responsive. If showCommand is true, update dependent
+	views in order to display the command."
+
 	self commandLineProcesses add:
-		([self command: aCommandString.
+		([self command: aCommandString echo: showCommand.
 		self commandLineProcesses
 				remove: Processor activeProcess
 				ifAbsent: []] forkAt: Processor userBackgroundPriority)
@@ -1970,7 +1991,7 @@ CommandShell >> waitForCommand: aCommandString [
 	when complete. Answer a collection of evaluated pipelines, or nil if nothing was done."
 
 	| sema pipelines lastPipeline |
-	self show: aCommandString; cr.
+	self changed: aCommandString.
 	pipelines := self evaluateOrMakePipelinesFrom: aCommandString.
 	pipelines isEmpty ifFalse:
 		[lastPipeline := pipelines last.
