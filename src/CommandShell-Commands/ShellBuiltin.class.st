@@ -522,7 +522,7 @@ ShellBuiltin >> fcCommand: myProxy shell: commandShell input: stdin output: stdo
 								ifFalse: [commandShell historyAt: index])].
 					commandShell notifyPrompt.
 					cmd isEmpty ifFalse:
-						[commandShell outputStream nextPutAll: cmd; cr; flush; processCommand: cmd]]]
+						[commandShell outputStream nextPutAll: cmd; cr; flush; processCommand: cmd echo: false]]]
 
 ]
 
