@@ -169,7 +169,7 @@ RemoteTask >> getResult [
 
 	SerializingStrategy = #referenceStream
 		ifTrue: [ | responseStream responseObject |
-			responseStream := ReferenceStream on: childProxy pipeFromOutput reader.
+			responseStream := (Smalltalk at: #ReferenceStream) on: childProxy pipeFromOutput reader.
 			responseObject := responseStream next.
 			^ responseObject].
 
@@ -188,7 +188,7 @@ RemoteTask >> put: result [
 	| out |
 	SerializingStrategy = #referenceStream
 		ifTrue: [
-			out := ReferenceStream on: OSProcess thisOSProcess stdOut.
+			out := (Smalltalk at: #ReferenceStream) on: OSProcess thisOSProcess stdOut.
 			^out nextPut: result].
 
 	SerializingStrategy = #fuel

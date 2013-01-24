@@ -27,7 +27,9 @@ ProxyPipeline class >> command: aCommandString [
 	"ProxyPipeline command: 'ls | copyToOutput | wc'"
 	"ProxyPipeline command: ''"
 
-	^ self command: aCommandString shell: CommandShell new
+	Smalltalk at: #CommandShell
+		ifPresent: [ :cls | ^ self command: aCommandString shell: cls new ].
+	self notify: 'CommandShell not found'
 
 ]
 
