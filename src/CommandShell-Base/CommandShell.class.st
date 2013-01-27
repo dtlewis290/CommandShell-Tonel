@@ -91,10 +91,151 @@ Three types of commands may be executed from a CommandShell:
 Internal and external commands can be freely mixed in a command pipeline, with results which should be familiar to users of Unix command shells. Pipes are implemented as instances of OSPipe or InternalPipe, and are capable of passing streams of characters from one process proxy to the next. All commands (internal or external) evaluate to strings, such that their results can either be passed through a pipe to the next command proxy in a pipeline, or displayed in the terminal window view if the proxy represents the last command in a command pipeline. Error messages (also strings) are written to an errorPipelineStream which is shared by all proxies in a command pipeline, such that any error messages are accumulated for the entire command pipeline.'
 ]
 
+{ #category : #'version dependent' }
+CommandShell class >> defaultPathString [
+
+	^ self useFileSystem
+		ifTrue: [(((Smalltalk at: #Path) perform: #workingDirectory) perform: #asFileReference) pathString]
+		ifFalse: [(Smalltalk at: #FileDirectory) default pathName]
+
+]
+
 { #category : #defaults }
 CommandShell class >> defaultWindowName [
 
 	^ 'Squeak Shell'
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> deleteFileNamed: fileName [
+	"Delete the file with the given name."
+
+	self useFileSystem
+		ifTrue: [ (fileName perform: #asFileReference)
+				perform: #ensureDeleted ]
+		ifFalse: [ (Smalltalk at: #FileDirectory) default
+				deleteFileNamed: fileName ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> deleteFileNamed: fileName inDirectory: directoryOrFileReference [
+	"Delete the file with the given name in the given directory."
+
+	^ self useFileSystem
+		ifTrue: [(directoryOrFileReference files
+						detect: [:e | e basename = fileName ]
+						ifNone: [ ])
+					ifNotNilDo: [:f | f delete ]]
+		ifFalse: [ directoryOrFileReference deleteFileNamed: fileName ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> dirPathFor: path [
+	"Return the directory part the given name."
+
+	^ self useFileSystem
+		ifTrue: [ (path perform: #asFileReference) parent fullName ]
+		ifFalse: [(Smalltalk at: #FileDirectory) perform: #dirPathFor: with: path]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> directoryEntryNames: path [
+
+	^ self useFileSystem
+		ifTrue: [ (path perform: #asFileReference) children collect: [:e | e perform: #basename] ]
+		ifFalse: [ ((Smalltalk at: #FileDirectory) on: path) entries collect: [:e | e name] ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> directoryExists: path [
+	"Answer true if a directory of the given name exists. The given name may
+	be either a full path name or a local directory within this directory."
+
+	^ self useFileSystem
+		ifTrue: [ (path perform: #asFileReference) exists ]
+		ifFalse: [ (Smalltalk at: #FileDirectory) default directoryExists: path ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> directoryForPath: path [
+
+	^ self useFileSystem
+		ifTrue: [path perform: #asFileReference]
+		ifFalse: [(Smalltalk at: #FileDirectory) on: path]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> directoryNamesInPath: path [
+
+	^ self useFileSystem
+		ifTrue: [ (path perform: #asFileReference) children	
+					select: [:e | e isDirectory ]
+					thenCollect: [:e | e perform: #basename] ]
+		ifFalse: [ ((Smalltalk at: #FileDirectory) on: path) entries
+					select: [:e | e isDirectory ]
+					thenCollect: [:e | e name] ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> fileExists: path [
+	"Answer true if a file of the given name exists. The given name may be
+	either a full path name or a local file within this directory."
+
+	^ self useFileSystem
+		ifTrue: [ (path perform: #asFileReference) exists ]
+		ifFalse: [ (Smalltalk at: #FileDirectory) default fileExists: path ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> fileExists: fileName inDirectory: directoryOrFileReference [
+	"Answer true if a file of the given name exists in this directory."
+
+	^ self useFileSystem
+		ifTrue: [ (directoryOrFileReference entries
+					detect: [:e | e basename = fileName] ifNone: []) notNil ]
+		ifFalse: [ directoryOrFileReference fileExists: fileName ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> fileExists: fileName inPath: path [
+	"Answer true if a file of the given name exists in the directory named by path."
+
+	^ self useFileSystem
+		ifTrue: [ self fileExists: fileName inDirectory: (path perform: #asFileReference) ]
+		ifFalse: [ self fileExists: fileName inDirectory: ((Smalltalk at: #FileDirectory) on: path) ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> fileNamed: fileName inDirectory: directoryOrFileReference [
+	"Open the file with the given name in this directory for writing."
+
+	^ self useFileSystem
+		ifTrue: [(directoryOrFileReference files
+						detect: [:e | e basename = fileName ]
+						ifNone: [ ])
+					ifNotNilDo: [:f | f writeStream ]]
+		ifFalse: [ directoryOrFileReference fileNamed: fileName ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> fullNameFor: fileName [
+	"Return a corrected, fully-qualified name for the given file name."
+
+	^ self useFileSystem
+		ifTrue: [ (fileName perform: #asFileReference) perform: #fullName ]
+		ifFalse: [ (Smalltalk at: #FileDirectory) default fullNameFor: fileName ]
+
 ]
 
 { #category : #documentation }
@@ -342,6 +483,16 @@ CommandShell class >> isMorphic [
 	^(Smalltalk respondsTo: #isMorphic) not or: [Smalltalk isMorphic]
 ]
 
+{ #category : #'version dependent' }
+CommandShell class >> localNameFor: path [
+	"Return the local part the given name."
+
+	^ self useFileSystem
+		ifTrue: [ (path perform: #asFileReference) perform: #basename ]
+		ifFalse: [(Smalltalk at: #FileDirectory) perform: #localNameFor: with: path]
+
+]
+
 { #category : #'VM building' }
 CommandShell class >> makeVmIn: buildDirectoryPathName [
 	"Rebuild the virtual machine and plugins in the buildDirectoryPathName
@@ -349,7 +500,7 @@ CommandShell class >> makeVmIn: buildDirectoryPathName [
 	new VM. This assumes that the currently executing VM is either located in,
 	or linked to, the buildDirectoryPathName directory."
 
-	"CommandShell makeVmIn: FileDirectory default pathName, FileDirectory slash, 'build'"
+	"CommandShell makeVmIn: CommandShell defaultPathString, CommandShell pathSeparator, 'build'"
 
 	| shell |
 	shell := self new.
@@ -396,6 +547,34 @@ CommandShell class >> overview [
 			[ws nextPutAll: (rs upTo: $<).
 			rs upTo: $>].
 	^ ws contents
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> pathNameDelimiter [
+
+	^ self useFileSystem
+		ifTrue: [(Smalltalk at: #DiskStore) perform: #delimiter]
+		ifFalse: [(Smalltalk at: #FileDirectory) pathNameDelimiter]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> pathNameForDirectory: directoryOrFileReference [
+	"Return the full name of this directory."
+
+	^ self useFileSystem
+		ifTrue: [directoryOrFileReference fullName]
+		ifFalse: [ directoryOrFileReference pathName ]
+
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> pathSeparator [
+
+	^ self useFileSystem
+		ifTrue: [((Smalltalk at: #DiskStore) perform: #delimiter) asString]
+		ifFalse: [(Smalltalk at: #FileDirectory) slash]
 
 ]
 
@@ -476,12 +655,20 @@ CommandShell class >> unload [
 				ifFalse: [ class unregisterOpenCommandWithReceiver: self ] ] ]
 ]
 
+{ #category : #'version dependent' }
+CommandShell class >> useFileSystem [
+	"If true use FileSystem, otherwise use traditional FileDirectory. See senders
+	for methods with file system dependencies."
+
+	^ Smalltalk hasClassNamed: #FileReference
+]
+
 { #category : #'version testing' }
 CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.5.7'
+	^'4.6.1'
 ]
 
 { #category : #'window color' }
@@ -1317,7 +1504,7 @@ CommandShell >> makeVmIn: buildDirectoryPathName [
 	new VM. This assumes that the currently executing VM is either located in,
 	or linked to, the buildDirectoryPathName directory."
 
-	"CommandShell makeVmIn: FileDirectory default pathName, FileDirectory slash, 'build'"
+	"CommandShell makeVmIn: CommandShell defaultPathString, CommandShell pathSeparator, 'build'"
 
 	self canAccessOSProcess
 		ifFalse:
@@ -1908,7 +2095,7 @@ CommandShell >> scriptDoAll: aScriptString [
 CommandShell >> setHomeDirectory [
 
 	self environment.
-	^ environment at: #HOME put: FileDirectory default pathName
+	^ environment at: #HOME put: CommandShell defaultPathString
 
 ]
 
@@ -2022,7 +2209,7 @@ CommandShell >> workingDirectory [
 
 	^ self shellSyntax workingDirectory
 		ifNil:
-			[shellSyntax workingDirectory: FileDirectory default pathName; workingDirectory]
+			[shellSyntax workingDirectory: CommandShell defaultPathString; workingDirectory]
 ]
 
 { #category : #'working directory' }

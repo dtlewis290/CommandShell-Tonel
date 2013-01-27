@@ -25,7 +25,7 @@ ShellSyntax >> appendPath: aPathString toPath: startingPathString [
 	"ShellSyntax new appendPath: 'someFileName' toPath: 'C:\WINDOWS'"
 
 	| newPath |
-	^ (aPathString findTokens: FileDirectory slash)
+	^ (aPathString findTokens: CommandShell pathSeparator)
 		inject: startingPathString
 		into: [:dirPath :nextPart | 
 			nextPart = '..'
@@ -34,7 +34,7 @@ ShellSyntax >> appendPath: aPathString toPath: startingPathString [
 						ifTrue: [newPath := dirPath]
 						ifFalse: [newPath := (self isAtFileSystemRoot: dirPath)
 										ifTrue: [dirPath , nextPart]
-										ifFalse: [dirPath , FileDirectory slash , nextPart]]].
+										ifFalse: [dirPath , CommandShell pathSeparator , nextPart]]].
 			newPath]
 ]
 
@@ -80,7 +80,7 @@ ShellSyntax >> containsExpansionTokens: aString [
 	contains path separator characters. If false, the sender may safely skip normal
 	glob expansion on aString."
 
-	^ aString includesAnyOf: {$? . $* . $[ . FileDirectory pathNameDelimiter}
+	^ aString includesAnyOf: {$? . $* . $[ . CommandShell pathNameDelimiter}
 
 ]
 
@@ -96,7 +96,7 @@ ShellSyntax >> cwdDictionary [
 ShellSyntax >> cwdIndex [
 	"Key to current cwd path name in cwdDictionary"
 
-	^ cwdIndex ifNil: [cwdIndex := self cwdIndexFor: FileDirectory default pathName]
+	^ cwdIndex ifNil: [cwdIndex := self cwdIndexFor: CommandShell defaultPathString]
 
 ]
 
@@ -165,13 +165,13 @@ ShellSyntax >> expandArgument: aString inDirectoryPath: aDefaultFileDirectoryPat
 	aString ifNil: [^ Array new: 0].
 	dirPath := (aDefaultFileDirectoryPath
 				ifNil: [self workingDirectory])
-					ifNil: [FileDirectory default pathName].
+					ifNil: [CommandShell defaultPathString].
 	pathNames := (self containsExpansionTokens: aString)
 				ifTrue: [self expandedPathsFrom: aString beginningAt: dirPath]
 				ifFalse: [OrderedCollection new].
 	newArgs := pathNames collect:
-				[:p | (aDefaultFileDirectoryPath notNil and: [p beginsWith: aDefaultFileDirectoryPath, FileDirectory slash])
-					ifTrue: [(ReadStream on: p) next: aDefaultFileDirectoryPath size + FileDirectory slash size; upToEnd]
+				[:p | (aDefaultFileDirectoryPath notNil and: [p beginsWith: aDefaultFileDirectoryPath, CommandShell pathSeparator])
+					ifTrue: [(ReadStream on: p) next: aDefaultFileDirectoryPath size + CommandShell pathSeparator size; upToEnd]
 					ifFalse: [p]].
 	newArgs isEmpty ifTrue: [newArgs add: aString].
 	^ newArgs
@@ -188,7 +188,7 @@ ShellSyntax >> expandArgumentsFrom: argArray inDirectoryPath: aDefaultFileDirect
 		inDirectoryPath: '/etc'"
 	"ShellSyntax new
 		expandArgumentsFrom: #('this' 'is' 'a' 'test' 'Sq*log' '/us*/b?n/v?')
-		inDirectoryPath: FileDirectory default pathName"
+		inDirectoryPath: CommandShell defaultPathString"
 	"ShellSyntax new
 		expandArgumentsFrom: #('this' 'is' 'a' 'test' 'Sq*log' '/us*/b?n/v?')
 		inDirectoryPath: nil"
@@ -229,17 +229,18 @@ ShellSyntax >> expandPathParts: pathParts beginningAt: root [
 					[remainder isEmpty
 						ifTrue:
 							["This condition terminates recursion"
-							names := self glob: firstPart inDirectory: (FileDirectory on: root).
-							^ (root = FileDirectory slash)
+							names := self glob: firstPart inDirectory: root.
+							^ (root = CommandShell pathSeparator)
 								ifTrue: [^ names collect: [:n | root, n]]
-								ifFalse: [^ names collect: [:n | root, FileDirectory slash, n]]]
+								ifFalse: [^ names collect: [:n | root, CommandShell pathSeparator, n]]]
 						ifFalse:
 							["Continue recursion until no more elements"
+							CommandShell directoryNamesInPath: root.
 							dirNames := self glob: firstPart
-											names: (FileDirectory on: root) directoryNames.
-							(('*', FileDirectory slash) match: root)
+											names: (CommandShell directoryNamesInPath: root).
+							(('*', CommandShell pathSeparator) match: root)
 								ifTrue: [basePath := root]
-								ifFalse: [basePath := root, FileDirectory slash].
+								ifFalse: [basePath := root, CommandShell pathSeparator].
 							dirPaths := dirNames collect: [:d | basePath, d]]]].
 		^ dirPaths
 			inject: OrderedCollection new
@@ -303,8 +304,8 @@ ShellSyntax >> expandedPathsFromAbsolutePath: anAbsolutePathString [
 	a := self splitLocationPrefixFromPath: anAbsolutePathString.
 	prefix := a at: 1.
 	dirPathString := a at: 2.
-	pathParts := dirPathString findTokens: FileDirectory slash.
-	root := prefix, FileDirectory slash.
+	pathParts := dirPathString findTokens: CommandShell pathSeparator.
+	root := prefix, CommandShell pathSeparator.
 	result addAll: (self expandPathParts: pathParts beginningAt: root).
 	^ result
 
@@ -327,9 +328,9 @@ ShellSyntax >> expandedPathsFromRelativePath: aPathString beginningAt: firstPart
 
 	| result pathParts root |
 	result := OrderedCollection new.
-	pathParts := aPathString findTokens: FileDirectory slash.
+	pathParts := aPathString findTokens: CommandShell pathSeparator.
 	root := firstPartOfPath isNil
-				ifTrue: [FileDirectory default pathName]
+				ifTrue: [CommandShell defaultPathString]
 				ifFalse: [firstPartOfPath].
 	result addAll: (self expandPathParts: pathParts beginningAt: root).
 	^ result
@@ -349,13 +350,12 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 	"ShellSyntax new findExecutablePathFor: 'a' inDirectoryPath: nil"
 	"ShellSyntax new findExecutablePathFor: 'sqcat' inDirectoryPath: '/home/lewis/bin'"
 
-	| delimiter path localNames fd fullName fileExists |
+	| delimiter path localNames fullName fileExists |
 	self canAccessOSProcess ifFalse: [^ nil].
-	delimiter := FileDirectory pathNameDelimiter.
+	delimiter := CommandShell pathNameDelimiter.
 	path := (pathString
 				ifNil: [self workingDirectory])
-					ifNil: [FileDirectory default pathName].
-	fd := FileDirectory on: path.
+					ifNil: [CommandShell defaultPathString].
 	"Unix compatibility note: If aString contains wildcard characters,
 	it is expanded in the context of the current working directory. Expansion
 	does not take place in the context of the PATH directories."
@@ -364,7 +364,7 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 			["A fully or partially qualified path, do not search PATH"
 			^ (self expandedPathsFrom: aString beginningAt: pathString)
 				detect: [:fileName |
-					(fd fileExists: fileName) and: [self isExecutable: fileName]]
+					(CommandShell fileExists: fileName inPath: path) and: [self isExecutable: fileName]]
 				ifNone: [nil]]
 		ifFalse:
 			["Look for the file in the PATH locations"
@@ -374,15 +374,15 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 					["Name was not expanded, so use the unmodified value of aString"
 					localNames := Array with: aString].
 			(self pathEntriesInDirectoryPath: path)
-				do: [:pathName | | thisDirectory |
-					thisDirectory := FileDirectory on: pathName.
+				do: [:pathName |
 					localNames
 						do: [:fileName |
-							fileExists := [thisDirectory fileExists: fileName]
-											on: InvalidDirectoryError
-											do: [:e | false].
+							fileExists := [ CommandShell useFileSystem
+									ifTrue: [ CommandShell fileExists: fileName inDirectory: (pathName perform: #asFileReference) ]
+									ifFalse: [ CommandShell fileExists: fileName inDirectory: ((Smalltalk at: #FileDirectory) on: pathName) ]
+								] on: InvalidDirectoryError do: [:e | false].
 							fileExists ifTrue:
-								[fullName := pathName, FileDirectory slash, fileName.
+								[fullName := pathName, CommandShell pathSeparator, fileName.
 								(self isExecutable: fullName)
 									ifTrue: [^ fullName]]]].
 			^ nil]
@@ -440,18 +440,18 @@ ShellSyntax >> glob: aString [
 ]
 
 { #category : #globbing }
-ShellSyntax >> glob: aString inDirectory: aFileDirectory [
+ShellSyntax >> glob: aString inDirectory: directoryPath [
 	"Apply Unix shell globbing rules to aString, and answer an array of matching
 	file names."
 
-	"ShellSyntax new glob: 'ReadMe.txt' inDirectory: FileDirectory default"
-	"ShellSyntax new glob: 'SqueakDebug.log' inDirectory: FileDirectory default"
-	"ShellSyntax new glob: '?queak*.[0-9].log' inDirectory: FileDirectory default"
-	"ShellSyntax new glob: '*image*' inDirectory: FileDirectory default"
-	"ShellSyntax new glob: 'noSuchFileName' inDirectory: FileDirectory default"
-	"ShellSyntax new glob: 'b?n' inDirectory: (FileDirectory on: '/usr')"
+	"ShellSyntax new glob: 'ReadMe.txt' inDirectory: FileDirectory default pathName"
+	"ShellSyntax new glob: 'SqueakDebug.log' inDirectory: FileDirectory default pathName"
+	"ShellSyntax new glob: '?queak*.[0-9].log' inDirectory: FileDirectory default pathName"
+	"ShellSyntax new glob: '*image*' inDirectory: FileDirectory default pathName"
+	"ShellSyntax new glob: 'noSuchFileName' inDirectory: FileDirectory default pathName"
+	"ShellSyntax new glob: 'b?n' inDirectory: '/usr'"
 
-	[^ self glob: aString names: aFileDirectory fileAndDirectoryNames]
+	[^ self glob: aString names: (CommandShell directoryEntryNames: directoryPath)]
 		on: Error
 		do: [:ex | ^ #()]
 
@@ -529,9 +529,9 @@ ShellSyntax >> isAbsolutePath: aPathString [
 	"ShellSyntax new isAbsolutePath: 'C:\WINDOWS'"
 
 	| prefixAndPath path |
-	^ ((((FileDirectory slash, '*') match: aPathString)
+	^ ((((CommandShell pathSeparator, '*') match: aPathString)
 		or:	[prefixAndPath := self splitLocationPrefixFromPath: aPathString.
-			(FileDirectory slash, '*') match: (path := prefixAndPath last)])
+			(CommandShell pathSeparator, '*') match: (path := prefixAndPath last)])
 				or: [prefixAndPath first isEmpty not and: [path isEmpty]]) "One above the root of a Win32 file system tree"
 
 ]
@@ -545,7 +545,7 @@ ShellSyntax >> isAtFileSystemRoot: aPathString [
 	"ShellSyntax new isAtFileSystemRoot: 'D:\Windows'"
 	"ShellSyntax new isAtFileSystemRoot: '\'"
 
-	^ (FileDirectory slash = (self splitLocationPrefixFromPath: aPathString) last) or: [aPathString isEmpty]
+	^ (CommandShell pathSeparator = (self splitLocationPrefixFromPath: aPathString) last) or: [aPathString isEmpty]
 
 ]
 
@@ -564,11 +564,16 @@ ShellSyntax >> isComment: aString [
 ShellSyntax >> isDirectoryPath: aPathString [
 
 	| fullPath localName entry |
-	^ (('*', FileDirectory slash) match: aPathString) or:
-		[fullPath := FileDirectory default fullNameFor: aPathString.
-		localName := FileDirectory localNameFor: fullPath.
-		entry := (FileDirectory on: (FileDirectory dirPathFor: fullPath)) entries
-			detect: [:e | e name = localName] ifNone: [nil].
+	^ (('*', CommandShell pathSeparator) match: aPathString) or:
+		[fullPath := CommandShell fullNameFor: aPathString.
+		localName := CommandShell localNameFor: fullPath.
+		[entry := CommandShell useFileSystem
+			ifTrue: [entry := ((CommandShell dirPathFor: fullPath) perform: #asFilePath) entries
+						detect: [:e | e basename = localName] ifNone: [nil]]
+			ifFalse: [entry := ((Smalltalk at: #FileDirectory) on: (CommandShell dirPathFor: fullPath)) entries
+						detect: [:e | e name = localName] ifNone: [nil]]]
+					on: InvalidDirectoryError
+					do: [: ex | ^false].
 		entry notNil and: [entry isDirectory]]
 
 ]
@@ -688,7 +693,7 @@ ShellSyntax >> pathAboveRoot [
 
 	^ (self platformName = 'Win32')
 		ifTrue: ['']
-		ifFalse: [FileDirectory slash].
+		ifFalse: [CommandShell pathSeparator].
 
 ]
 
@@ -698,7 +703,7 @@ ShellSyntax >> pathEntriesInDirectoryPath: basePath [
 	string provided by the operating system. Relative path names are interpreted relative
 	to basePath"
 
-	"ShellSyntax new pathEntriesInDirectoryPath: FileDirectory default pathName"
+	"ShellSyntax new pathEntriesInDirectoryPath: CommandShell defaultPathString"
 
 	^ (Smalltalk at: #OSProcess ifPresent:
 		[:osp |
@@ -717,7 +722,7 @@ ShellSyntax >> pathRoot: aPathString [
 
 	| prefix |
 	prefix := (self splitLocationPrefixFromPath: aPathString) first.
-	^ prefix, FileDirectory slash
+	^ prefix, CommandShell pathSeparator
 
 ]
 
@@ -1116,13 +1121,13 @@ ShellSyntax >> upOneDirectoryLevel: aPathName [
 					as a sytax error."
 					^ '..']]
 		ifFalse:
-			[newPath := (path includes: FileDirectory pathNameDelimiter)
-				ifTrue: [path copyUpToLast: FileDirectory pathNameDelimiter]
+			[newPath := (path includes: CommandShell pathNameDelimiter)
+				ifTrue: [path copyUpToLast: CommandShell pathNameDelimiter]
 				ifFalse: [''].
 			^ newPath isEmpty
 				ifTrue:
 					[(self isAbsolutePath: aPathName)
-						ifTrue: [prefix, FileDirectory slash]
+						ifTrue: [prefix, CommandShell pathSeparator]
 						ifFalse: [prefix]]
 				ifFalse:
 					[prefix, newPath]]
