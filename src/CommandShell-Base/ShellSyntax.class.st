@@ -568,7 +568,7 @@ ShellSyntax >> isDirectoryPath: aPathString [
 		[fullPath := CommandShell fullNameFor: aPathString.
 		localName := CommandShell localNameFor: fullPath.
 		[entry := CommandShell useFileSystem
-			ifTrue: [entry := ((CommandShell dirPathFor: fullPath) perform: #asFilePath) entries
+			ifTrue: [entry := ((CommandShell dirPathFor: fullPath) perform: #asFileReference) entries
 						detect: [:e | e basename = localName] ifNone: [nil]]
 			ifFalse: [entry := ((Smalltalk at: #FileDirectory) on: (CommandShell dirPathFor: fullPath)) entries
 						detect: [:e | e name = localName] ifNone: [nil]]]
