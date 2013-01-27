@@ -42,23 +42,22 @@ PipeableOSProcessTestCase >> numberOfOpenFiles [
 	only on a system with a /proc filesystem and file descriptors located in a
 	directory called /proc/<pid>/fd. On other systems, just answer 0."
 
-	"UnixProcessTestCase new numberOfOpenFiles"
+	"PipeableOSProcessTestCase new numberOfOpenFiles"
 
 	| d |
 	^ (d := self procDir) isNil
 		ifTrue: [0]
-		ifFalse: [d entries size]
+		ifFalse: [(CommandShell directoryEntryNames: d) size]
 ]
 
 { #category : #private }
 PipeableOSProcessTestCase >> procDir [
 	"Assuming that we have a /proc file system as on Linux (otherwise answer nil)"
 
-	| path d |
+	| path |
 	^ procDir ifNil:
 		[path := '/proc/' , OSProcess thisOSProcess pid printString, '/fd'.
-		d := FileDirectory on: path.
-		(d directoryExists: path) ifTrue: [procDir := d]]
+		(CommandShell directoryExists: path) ifTrue: [procDir := path]]
 
 ]
 

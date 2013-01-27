@@ -561,7 +561,7 @@ ShellSyntaxTestCase >> testExpandArgumentFrom02 [
 	self unix ifTrue:
 		[args := shellSyntax
 			expandArgumentsFrom: #('this' 'is' 'a' 'test' '*.image' '/us*/b?n/v?')
-			inDirectoryPath: FileDirectory default pathName.
+			inDirectoryPath: CommandShell defaultPathString.
 		self shouldnt: [args isEmpty].
 		self should: [args includes: 'this'].
 		self should: [args includes: 'is'].
@@ -1022,6 +1022,24 @@ ShellSyntaxTestCase >> testIsComment [
 	self shouldnt: (shellSyntax isComment: '   notComment').
 	self shouldnt: (shellSyntax isComment: 'notComment').
 	self should: (shellSyntax isComment: '')
+
+]
+
+{ #category : #'testing - path navigation' }
+ShellSyntaxTestCase >> testIsDirectoryPath [
+
+	"(ShellSyntaxTestCase selector: #testIsDirectoryPath) debug"
+
+	self unix ifTrue: [
+		self should: [ShellSyntax new isDirectoryPath: '/usr/bin'].
+		self should: [ShellSyntax new isDirectoryPath: '/'].
+		self shouldnt: [ShellSyntax new isDirectoryPath: '/bin/sh'].
+		self shouldnt: [ShellSyntax new isDirectoryPath: '/foo'].
+		self shouldnt: [ShellSyntax new isDirectoryPath: '/foo/bar'] ].
+	self win32 ifTrue: [
+		self should: [ShellSyntax new isDirectoryPath: 'C:' ] ]
+
+		
 
 ]
 

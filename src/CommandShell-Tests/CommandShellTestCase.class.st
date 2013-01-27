@@ -85,24 +85,23 @@ CommandShellTestCase >> numberOfOpenFiles [
 	only on a system with a /proc filesystem and file descriptors located in a
 	directory called /proc/<pid>/fd. On other systems, just answer 0."
 
-	"UnixProcessTestCase new numberOfOpenFiles"
+	"CommandShellTestCase new numberOfOpenFiles"
 
 	| d |
 	self checkFileHandleCount ifFalse: [^ 0]. "Bypass the test"
 	^ (d := self procDir) isNil
 		ifTrue: [0]
-		ifFalse: [d entries size]
+		ifFalse: [(CommandShell directoryEntryNames: d) size]
 ]
 
 { #category : #accessing }
 CommandShellTestCase >> procDir [
 	"Assuming that we have a /proc file system as on Linux (otherwise answer nil)"
 
-	| path d |
+	| path |
 	^ procDir ifNil:
 		[path := '/proc/' , OSProcess thisOSProcess pid printString, '/fd'.
-		d := FileDirectory on: path.
-		(d directoryExists: path) ifTrue: [procDir := d]]
+		(CommandShell directoryExists: path) ifTrue: [procDir := path]]
 
 ]
 
@@ -205,7 +204,7 @@ CommandShellTestCase >> testBangExpression [
 	openFileCount := self numberOfOpenFiles.
 	self should: [shell outputStream contents isEmpty].
 	self should: shell outputStream isEmpty.
-	pipelines := shell evaluateOrMakePipelinesFrom: 'Smalltalk size!'.
+	pipelines := shell evaluateOrMakePipelinesFrom: 'Smalltalk name!'.
 	self assert: pipelines size = 1.
 	procs := pipelines last.
 	p := procs last.
@@ -232,7 +231,7 @@ CommandShellTestCase >> testBangExpressionInPipeline [
 	openFileCount := self numberOfOpenFiles.
 	self should: [shell outputStream contents isEmpty].
 	self should: shell outputStream isEmpty.
-	pipelines := shell evaluateOrMakePipelinesFrom: 'who | Smalltalk size!'.
+	pipelines := shell evaluateOrMakePipelinesFrom: 'who | Smalltalk name!'.
 	self assert: pipelines size = 1.
 	procs := pipelines last.
 	p := procs last.
@@ -1032,7 +1031,7 @@ CommandShellTestCase >> testPipeline40 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'ps > /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == PipeableOSProcess].
@@ -1053,7 +1052,7 @@ CommandShellTestCase >> testPipeline41 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'ls /etc/hosts /NO/SUCH/FILE 2> /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == PipeableOSProcess].
@@ -1250,7 +1249,7 @@ CommandShellTestCase >> testPipeline50 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'help > /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ShellBuiltinEvaluator].
@@ -1274,7 +1273,7 @@ CommandShellTestCase >> testPipeline51 [
 
 	| openFileCount procs p o fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'copyToError /etc/hosts 2> /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ShellBuiltinEvaluator].
@@ -1295,7 +1294,7 @@ CommandShellTestCase >> testPipeline52 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'copyToError < /etc/hosts 2> /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ShellBuiltinEvaluator].
@@ -1333,7 +1332,7 @@ CommandShellTestCase >> testPipeline60 [
 
 	| procs p o openFileCount |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'Smalltalk! > /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ExpressionEvaluator].
@@ -1354,7 +1353,7 @@ CommandShellTestCase >> testPipeline61 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'stdout nextPutAll: ''Hello world!'' ! > /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ExpressionEvaluator].
@@ -1375,7 +1374,7 @@ CommandShellTestCase >> testPipeline62 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'stderr nextPutAll: ''Hello stderr'' ! 2> /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ExpressionEvaluator].
@@ -1413,7 +1412,7 @@ CommandShellTestCase >> testPipeline64 [
 
 	| procs p o openFileCount fs |
 	openFileCount := self numberOfOpenFiles.
-	FileDirectory default deleteFileNamed: '/tmp/delete.me' ifAbsent: [].	
+	CommandShell deleteFileNamed: '/tmp/delete.me'.	
 	procs := shell pipeline: 'stdout nextPutAll: stdin upToEnd ! < /etc/hosts > /tmp/delete.me'.
 	p := procs last.
 	self should: [p class == ExpressionEvaluator].
@@ -1442,8 +1441,8 @@ CommandShellTestCase >> testPipeline65 [
 		ifFalse: ["newer image with refactored system dictionary"
 			(Smalltalk respondsTo: #globals)
 				ifFalse: [self error: 'unknown system dictionary organization'].
-			last := (Smalltalk globals asArray first: 300) printString last: 20.
-			procs := shell pipeline: 'Smalltalk globals asArray first: 300! | copyToOutput'].
+			last := (Smalltalk globals keys first: 300) printString last: 20.
+			procs := shell pipeline: 'Smalltalk globals keys first: 300! | copyToOutput'].
 	p := procs last.
 	self should: [p class == ShellBuiltinEvaluator].
 	o := procs output.
@@ -1473,8 +1472,8 @@ CommandShellTestCase >> testPipeline66 [
 		ifFalse: ["newer image with refactored system dictionary"
 			(Smalltalk respondsTo: #globals)
 				ifFalse: [self error: 'unknown system dictionary organization'].
-			last := (Smalltalk globals asArray first: count) last printString.
-			procs := shell pipeline: 'Smalltalk globals asArray first: ', count printString, '! | cat'].
+			last := (Smalltalk globals keys first: count) last printString.
+			procs := shell pipeline: 'Smalltalk globals keys first: ', count printString, '! | cat'].
 	p := procs last.
 	self should: [p class == PipeableOSProcess].
 	o := procs output.
@@ -1839,7 +1838,7 @@ CommandShellTestCase >> testSimpleExpression [
 	| procs openFileCount |
 	openFileCount := self numberOfOpenFiles.
 	self should: [shell outputStream contents isEmpty].
-	procs := shell evaluateOrMakePipelinesFrom: 'Smalltalk size'.
+	procs := shell evaluateOrMakePipelinesFrom: 'Smalltalk name'.
 	self should: [procs = #()].
 	self shouldnt: [shell outputStream contents isEmpty].
 	self should: [self isNumberOfOpenFiles: openFileCount]
