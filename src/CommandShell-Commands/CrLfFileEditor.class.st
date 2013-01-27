@@ -67,10 +67,10 @@ CrLfFileEditor class >> fileNamed: pathName inDirectoryPath: dirPath [
 	"CrLfFileEditor fileNamed: '/etc/NOSUCHFILE' inDirectoryPath: '/etc'"
 
 	| dir fs convention editText |
-	dir := FileDirectory on: dirPath.
+	dir := CommandShell directoryForPath: dirPath.
 	(dir fileExists: pathName)
 		ifTrue:
-			[[fs := CrLfFileStream readOnlyFileNamed: dirPath, FileDirectory slash, pathName.
+			[[fs := CrLfFileStream readOnlyFileNamed: dirPath, CommandShell pathSeparator, pathName.
 			convention := fs detectLineEndConvention.
 			editText := fs contentsOfEntireFile.
 			fs close]
@@ -96,9 +96,9 @@ CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
 	"CrLfFileEditor fileNamed: '/etc/hosts' withLabel: 'an editor on /etc/hosts'"
 
 	| dirPath dir fs convention editText localName |
-	dirPath := FileDirectory dirPathFor: pathName.
-	dir := FileDirectory on: dirPath.
-	localName := FileDirectory localNameFor: pathName.
+	dirPath := CommandShell dirPathFor: pathName.
+	dir := CommandShell directoryForPath: dirPath..
+	localName := CommandShell localNameFor: pathName.
 	(dir fileExists: localName)
 		ifTrue:
 			[[fs := CrLfFileStream readOnlyFileNamed: pathName.
@@ -223,7 +223,7 @@ CrLfFileEditor >> bogusTruncate: fileStream [
 	| name |
 	name := fileStream name.
 	fileStream close.
-	directory deleteFileNamed: name.
+	CommandShell deleteFileNamed: name inDirectory: directory.
 	^ CrLfFileStream fileNamed: name
 
 ]
@@ -233,7 +233,7 @@ CrLfFileEditor >> browseChanges [
 	"Browse in fileIn format."
 
 	| fs |
-	fs :=  self directory fileNamed: fileName.
+	fs :=  CommandShell fileNamed: fileName inDirectory: directory.
 	ChangeList browseStream: fs.
 	fs close
 
@@ -242,7 +242,7 @@ CrLfFileEditor >> browseChanges [
 { #category : #'model access' }
 CrLfFileEditor >> contents [
 
-	^ (self viewStyle == #hex)
+	^ viewStyle == #hex
 		ifTrue: [self hexFormat: contents]
 		ifFalse: [contents]
 
@@ -251,7 +251,7 @@ CrLfFileEditor >> contents [
 { #category : #'model access' }
 CrLfFileEditor >> contents: aString [
 
-	(self viewStyle == #hex)
+	viewStyle == #hex
 		ifTrue: [self inform: 'cannot update in hex mode']
 		ifFalse: [^ super contents: aString]
 ]
@@ -275,7 +275,7 @@ CrLfFileEditor >> controllerForAccept [
 { #category : #'model access' }
 CrLfFileEditor >> currentFilePathName [
 
-	^ self directory pathName, FileDirectory slash, self fileName
+	^ (CommandShell dirPathFor: directory), CommandShell pathSeparator, fileName
 ]
 
 { #category : #'initialize-release' }
@@ -283,12 +283,6 @@ CrLfFileEditor >> defaultFont [
 	"A fixed width font suitable for displaying output of shell command lines"
 
 	^ StrikeFont familyName: 'Atlanta' size: 11 emphasized: 0
-]
-
-{ #category : #accessing }
-CrLfFileEditor >> directory [
-
-	^ directory
 ]
 
 { #category : #accessing }
@@ -356,12 +350,6 @@ shiftedYellowButtonActivity)]
 ]
 
 { #category : #accessing }
-CrLfFileEditor >> fileName [
-
-	^ fileName
-]
-
-{ #category : #accessing }
 CrLfFileEditor >> fileName: aString [
 
 	fileName := aString
@@ -395,7 +383,7 @@ CrLfFileEditor >> getAnotherFileName: initialFileName [
 		ifTrue: [newFileName := FillInTheBlank
 									request: 'Enter a new file name'
 									initialAnswer: initialFileName.
-				newFileName := (directory fileExists: newFileName)
+				newFileName := (CommandShell fileExists: newFileName inDirectory: directory)
 					ifTrue: [self getFileName: newFileName]
 					ifFalse: [newFileName].
 				^ newFileName].
@@ -415,7 +403,7 @@ CrLfFileEditor >> getFileName: initialFileName [
 		ifTrue: [newFileName := FillInTheBlank
 									request: 'Enter a new file name'
 									initialAnswer: initialFileName.
-				newFileName := (directory fileExists: newFileName)
+				newFileName := (CommandShell fileExists: newFileName inDirectory: directory)
 					ifTrue: [self getFileName: newFileName]
 					ifFalse: [newFileName].
 				^ newFileName].
@@ -467,12 +455,6 @@ CrLfFileEditor >> labelString [
 	"For views to use a labels"
 
 	^ self currentFilePathName
-]
-
-{ #category : #accessing }
-CrLfFileEditor >> lineEndConvention [
-
-	^ lineEndConvention
 ]
 
 { #category : #accessing }
@@ -541,18 +523,17 @@ CrLfFileEditor >> openLabel: aLabelString [
 CrLfFileEditor >> put: aText [ 
 
 	| str newFileName fs |
-	(self viewStyle == #hex)
-		ifTrue:
-			[self inform: 'cannot save file in hex mode'.
-			^ false].
+	viewStyle == #hex
+		ifTrue: [self inform: 'cannot save file in hex mode'.
+				^ false].
 	str := aText asString.
 	self contents: str.
-	(directory fileExists: fileName)
+	(CommandShell fileExists: fileName inDirectory: directory)
 		ifTrue: [newFileName := self
-					getFileName: directory pathName,
-						FileDirectory slash , fileName.]
-		ifFalse: [newFileName := directory pathName,
-						FileDirectory slash , fileName].
+					getFileName: (CommandShell pathNameForDirectory: directory),
+						CommandShell pathSeparator , fileName.]
+		ifFalse: [newFileName := (CommandShell pathNameForDirectory: directory),
+						CommandShell pathSeparator , fileName].
 	newFileName ifNil: [^ false].
 	fs := CrLfFileStream fileNamed: newFileName.
 	[fs isNil] whileTrue:
@@ -624,18 +605,10 @@ CrLfFileEditor >> selectedMessageCategoryName [
 { #category : #private }
 CrLfFileEditor >> updateFilePathWith: aPathString [
 
-	self fileName: (FileDirectory localNameFor: aPathString).
-	self directory: (FileDirectory on: (FileDirectory dirPathFor: aPathString)).
+	self fileName: (CommandShell localNameFor: aPathString).
+	self directory: (CommandShell directoryForPath: aPathString).
 	self changed: #relabel
 
-]
-
-{ #category : #accessing }
-CrLfFileEditor >> viewStyle [
-	"#text or #hex"
-
-	viewStyle isNil ifTrue: [viewStyle := #text].
-	^ viewStyle
 ]
 
 { #category : #accessing }

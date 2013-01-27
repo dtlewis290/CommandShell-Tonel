@@ -281,7 +281,7 @@ ShellBuiltin >> cdCommand: myProxy shell: commandShell input: stdin output: stdo
 							[newPath := commandShell shellSyntax pathAboveRoot]
 						ifFalse:
 							[pathCwd := commandShell shellSyntax getCwdForPath: path.
-							arg := (path = FileDirectory slash)
+							arg := (path = CommandShell pathSeparator)
 								ifTrue: [path]
 								ifFalse: [commandShell shellSyntax
 												firstExpandedArgument: path
@@ -290,7 +290,7 @@ ShellBuiltin >> cdCommand: myProxy shell: commandShell input: stdin output: stdo
 								ifTrue: [arg]
 								ifFalse:
 									[p := commandShell shellSyntax newDirPath: arg from: pathCwd.
-									p ifNotNil: [FileDirectory default fullNameFor: p]]]]
+									p ifNotNil: [CommandShell fullNameFor: p]]]]
 				ifFalse:
 					[myProxy fail.
 					^ commandShell invalidCommandMessage]].
@@ -353,7 +353,7 @@ ShellBuiltin >> copyToErrorCommand: myProxy shell: commandShell input: stdin out
 		ifFalse:
 			[argArray do:
 				[:file |
-				(FileDirectory default fileExists: file)
+				(CommandShell fileExists: file)
 					ifTrue:
 						[fs := FileStream readOnlyFileNamed: file.
 						fs ifNotNil:
@@ -375,7 +375,7 @@ ShellBuiltin >> copyToOutputCommand: myProxy shell: commandShell input: stdin ou
 		ifFalse:
 			[argArray do:
 				[:file |
-				(FileDirectory default fileExists: file)
+				(CommandShell fileExists: file)
 					ifTrue:
 						[fs := FileStream readOnlyFileNamed: file.
 						fs ifNotNil:
@@ -407,21 +407,27 @@ ShellBuiltin >> copyUntilDoneFrom: aPipe to: aStream [
 
 { #category : #private }
 ShellBuiltin >> dirEntryString: aDirectoryEntry [
-	"Code lifted from Lex Spoon's FileList>>fileNameFormattedFrom:sizePad:"
+	"Original code lifted from Lex Spoon's FileList>>fileNameFormattedFrom:sizePad:"
 
 	"self new dirEntryString: FileDirectory default entries first"
 
-	| folderString nameStr dateStr sizeStr |
+	| folderString nameStr dateStr sizeStr date time |
 	folderString := ' [...]'.
-	nameStr := aDirectoryEntry isDirectory
-		ifTrue: [aDirectoryEntry name , folderString]
-		ifFalse: [aDirectoryEntry name].
-	dateStr := ((Date fromSeconds: aDirectoryEntry modificationTime )
-					printFormat: #(3 2 1 $. 1 1 2)) , ' ' ,
-				(String streamContents: [:s |
-					(Time fromSeconds: aDirectoryEntry modificationTime \\ 86400)
-						print24: true on: s]).
-	sizeStr := aDirectoryEntry fileSize asStringWithCommas.
+	CommandShell useFileSystem
+		ifTrue: [nameStr := aDirectoryEntry isDirectory
+				ifTrue: [(aDirectoryEntry perform: #basename), folderString]
+				ifFalse: [aDirectoryEntry perform: #basename].
+				date := aDirectoryEntry modificationTime asDate.
+				time := aDirectoryEntry modificationTime asTime.
+				sizeStr := aDirectoryEntry size asStringWithCommas]
+		ifFalse: [nameStr := aDirectoryEntry isDirectory
+				ifTrue: [aDirectoryEntry name , folderString]
+				ifFalse: [aDirectoryEntry name].
+				date := Date fromSeconds: aDirectoryEntry modificationTime.
+				time := Time fromSeconds: aDirectoryEntry modificationTime \\ 86400.
+				sizeStr := aDirectoryEntry fileSize asStringWithCommas].
+	dateStr := (date printFormat: #(3 2 1 $. 1 1 2)) , ' ' ,
+					(String streamContents: [:s | time print24: true on: s]).
 	^ nameStr , '    (' , dateStr , ' ' , sizeStr , ')'
 
 ]
@@ -640,7 +646,7 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 						pathName := commandShell shellSyntax
 							firstExpandedArgument: e
 							inDirectoryPath: commandShell shellSyntax workingDirectory.
-						fs := (FileDirectory default fileExists: pathName)
+						fs := (CommandShell fileExists: pathName)
 							ifTrue: [FileStream readOnlyFileNamed: pathName]
 							ifFalse: [nil].
 						fs isNil
@@ -762,10 +768,12 @@ ShellBuiltin >> slsCommand: myProxy shell: commandShell input: stdin output: std
 		ifFalse:
 			["List named files"
 			filePatterns := argArray].
-	d := FileDirectory on: commandShell workingDirectory.
+	CommandShell useFileSystem
+		ifTrue: [d := commandShell workingDirectory perform: #asFileReference]
+		ifFalse: [d := (Smalltalk at: #FileDirectory) on: commandShell workingDirectory].
 	entries := d entries.
 	names := Set new.
-	filePatterns do: [:pat | names addAll: (commandShell shellSyntax glob: pat inDirectory: d)].
+	filePatterns do: [:pat | names addAll: (commandShell shellSyntax glob: pat inDirectory: commandShell workingDirectory)].
 	dirs := OrderedCollection new.
 	files := OrderedCollection new.
 	names asArray sort do:
