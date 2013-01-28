@@ -452,7 +452,7 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 					[(self copyUntilDoneFrom: stdin to: (WriteStream on: String new)) contents
 						replaceAll: Character lf with: Character cr].
 			workingDir := CommandShell useFileSystem
-					ifTrue: [commandShell workingDirectory perform: #asFileReferenc]
+					ifTrue: [commandShell workingDirectory perform: #asFileReference]
 					ifFalse: [(Smalltalk at: #FileDirectory) on: commandShell workingDirectory].
 			commandShell scheduleToEvaluate:
 				[CrLfFileEditor
@@ -782,7 +782,7 @@ ShellBuiltin >> slsCommand: myProxy shell: commandShell input: stdin output: std
 	files := OrderedCollection new.
 	names asArray sort do:
 		[:n |
-		entry := entries detect: [:e | e name = n].
+		entry := entries detect: [:e | (CommandShell entryName: e) = n].
 		entry isDirectory
 			ifTrue: [dirs add: entry]
 			ifFalse: [files add: entry]].
@@ -842,7 +842,7 @@ ShellBuiltin >> snapshotCommand: myProxy shell: commandShell input: stdin output
 { #category : #'help messages' }
 ShellBuiltin >> snapshotHelp [
 
-	^ 'snapshot - save the Squeak image'
+	^ 'snapshot - snapshot and save image'
 ]
 
 { #category : #implementations }
