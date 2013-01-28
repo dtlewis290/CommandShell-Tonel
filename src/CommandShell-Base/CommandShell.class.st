@@ -184,6 +184,16 @@ CommandShell class >> directoryNamesInPath: path [
 ]
 
 { #category : #'version dependent' }
+CommandShell class >> entryName: directoryEntry [
+	"Answer the name of a directory entry."
+
+	^ self useFileSystem
+		ifTrue: [ directoryEntry basename ]
+		ifFalse: [ directoryEntry name ]
+
+]
+
+{ #category : #'version dependent' }
 CommandShell class >> fileExists: path [
 	"Answer true if a file of the given name exists. The given name may be
 	either a full path name or a local file within this directory."
@@ -668,7 +678,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.2'
+	^'4.6.3'
 ]
 
 { #category : #'window color' }
@@ -1092,7 +1102,7 @@ CommandShell >> doItProxyFor: aCommandString input: in output: out error: err [
 { #category : #'command history' }
 CommandShell >> editCommand: aString [
 
-	^ FillInTheBlank
+	^ UIManager default
 		request: 'edit command'
 		initialAnswer: aString
 ]
