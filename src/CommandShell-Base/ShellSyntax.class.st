@@ -572,7 +572,7 @@ ShellSyntax >> isDirectoryPath: aPathString [
 						detect: [:e | e basename = localName] ifNone: [nil]]
 			ifFalse: [entry := ((Smalltalk at: #FileDirectory) on: (CommandShell dirPathFor: fullPath)) entries
 						detect: [:e | e name = localName] ifNone: [nil]]]
-					on: InvalidDirectoryError
+					on: Error
 					do: [: ex | ^false].
 		entry notNil and: [entry isDirectory]]
 
