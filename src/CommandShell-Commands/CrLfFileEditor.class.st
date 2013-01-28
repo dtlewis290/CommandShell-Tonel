@@ -99,7 +99,7 @@ CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
 	dirPath := CommandShell dirPathFor: pathName.
 	dir := CommandShell directoryForPath: dirPath..
 	localName := CommandShell localNameFor: pathName.
-	(dir fileExists: localName)
+	(CommandShell fileExists: localName inDirectory: dir)
 		ifTrue:
 			[[fs := CrLfFileStream readOnlyFileNamed: pathName.
 			convention := fs detectLineEndConvention.

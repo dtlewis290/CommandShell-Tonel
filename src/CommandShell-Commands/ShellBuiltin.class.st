@@ -444,19 +444,23 @@ ShellBuiltin >> editCommand: myProxy shell: commandShell input: stdin output: st
 			is scheduled to be created later, and the input pipe will be closed by
 			the caller of this method before the CrLfFileEditor ever has a chance
 			to read it."
+			| workingDir |
 			inputString := stdin isNil
 				ifTrue:
 					['']
 				ifFalse:
 					[(self copyUntilDoneFrom: stdin to: (WriteStream on: String new)) contents
 						replaceAll: Character lf with: Character cr].
+			workingDir := CommandShell useFileSystem
+					ifTrue: [commandShell workingDirectory perform: #asFileReferenc]
+					ifFalse: [(Smalltalk at: #FileDirectory) on: commandShell workingDirectory].
 			commandShell scheduleToEvaluate:
 				[CrLfFileEditor
 					openOn: inputString
 					withLabel: (commandShell commandHistory isEmpty
 									ifTrue: ['']
 									ifFalse: [commandShell commandHistory last])
-					inDirectory: (FileDirectory on: commandShell workingDirectory)
+					inDirectory: workingDir
 					defaultFileName: 'buffer.txt']]
 		ifFalse:
 			[controllers := argArray collect:
