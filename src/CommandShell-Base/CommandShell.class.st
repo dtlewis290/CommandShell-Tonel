@@ -678,7 +678,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.3'
+	^'4.6.4'
 ]
 
 { #category : #'window color' }
@@ -695,6 +695,15 @@ CommandShell class >> windowColorSpecification [
 		brightColor: (Color lightGray lighter paler)
 		pastelColor: (Color lightGray lighter lighter paler paler)
 		helpMessage: 'CommandShell window for evaluating Smalltalk and OS commands'
+]
+
+{ #category : #'version dependent' }
+CommandShell class >> withBlanksTrimmed: aString [
+
+	^ (aString respondsTo: #withBlanksTrimmed)
+		ifFalse: [aString perform: #trimBoth "Pharo"]
+		ifTrue: [aString perform: #withBlanksTrimmed]
+
 ]
 
 { #category : #accessing }
@@ -1476,7 +1485,7 @@ CommandShell >> isOneWordCommentString: aCommandString [
 	"CommandShell new isOneWordCommentString: ''"
 
 	| s |
-	s := aCommandString withBlanksTrimmed.
+	s := CommandShell withBlanksTrimmed: aCommandString.
 	^ s isEmpty
 		or: [(s first == self shellSyntax commentChar)
 			and: [(Scanner new scanTokens: s) size == 1]]
@@ -1647,7 +1656,7 @@ CommandShell >> pipelineCollectionFrom: aCommandString [
 	"CommandShell new pipelineCollectionFrom: 'who | cat | wc; ps -aef | cat& pwd | cat'"
 
 	| str pipelineCollection tokens strm cmd cmdWithTerm pipeline lastProxy |
-	str := aCommandString withBlanksTrimmed.
+	str := CommandShell withBlanksTrimmed: aCommandString.
 	pipelineCollection := OrderedCollection new.
 	(self shellSyntax isComment: str)
 		ifFalse:
@@ -1655,7 +1664,7 @@ CommandShell >> pipelineCollectionFrom: aCommandString [
 			strm := ReadStream on: tokens.
 			[strm atEnd]
 				whileFalse:
-					[cmd := strm next withBlanksTrimmed.
+					[cmd := CommandShell withBlanksTrimmed: strm next.
 					(self shellSyntax isComment: cmd)
 						ifFalse:
 							[strm atEnd

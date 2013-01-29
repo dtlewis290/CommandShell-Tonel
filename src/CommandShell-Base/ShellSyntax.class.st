@@ -132,7 +132,7 @@ ShellSyntax >> doItStringFrom: aCommandString [
 	"Answer a string which can be evaluated as Smalltalk doIt, or nil."
 
 	| s |
-	s := aCommandString withoutTrailingBlanks.
+	s := CommandShell withBlanksTrimmed: aCommandString.
 	s last == $!
 		ifTrue: [^ aCommandString copyUpToLast: $!]
 		ifFalse: [^ nil]
@@ -406,7 +406,7 @@ ShellSyntax >> firstExpandedArgument: aString inDirectoryPath: aPath [
 
 	| expanded path trimmedString |
 	aString ifNil: [^ ''].
-	trimmedString := aString withBlanksTrimmed.
+	trimmedString := CommandShell withBlanksTrimmed: aString.
 	expanded := self expandArgument: trimmedString inDirectoryPath: aPath.
 	path := expanded isEmpty
 			ifTrue: [trimmedString]
@@ -582,7 +582,7 @@ ShellSyntax >> isDirectoryPath: aPathString [
 ShellSyntax >> isDoItCommand: aCommandString [
 	"Answer true if aCommandString should be evaluated as Smalltalk doIt."
 
-	^ aCommandString withoutTrailingBlanks last == $!
+	^ (CommandShell withBlanksTrimmed: aCommandString) last == $!
 ]
 
 { #category : #'platform dependent' }
@@ -918,7 +918,7 @@ ShellSyntax >> splitPipelineCommands: aCommand [
 	"Answer a list of the individual commands in a command pipeline string,
 	delimited by the pipe character."
 
-	^ (aCommand findTokens: self pipeCharToken) collect: [:e | e withBlanksTrimmed]
+	^ (aCommand findTokens: self pipeCharToken) collect: [:e | CommandShell withBlanksTrimmed: e]
 
 ]
 
