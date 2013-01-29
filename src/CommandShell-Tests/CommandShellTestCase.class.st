@@ -492,7 +492,7 @@ CommandShellTestCase >> testPipeline02 [
 	self should: [o isKindOf: String].
 	self shouldnt: [o isEmpty].
 	self should: ['hello world*' match: o].
-	self should: [o withBlanksTrimmed = 'hello world'].
+	self should: [(CommandShell withBlanksTrimmed: o) = 'hello world'].
 	self should: [self isNumberOfOpenFiles: openFileCount]
 
 ]
