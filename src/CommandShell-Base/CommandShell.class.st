@@ -111,8 +111,11 @@ CommandShell class >> deleteFileNamed: fileName [
 	"Delete the file with the given name."
 
 	self useFileSystem
-		ifTrue: [ (fileName perform: #asFileReference)
-				perform: #ensureDeleted ]
+		ifTrue: [ | file |
+			file := fileName perform: #asFileReference.
+			(file respondsTo: #ensureDeleted)
+				ifTrue: [ file perform: #ensureDeleted ]
+				ifFalse: [ file perform: #delete ] ]
 		ifFalse: [ (Smalltalk at: #FileDirectory) default
 				deleteFileNamed: fileName ]
 
@@ -564,7 +567,7 @@ CommandShell class >> overview [
 CommandShell class >> pathNameDelimiter [
 
 	^ self useFileSystem
-		ifTrue: [(Smalltalk at: #DiskStore) perform: #delimiter]
+		ifTrue: [(Smalltalk at: #DiskStore) current perform: #delimiter]
 		ifFalse: [(Smalltalk at: #FileDirectory) pathNameDelimiter]
 
 ]
@@ -583,7 +586,7 @@ CommandShell class >> pathNameForDirectory: directoryOrFileReference [
 CommandShell class >> pathSeparator [
 
 	^ self useFileSystem
-		ifTrue: [((Smalltalk at: #DiskStore) perform: #delimiter) asString]
+		ifTrue: [((Smalltalk at: #DiskStore) current perform: #delimiter) asString]
 		ifFalse: [(Smalltalk at: #FileDirectory) slash]
 
 ]
