@@ -259,7 +259,7 @@ ExternalCommandShell >> isRunning: trueOrFalse [
 ExternalCommandShell >> lineBuffer [
 	"Answer the value of lineBuffer"
 
-	^ lineBuffer ifNil: [lineBuffer := WriteStream on: '']
+	^ lineBuffer ifNil: [lineBuffer := WriteStream on: String new]
 ]
 
 { #category : #accessing }
