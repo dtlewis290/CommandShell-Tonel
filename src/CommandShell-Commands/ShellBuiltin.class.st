@@ -549,7 +549,7 @@ ShellBuiltin >> helpCommand: myProxy shell: commandShell input: stdin output: st
 	| topic command cacheStream |
 	argArray size == 0
 		ifTrue:
-			[cacheStream := WriteStream on: ''.
+			[cacheStream := WriteStream on: String new.
 			(commandShell builtinCommands
 				collect: [:c | c helpSelector] thenSelect: [:s | s notNil])
 					asArray sort do:
@@ -789,20 +789,20 @@ ShellBuiltin >> slsCommand: myProxy shell: commandShell input: stdin output: std
 
 	linesToPrint := 5.
 	lineCount := 1.
-	cacheStream := WriteStream on: ''.
+	cacheStream := WriteStream on: String new.
 	dirs do:	[:dir |
 		lineCount := lineCount + 1.
 		cacheStream nextPutAll: (self dirEntryString: dir); nextPut: Character lf.
 		(lineCount > linesToPrint) ifTrue:
 			[stdout nextPutAll: cacheStream contents.
-			cacheStream := WriteStream on: ''.
+			cacheStream := WriteStream on: String new.
 			lineCount := 1]].
 	files do: [:file |
 		lineCount := lineCount + 1.
 		cacheStream nextPutAll: (self dirEntryString: file); nextPut: Character lf.
 		(lineCount > linesToPrint) ifTrue:
 			[stdout nextPutAll: cacheStream contents.
-			cacheStream := WriteStream on: ''.
+			cacheStream := WriteStream on: String new.
 			lineCount := 1]].
 	stdout nextPutAll: cacheStream contents.
 ]
