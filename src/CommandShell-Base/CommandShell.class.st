@@ -681,7 +681,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.4'
+	^'4.6.5'
 ]
 
 { #category : #'window color' }
@@ -1146,7 +1146,7 @@ CommandShell >> environment: anObject [
 CommandShell >> errorStream [
 	"Answer the value of errorStream"
 
-	^ errorStream ifNil: [errorStream := WriteStream on: '']
+	^ errorStream ifNil: [errorStream := WriteStream on: String new]
 ]
 
 { #category : #accessing }
@@ -1590,7 +1590,7 @@ CommandShell >> openLabel: aString [
 CommandShell >> outputStream [
 	"Answer the value of outputStream"
 
-	^ outputStream ifNil: [outputStream := WriteStream on: '']
+	^ outputStream ifNil: [outputStream := WriteStream on: String new]
 ]
 
 { #category : #accessing }

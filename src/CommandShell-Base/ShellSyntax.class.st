@@ -482,7 +482,7 @@ ShellSyntax >> globRangeFrom: aString tokenStream: aTokenStream [
 	| r w c t |
 	(aString includes: $-) ifFalse: [^ aString]. "Simple case"
 	r := ReadStream on: aString.
-	w := WriteStream on: ''.
+	w := WriteStream on: String new.
 	(r peek == $!) ifTrue:
 		[r next.
 		aTokenStream nextPut: #not].
@@ -1022,7 +1022,7 @@ ShellSyntax >> tokenizeForRedirect: aString [
 	| oc rs ws c redirectToken tok |
 	oc := OrderedCollection new.
 	rs := ReadStream on: aString.
-	ws := WriteStream on: ''.
+	ws := WriteStream on: String new.
 	[rs atEnd]
 		whileFalse:
 			[c := rs next.
