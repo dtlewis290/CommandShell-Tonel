@@ -1087,7 +1087,7 @@ PipeableOSProcess >> unixFileNumbers [
 	"(PipeableOSProcess new: '/bin/ls'
 		arguments: #('-ls' 'hosts' 'NOSUCHFILE') environment: nil
 		descriptors: nil workingDir: '/etc'
-		errorPipelineStream: ((WriteStream on: '')
+		errorPipelineStream: ((WriteStream on: String new)
 		nextPutAll: 'this is the error stream '; yourself)) unixFileNumbers"
 
 	| d |

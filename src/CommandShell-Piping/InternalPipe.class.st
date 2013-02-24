@@ -207,7 +207,7 @@ InternalPipe >> next: anInteger [
 	"Answer the next anInteger elements of my collection."
 
 	| strm c |
-	strm := WriteStream on: ''.
+	strm := WriteStream on: String new.
 	(1 to: anInteger) do: [:index |
 		self atEnd
 			ifTrue: [^ strm contents]
@@ -324,7 +324,7 @@ InternalPipe >> upToEnd [
 	"Answer the remaining elements in the pipe"
 
 	| strm c |
-	strm := WriteStream on: ''.
+	strm := WriteStream on: String new.
 	[self atEnd] whileFalse:
 		[c := self next.
 		c isNil

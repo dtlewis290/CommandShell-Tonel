@@ -320,7 +320,7 @@ PipeJunction >> output [
 	"((PipeableOSProcess command: 'ps') | 'grep squeak' | 'cut -c16-100') output"
 
 	^ (self isNotYetRunning not and: [self canProvideOutputPipe])
-		ifTrue: [(self outputOn: (WriteStream on: '')) contents]
+		ifTrue: [(self outputOn: (WriteStream on: String new)) contents]
 		ifFalse: ['']
 
 ]
