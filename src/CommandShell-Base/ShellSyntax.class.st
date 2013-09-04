@@ -605,6 +605,18 @@ ShellSyntax >> isFlagParameter: aString [
 	^ (aString size > 0) and: [(aString at: 1) == $-]
 ]
 
+{ #category : #'platform dependent' }
+ShellSyntax >> isPharo3AndLater [
+	"True if this image is a pharo of major version 3 or greater"
+
+	Smalltalk
+		at: #SystemVersion
+		ifPresent: [:cls | ((cls canUnderstand: #type) and: [ cls canUnderstand: #major ])
+			ifTrue: [^ cls current type = 'Pharo' and: [ cls current major >= 3 ]]].
+	^false
+
+]
+
 { #category : #'path name expansion' }
 ShellSyntax >> newDirPath: aPath from: initialPath [
 	"Answer a path string for a change directory command. Change from initialPath
@@ -747,8 +759,10 @@ ShellSyntax >> platformName [
 	versions of Pharo move this to OSPlatform and issue deprecation warnings
 	about the other usages."
 
-	"self platformName"
+	"self new platformName"
 
+	self isPharo3AndLater
+		ifTrue: [ ^ (Smalltalk perform: #os) name ].
 	^ (((Smalltalk hasClassNamed: #OSPlatform)
 			and: [(Smalltalk at: #OSPlatform)
 					respondsTo: #platformName])
