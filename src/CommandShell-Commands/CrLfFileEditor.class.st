@@ -70,7 +70,7 @@ CrLfFileEditor class >> fileNamed: pathName inDirectoryPath: dirPath [
 	dir := CommandShell directoryForPath: dirPath.
 	(dir fileExists: pathName)
 		ifTrue:
-			[[fs := CrLfFileStream readOnlyFileNamed: dirPath, CommandShell pathSeparator, pathName.
+			[[fs := (Smalltalk at: #CrLfFileStream) readOnlyFileNamed: dirPath, CommandShell pathSeparator, pathName.
 			convention := fs detectLineEndConvention.
 			editText := fs contentsOfEntireFile.
 			fs close]
@@ -101,7 +101,7 @@ CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
 	localName := CommandShell localNameFor: pathName.
 	(CommandShell fileExists: localName inDirectory: dir)
 		ifTrue:
-			[[fs := CrLfFileStream readOnlyFileNamed: pathName.
+			[[fs := (Smalltalk at: #CrLfFileStream) readOnlyFileNamed: pathName.
 			convention := fs detectLineEndConvention.
 			editText := fs contentsOfEntireFile.
 			fs close]
@@ -224,7 +224,7 @@ CrLfFileEditor >> bogusTruncate: fileStream [
 	name := fileStream name.
 	fileStream close.
 	CommandShell deleteFileNamed: name inDirectory: directory.
-	^ CrLfFileStream fileNamed: name
+	^ (Smalltalk at: #CrLfFileStream) fileNamed: name
 
 ]
 
@@ -340,7 +340,7 @@ doIt printIt inspectIt fileItIn
 accept cancel
 shiftedYellowButtonActivity)]
 
-	ifTrue: [shiftMenu := ParagraphEditor shiftedYellowButtonMenu.
+	ifTrue: [shiftMenu := (Smalltalk at: #ParagraphEditor) shiftedYellowButtonMenu.
 		aMenu 
 			labels: shiftMenu labelString 
 			lines: shiftMenu lineArray
@@ -376,11 +376,11 @@ CrLfFileEditor >> forceDirtyBuffer [
 CrLfFileEditor >> getAnotherFileName: initialFileName [
 
 	| choice newFileName |
-	choice := (PopUpMenu
+	choice := ((Smalltalk at: #PopUpMenu)
 		labels: 'choose another name\cancel' withCRs)
 		startUpWithCaption: initialFileName.
 	choice = 1
-		ifTrue: [newFileName := FillInTheBlank
+		ifTrue: [newFileName := (Smalltalk at: #FillInTheBlank)
 									request: 'Enter a new file name'
 									initialAnswer: initialFileName.
 				newFileName := (CommandShell fileExists: newFileName inDirectory: directory)
@@ -394,13 +394,13 @@ CrLfFileEditor >> getAnotherFileName: initialFileName [
 CrLfFileEditor >> getFileName: initialFileName [
 
 	| choice newFileName |
-	choice := (PopUpMenu
+	choice := ((Smalltalk at: #PopUpMenu)
 		labels: 'overwrite that file\choose another name\cancel' withCRs)
 		startUpWithCaption: initialFileName, ' already exists.'.
 	choice = 1
 		ifTrue: [^ initialFileName].
 	choice = 2
-		ifTrue: [newFileName := FillInTheBlank
+		ifTrue: [newFileName := (Smalltalk at: #FillInTheBlank)
 									request: 'Enter a new file name'
 									initialAnswer: initialFileName.
 				newFileName := (CommandShell fileExists: newFileName inDirectory: directory)
@@ -466,29 +466,28 @@ CrLfFileEditor >> lineEndConvention: aSymbol [
 
 { #category : #'initialize-release' }
 CrLfFileEditor >> mvcWithLabel: aLabelString [
-
 	| topView controllerClass fileContentsView |
-	CommandShell isMorphic ifTrue:
-		[^ self error: 'this method should be used only for MVC'].
-	topView := StandardSystemView new.
+	CommandShell isMorphic
+		ifTrue: [ ^ self error: 'this method should be used only for MVC' ].
+	topView := (Smalltalk at: #StandardSystemView) new.
 	controllerClass := Smalltalk
 		at: #DeferredActionStandardSystemController
-		ifAbsent: [StandardSystemController].	
+		ifAbsent: [ Smalltalk at: #StandardSystemController ].
 	topView
 		model: self;
 		controller: controllerClass new;
 		label: aLabelString;
-		minimumSize: 200@200.
+		minimumSize: 200 @ 200.
 	topView borderWidth: 1.
-	fileContentsView := PluggableTextView on: self
+	fileContentsView := (Smalltalk at: #PluggableTextView)
+		on: self
 		text: #contents
 		accept: #put:
 		readSelection: #contentsSelection
 		menu: #fileContentsMenu:shifted:.
-	fileContentsView window: (0@0 extent: 200@140).
+	fileContentsView window: (0 @ 0 extent: 200 @ 140).
 	topView addSubView: fileContentsView.
 	^ topView controller
-
 ]
 
 { #category : #'initialize-release' }
@@ -535,7 +534,7 @@ CrLfFileEditor >> put: aText [
 		ifFalse: [newFileName := (CommandShell pathNameForDirectory: directory),
 						CommandShell pathSeparator , fileName].
 	newFileName ifNil: [^ false].
-	fs := CrLfFileStream fileNamed: newFileName.
+	fs := (Smalltalk at: #CrLfFileStream) fileNamed: newFileName.
 	[fs isNil] whileTrue:
 		[self inform: 'cannot write file'.
 		newFileName := self getAnotherFileName: newFileName.
@@ -544,7 +543,7 @@ CrLfFileEditor >> put: aText [
 				[self inform: 'file not written'.
 				^ false]
 			ifFalse:
-				[fs := CrLfFileStream fileNamed: newFileName]].
+				[fs := (Smalltalk at: #CrLfFileStream )fileNamed: newFileName]].
 	(str size < fs size)
 		ifTrue:
 			[(fs respondsTo: #truncate)
@@ -574,7 +573,7 @@ CrLfFileEditor >> saveAs [
 
 	| oldFilePath newFilePath controller |
 	oldFilePath := self currentFilePathName.
-	newFilePath := FillInTheBlank
+	newFilePath := (Smalltalk at: #FillInTheBlank)
 					request: 'Enter a new file name'
 					initialAnswer: oldFilePath.
 	newFilePath isEmpty
