@@ -2021,7 +2021,7 @@ CommandShell >> scheduleToEvaluate: aBlock [
 
 	CommandShell isMorphic
 		ifTrue: [WorldState addDeferredUIMessage: aBlock]
-		ifFalse: [ScheduledControllers activeController addDeferredUIMessage: aBlock]
+		ifFalse: [(Smalltalk at: #ScheduledControllers) activeController addDeferredUIMessage: aBlock]
 ]
 
 { #category : #'command scripting' }
