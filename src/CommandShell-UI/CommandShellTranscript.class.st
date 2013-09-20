@@ -336,16 +336,16 @@ CommandShellTranscript >> openLabel: aString [
 	CommandShell isMorphic ifTrue: [^ (self openAsMorphLabel: aString) openInWorld].
 
 	aString ifNotNil: [self labelStringBlock: [aString]].
-	topView := StandardSystemView new.
+	topView := (Smalltalk at: #StandardSystemView) new.
 	controllerClass := Smalltalk
 		at: #DeferredActionStandardSystemController
-		ifAbsent: [StandardSystemController].	
+		ifAbsent: [(Smalltalk at: #StandardSystemController)].	
 	topView model: self;
 			controller: controllerClass new;
 			borderWidth: 1;
 			label: aString;
 			minimumSize: 100 @ 50.
-	codeView := ShellWindowView
+	codeView := (Smalltalk at: #ShellWindowView)
 					on: self
 					text: nil
 					accept: nil
