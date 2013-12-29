@@ -159,7 +159,7 @@ PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary
 				ifFalse:
 					[Array
 						with: proxyClass defaultShellPath
-						with: (Array with: '-c' with: aString)]]
+						with: (Array with: proxyClass shellFlags with: aString)]]
 		ifFalse:
 			[aSyntaxProcessor
 				programNameAndArgumentsFrom: aString
