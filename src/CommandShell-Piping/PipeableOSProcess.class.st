@@ -150,29 +150,20 @@ PipeableOSProcess class >> command: aString environment: anEnvironmentDictionary
 
 	"(PipeableOSProcess command: 'ls -l hosts NOSUCHFILE' environment: nil workingDir: '/etc' input: nil output: nil error: nil errorPipelineStream: (InternalPipe nonBlockingPipe nextPutAll: 'this is the error stream '; yourself) shellSyntax: nil) output"
 
-	| nameAndArgs proxyClass |
-	nameAndArgs := aSyntaxProcessor isNil
-		ifTrue:
-			[(proxyClass := self externalProxyClass) isNil
-				ifTrue:
-					[Array with: aString with: Array new]
-				ifFalse:
-					[Array
-						with: proxyClass defaultShellPath
-						with: (Array with: proxyClass shellFlags with: aString)]]
-		ifFalse:
-			[aSyntaxProcessor
-				programNameAndArgumentsFrom: aString
-				inDirectoryPath: pathString
-				findExecutable: true].
-	^ self
-		forkAndExec: (nameAndArgs at: 1)
-		arguments: (nameAndArgs at: 2)
+	| p |
+	p := self
+		commandNoEvaluate: aString
 		environment: anEnvironmentDictionary
-		descriptors: (Array with: inputStream with: outputStream with: errorStream)
 		workingDir: pathString
+		input: inputStream
+		output: outputStream
+		error: errorStream
 		errorPipelineStream: anErrorWriteStream
-
+		shellSyntax: aSyntaxProcessor.
+	p pipeFromOutput setBufferedReader.
+	(Delay forMilliseconds: 1) wait. "context switch to enable buffered reader"
+	p value.
+	^p
 
 ]
 
@@ -684,14 +675,6 @@ PipeableOSProcess >> enableEventTriggers [
 
 ]
 
-{ #category : #'command pipelines' }
-PipeableOSProcess >> errorPipelineContents [
-
-	^ self errorHasBeenRedirected
-		ifTrue: ['' "stderr has been redirected to a file"]
-	 	ifFalse: [self errorPipelineStream contents]
-]
-
 { #category : #accessing }
 PipeableOSProcess >> errorPipelineStream: aStream [
 	"Accumulates the error output of commands in a command pipeline. Overridden
@@ -885,29 +868,6 @@ PipeableOSProcess >> nextFromError: count [
 	^ self errorHasBeenRedirected
 		ifTrue: [nil]
 		ifFalse: [self errorPipelineStream next: count]
-
-]
-
-{ #category : #private }
-PipeableOSProcess >> notifyError [
-	"Display a notifier if child exited with non-zero status, or if any of its predecessors
-	in a command pipeline left error text in the errorPipeline."
-
-	| errText |
-	self isComplete ifTrue: [
-		errText := self errorPipelineContents.
-		(errText size ~= 0)
-			ifTrue:
-				[self inform:
-					self processProxy programName, ' exit status ',
-					processProxy exitStatus printString, ', error message: ',
-					errText]
-			ifFalse:
-				[(processProxy exitStatus ~= 0)
-					ifTrue:
-						[self inform:
-							self processProxy programName, ' exit status ',
-							processProxy exitStatus printString]]]
 
 ]
 

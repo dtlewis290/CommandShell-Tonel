@@ -533,7 +533,10 @@ PipeJunction >> upToEndOfFile [
 	continue reading until end of file is detected."
 
 	^ (self pipeFromOutput notNil and: [self canProvideOutputPipe])
-		ifTrue: [pipeFromOutput upToEndOfFile]
+		ifTrue: [ | s |
+			s := pipeFromOutput upToEndOfFile.
+			pipeFromOutput close..
+			s]
 		ifFalse: ['']
 
 ]
