@@ -681,7 +681,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.8'
+	^'4.6.9'
 ]
 
 { #category : #'window color' }
