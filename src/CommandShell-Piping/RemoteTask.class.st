@@ -19,6 +19,9 @@ Class {
 		'aioHandler'
 	],
 	#classVars : [
+		'HeadlessChild',
+		'Materializer',
+		'Serializer',
 		'SerializingStrategy'
 	],
 	#category : #'CommandShell-Piping'
@@ -59,16 +62,37 @@ RemoteTask class >> finalize: aRemoteTask [
 ]
 
 { #category : #'class initialization' }
+RemoteTask class >> headlessChild: boolean [
+	"If true (default), the child process is headless. Set to false to allow debugging in
+	the child Squeak image"
+
+	"RemoteTask headlessChild:true"
+	"RemoteTask headlessChild:false" "for debugging the child image"
+
+	HeadlessChild := boolean
+]
+
+{ #category : #'class initialization' }
 RemoteTask class >> initialize [
-	"Use Fuel if present in the image, otherwise use reference stream serialization"
+	"Initilialize the serialization strategy. Assume that if Magma is loaded in this image,
+	that the Magma serializer is preferred. If Fuel is present, use that. Otherwise use the
+	simple and effective default of a Squeak ReferenceStream."
 
 	"RemoteTask initialize"
-	"RemoteTask useFuelSerializer"
+
 	"RemoteTask useReferenceStreamSerializer"
+	"RemoteTask useFuelSerializer"
+	"RemoteTask useMagmaSerializer"
+
+	self headlessChild: true.
+
+	(Smalltalk hasClassNamed: #MaObjectSerializer)
+		ifTrue: [^self useMagmaSerializer].
 
 	(Smalltalk hasClassNamed: #FLSerializer)
-		ifTrue: [self useFuelSerializer]
-		ifFalse: [self useReferenceStreamSerializer]
+		ifTrue: [^ self useFuelSerializer].
+
+	self useReferenceStreamSerializer.
 
 ]
 
@@ -140,16 +164,28 @@ RemoteTask class >> threeParallelTasks [
 { #category : #'class initialization' }
 RemoteTask class >> useFuelSerializer [
 	"RemoteTask useFuelSerializer"
-	"RemoteTask useReferenceStreamSerializer"
 
-	SerializingStrategy := #fuel
+	Serializer := (Smalltalk at: #FLSerializer ifAbsent: [self error: 'Fuel not installed']) newDefault.
+	Materializer := (Smalltalk at: #FLMaterializer) newDefault..
+	^SerializingStrategy := #fuel
+]
+
+{ #category : #'class initialization' }
+RemoteTask class >> useMagmaSerializer [
+	"RemoteTask useMagmaSerializer"
+
+	Serializer := (Smalltalk at: #MaObjectSerializer ifAbsent: [self error: 'Magma serializer not installed']) new.
+	Materializer := Serializer.
+	^SerializingStrategy := #magma
 ]
 
 { #category : #'class initialization' }
 RemoteTask class >> useReferenceStreamSerializer [
 	"RemoteTask useReferenceStreamSerializer"
 
-	SerializingStrategy := #referenceStream
+	Serializer := (Smalltalk at: #ReferenceStream).
+	Materializer := Serializer.
+	^SerializingStrategy := #referenceStream
 ]
 
 { #category : #finalization }
@@ -168,14 +204,13 @@ RemoteTask >> getResult [
 	"Materialize the result, reading serialized data from standard input"
 
 	SerializingStrategy = #referenceStream
-		ifTrue: [ | responseStream responseObject |
-			responseStream := (Smalltalk at: #ReferenceStream) on: childProxy pipeFromOutput reader.
-			responseObject := responseStream next.
-			^ responseObject].
+		ifTrue: [^(Materializer on: childProxy pipeFromOutput reader) next].
 
 	SerializingStrategy = #fuel
-		ifTrue: [^((Smalltalk at: #FLMaterializer ifAbsent: [self error: 'Fuel not installed'])
-		newDefault materializeFrom: childProxy pipeFromOutput reader binary) root].
+		ifTrue: [^(Materializer materializeFrom: childProxy pipeFromOutput reader binary) root].
+
+	SerializingStrategy = #magma
+		ifTrue: [^Materializer objectFromStream: childProxy pipeFromOutput reader].
 
 	self error: 'undefined strategy ', SerializingStrategy asString
 
@@ -185,16 +220,14 @@ RemoteTask >> getResult [
 RemoteTask >> put: result [
 	"Serialize the result and write to standard output"
 
-	| out |
 	SerializingStrategy = #referenceStream
-		ifTrue: [
-			out := (Smalltalk at: #ReferenceStream) on: OSProcess thisOSProcess stdOut.
-			^out nextPut: result].
+		ifTrue: [ ^ (Serializer on: OSProcess thisOSProcess stdOut) nextPut: result].
 
 	SerializingStrategy = #fuel
-		ifTrue: [
-		out := (Smalltalk at: #FLSerializer ifAbsent: [self error: 'Fuel not installed']) newDefault.
-		^out serialize: result on: OSProcess thisOSProcess stdOut binary].
+		ifTrue: [ ^ Serializer serialize: result on: OSProcess thisOSProcess stdOut binary].
+
+	SerializingStrategy = #magma
+		ifTrue: [ ^Serializer object: result toStream: OSProcess thisOSProcess stdOut].
 
 	self error: 'undefined strategy ', SerializingStrategy asString
 
@@ -234,7 +267,9 @@ RemoteTask >> start [
 		on the read and lock up the child squeak process."
 		result := [self task value]
 					on: Exception
-					do: [:e | result := 'remote task execution failed: ', e printString].
+					do: [:e |
+						HeadlessChild ifFalse: [ e halt; resume ].
+						result := 'remote task execution failed: ', e printString].
 		OSProcess thisOSProcess stdIn setBlocking.
 		self put: result.
 		OSProcess thisOSProcess stdOut flush; close].
@@ -242,7 +277,7 @@ RemoteTask >> start [
 	childProxy := PipeableOSProcess
 					forkSqueakAndDoThenQuit: childBlock
 					errorPipelineStream: InternalPipe nonBlockingPipe
-					headless: true
+					headless: HeadlessChild
 					bufferedOutput: false
 					outputNotifier: aioHandler
 
