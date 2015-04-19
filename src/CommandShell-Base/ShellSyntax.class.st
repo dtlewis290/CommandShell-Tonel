@@ -380,7 +380,8 @@ ShellSyntax >> findExecutablePathFor: aString inDirectoryPath: pathString [
 							fileExists := [ CommandShell useFileSystem
 									ifTrue: [ CommandShell fileExists: fileName inDirectory: (pathName perform: #asFileReference) ]
 									ifFalse: [ CommandShell fileExists: fileName inDirectory: ((Smalltalk at: #FileDirectory) on: pathName) ]
-								] on: InvalidDirectoryError do: [:e | false].
+								] on: (Smalltalk at: #InvalidDirectoryError ifAbsent: [ Error ]) "Pharo does not have InvalidDirectoryError"
+									do: [:e | false].
 							fileExists ifTrue:
 								[fullName := pathName, CommandShell pathSeparator, fileName.
 								(self isExecutable: fullName)
