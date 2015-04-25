@@ -147,7 +147,7 @@ ConfigurationOfCommandShell >> baseline10: spec [
 ConfigurationOfCommandShell >> development: spec [
 	<symbolicVersion: #'development'>
 
-	spec for: #'common' version: '1.1'.
+	spec for: #'common' version: '4.6.9'.
 
 ]
 
@@ -168,7 +168,7 @@ ConfigurationOfCommandShell >> project [
 ConfigurationOfCommandShell >> stable: spec [
 	<symbolicVersion: #'stable'>
 
-	spec for: #'common' version: '1.1'.
+	spec for: #'common' version: '4.6.12'.
 	spec for: #'pharo1.4.x' version: '1.0'.
 ]
 
@@ -222,4 +222,122 @@ ConfigurationOfCommandShell >> version11: spec [
 
 	spec for: #'squeak' do: [
 		spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ].
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version4612: spec [
+	<version: '4.6.12' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: ''.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '4/25/2015 18:19'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.2' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.41';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-ThierryGoubier.16';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.18';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version466: spec [
+	<version: '4.6.6' imports: #('1.0-baseline' )>
+
+	spec for: #'common' do: [
+		spec blessing: #'release'.
+		spec description: ''.
+		spec author: 'ThierryGoubier'.
+		spec timestamp: '09/11/2013 10:13'.
+		spec project: 'OSProcess' with: [ spec version: '4.5.7' ].
+		spec 
+			package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.34';
+			package: 'CommandShell-Commands' with: 'CommandShell-Commands-dtl.15';
+			package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+
+			package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.14';
+			package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+			package: 'CommandShell-UI' with: 'CommandShell-UI-dtl.11' ].
+		
+	spec for: #'pharo' do: [
+		spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+
+	spec for: #'squeak' do: [
+		spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ].
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version467: spec [
+	<version: '4.6.7' imports: #('1.0-baseline' )>
+
+	spec for: #'common' do: [
+		spec blessing: #'release'.
+		spec description: ''.
+		spec author: 'ThierryGoubier'.
+		spec timestamp: '9/23/2013 10:12'.
+		spec project: 'OSProcess' with: [ spec version: '4.5.8' ].
+		spec 
+			package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.36';
+			package: 'CommandShell-Commands' with: 'CommandShell-Commands-ThierryGoubier.16';
+			package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+
+			package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.14';
+			package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+			package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+		
+	spec for: #'pharo' do: [
+		spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+
+	spec for: #'squeak' do: [
+		spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ].
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version468: spec [
+	<version: '4.6.8' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: ''.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '2014-10-05T09:22:59.050216+02:00'.
+			spec project: 'OSProcess' with: [ spec version: '4.5.11' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.37';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-ThierryGoubier.16';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.15';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version469: spec [
+	<version: '4.6.9' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: ''.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '2014-10-05T09:22:59.050216+02:00'.
+			spec project: 'OSProcess' with: [ spec version: '4.5.13' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.38';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-ThierryGoubier.16';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.16';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
 ]
