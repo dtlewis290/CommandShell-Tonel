@@ -137,7 +137,7 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueakReadAndWriteReferenceStream [
 				refStream nextPut: anObject "echo the object back to the parent Squeak"]]
 		raise: Warning.
 	objectStreamToChild := ReferenceStream on: child pipeToInput writer.
-	objectStreamToChild nextPut: Smalltalk. "send a complex object to the child"
+	objectStreamToChild nextPut: Smalltalk; flush. "send a complex object to the child"
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := ReferenceStream on: s.
@@ -180,8 +180,7 @@ PipeableOSProcessTestCase >> testForkSqueak [
 	openFileCount := self numberOfOpenFiles.
 	self shouldnt:
 			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
-				[(Delay forMilliseconds: 100) wait. "wait for data to arrive"
-				in := OSProcess thisOSProcess stdIn upToEnd.
+				[in := OSProcess thisOSProcess stdIn upToEnd.
 				OSProcess thisOSProcess stdOut nextPutAll: in]]
 		raise: Warning.
 	child nextPutAll: 'hello'.
@@ -217,7 +216,7 @@ PipeableOSProcessTestCase >> testForkSqueakReadAndWriteReferenceStream [
 				refStream nextPut: anObject "echo the object back to the parent Squeak"]]
 		raise: Warning.
 	objectStreamToChild := ReferenceStream on: child pipeToInput writer.
-	objectStreamToChild nextPut: Smalltalk. "send a complex object to the child"
+	objectStreamToChild nextPut: Smalltalk; flush. "send a complex object to the child"
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := ReferenceStream on: s.
