@@ -323,6 +323,9 @@ PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: 
 		OSProcess thisOSProcess redirectStdInTo: pp pipeToInput reader.
 		OSProcess thisOSProcess redirectStdOutTo: pp pipeFromOutput writer.
 		OSProcess thisOSProcess redirectStdErrTo: pp pipeFromError writer.
+		pp pipeToInput writer close.
+		pp pipeFromOutput reader close.
+		pp pipeFromError reader close.
 		aBlock value].	
 	parentVmProcess := OSProcess thisOSProcess.
 	proc := headless
@@ -332,7 +335,9 @@ PipeableOSProcess class >> forkSqueakAndDoThenQuit: aBlock errorPipelineStream: 
 		ifTrue: ["child Squeak - this branch is never reached"]
 		ifFalse: ["parent Squeak - set the child Squeak as the process proxy"
 			pp errorPipelineStream: anErrorStream.
-			pp initialize.
+			pp pipeToInput reader close.
+			pp pipeFromOutput writer close.
+			pp pipeFromError writer close.
 			^ pp processProxy: proc]
 
 ]
