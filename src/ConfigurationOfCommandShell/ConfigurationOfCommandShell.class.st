@@ -247,6 +247,28 @@ ConfigurationOfCommandShell >> version4612: spec [
 ]
 
 { #category : #versions }
+ConfigurationOfCommandShell >> version4613: spec [
+	<version: '4.6.13' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: ''.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '6/17/2015 20:09'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.3' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.42';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-ThierryGoubier.16';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.19';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
 ConfigurationOfCommandShell >> version466: spec [
 	<version: '4.6.6' imports: #('1.0-baseline' )>
 
