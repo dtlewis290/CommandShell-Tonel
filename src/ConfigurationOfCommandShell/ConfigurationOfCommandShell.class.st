@@ -168,7 +168,7 @@ ConfigurationOfCommandShell >> project [
 ConfigurationOfCommandShell >> stable: spec [
 	<symbolicVersion: #'stable'>
 
-	spec for: #'common' version: '4.6.12'.
+	spec for: #'common' version: '4.6.13'.
 	spec for: #'pharo1.4.x' version: '1.0'.
 ]
 
