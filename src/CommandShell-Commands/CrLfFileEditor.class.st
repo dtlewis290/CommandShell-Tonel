@@ -6,8 +6,9 @@ Bug: On older Squeak systems which do not support FilesStream>>truncate, file pe
 "
 Class {
 	#name : #CrLfFileEditor,
-	#superclass : #StringHolder,
+	#superclass : #Model,
 	#instVars : [
+		'contents',
 		'lineEndConvention',
 		'directory',
 		'fileName',
@@ -250,10 +251,16 @@ CrLfFileEditor >> contents [
 
 { #category : #'model access' }
 CrLfFileEditor >> contents: aString [
-
 	viewStyle == #hex
-		ifTrue: [self inform: 'cannot update in hex mode']
-		ifFalse: [^ super contents: aString]
+		ifTrue: [ self inform: 'cannot update in hex mode' ]
+		ifFalse: [ contents := aString	"asString" ]
+]
+
+{ #category : #accessing }
+CrLfFileEditor >> contentsSelection [
+	"Return the interval of text in the code pane to select when I set the pane's contents"
+
+	^ 1 to: 0  "null selection"
 ]
 
 { #category : #menus }
