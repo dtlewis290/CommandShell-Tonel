@@ -71,7 +71,10 @@ CrLfFileEditor class >> fileNamed: pathName inDirectoryPath: dirPath [
 	dir := CommandShell directoryForPath: dirPath.
 	(dir fileExists: pathName)
 		ifTrue:
-			[[fs := (Smalltalk at: #CrLfFileStream) readOnlyFileNamed: dirPath, CommandShell pathSeparator, pathName.
+			[[fs := (Smalltalk
+						at: #MultiByteFileStream
+						ifAbsent: [Smalltalk at: #CrLfFileStream])
+							readOnlyFileNamed: dirPath, CommandShell pathSeparator, pathName.
 			convention := fs detectLineEndConvention.
 			editText := fs contentsOfEntireFile.
 			fs close]
@@ -102,7 +105,10 @@ CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
 	localName := CommandShell localNameFor: pathName.
 	(CommandShell fileExists: localName inDirectory: dir)
 		ifTrue:
-			[[fs := (Smalltalk at: #CrLfFileStream) readOnlyFileNamed: pathName.
+			[[fs := (Smalltalk
+						at: #MultiByteFileStream
+						ifAbsent: [Smalltalk at: #CrLfFileStream])
+							readOnlyFileNamed: pathName.
 			convention := fs detectLineEndConvention.
 			editText := fs contentsOfEntireFile.
 			fs close]
