@@ -143,10 +143,15 @@ CommandShellTranscript >> close [
 { #category : #'model protocol' }
 CommandShellTranscript >> codePaneMenu: aMenu shifted: shifted [
 	"Note that unless we override perform:orSendTo:, PluggableTextController will respond
-	to all menu items"
+	to all menu items.
 
-	^ StringHolder basicNew codePaneMenu: aMenu shifted: shifted
+	If StringHolder is not present, try to delegate to Workspace instead."
 
+	^ (Smalltalk
+		at: #StringHolder
+		ifAbsent: [Smalltalk
+				at: #Workspace
+				ifAbsent: [^ self ]]) basicNew codePaneMenu: aMenu shifted: shifted
 ]
 
 { #category : #'input character filtering' }
