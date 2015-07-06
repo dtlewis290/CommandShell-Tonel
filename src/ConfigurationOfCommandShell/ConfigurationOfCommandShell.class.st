@@ -147,7 +147,7 @@ ConfigurationOfCommandShell >> baseline10: spec [
 ConfigurationOfCommandShell >> development: spec [
 	<symbolicVersion: #'development'>
 
-	spec for: #'common' version: '4.6.9'.
+	spec for: #'common' version: '4.6.15'.
 
 ]
 
@@ -168,7 +168,7 @@ ConfigurationOfCommandShell >> project [
 ConfigurationOfCommandShell >> stable: spec [
 	<symbolicVersion: #'stable'>
 
-	spec for: #'common' version: '4.6.13'.
+	spec for: #'common' version: '4.6.15'.
 	spec for: #'pharo1.4.x' version: '1.0'.
 ]
 
@@ -264,6 +264,54 @@ ConfigurationOfCommandShell >> version4613: spec [
 				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.19';
 				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
 				package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version4614: spec [
+	<version: '4.6.14' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: ''.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '6/18/2015 07:22'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.4' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.43';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-ThierryGoubier.16';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.19';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.11';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-ThierryGoubier.12' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version4615: spec [
+	<version: '4.6.15' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: 'CommandShell 4.6.15
+
+By Thierry Goubier: Reimplement CrLfFileEditor as subclass of Model to remove StringHolder reference.
+
+Use CrLfFileStream only if the preferred MultiByteFileStream is not present in the image (old images).'.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '7/6/2015 19:14'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.4' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.44';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-dtl.18';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-dtl.19';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.13';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-dtl.13' ].
 	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
 	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
 ]
