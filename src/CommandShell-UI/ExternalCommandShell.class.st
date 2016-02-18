@@ -38,11 +38,13 @@ ExternalCommandShell class >> initialize [
 
 	"ExternalCommandShell initialize"
 
-	ExternalShell ifNotNil:
-		[ExternalShell stop.
-		ExternalShell := nil].
-	Smalltalk addToStartUpList: self
-
+	ExternalShell
+		ifNotNil: [ ExternalShell stop.
+			ExternalShell := nil ].
+	(SystemVersion current perform: #highestUpdate) >= 50558
+		ifTrue:
+			[ (Smalltalk at: SessionManager) default perform: #registerToolClassNamed: with: self ]
+		ifFalse: [ Smalltalk addToStartUpList: self ]
 ]
 
 { #category : #'instance creation' }
