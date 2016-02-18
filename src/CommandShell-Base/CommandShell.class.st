@@ -461,27 +461,42 @@ The fourth command will generate an error.
 
 { #category : #'class initialization' }
 CommandShell class >> initialize [
-
 	"CommandShell initialize"
 
 	| preferencesClass |
-	Smalltalk addToStartUpList: self.
+	(SystemVersion current perform: #highestUpdate) >= 50558
+		ifTrue:
+			[ (Smalltalk at: SessionManager) default
+				perform: #registerToolClassNamed:
+				with: ThisOSProcess ]
+		ifFalse: [ Smalltalk addToStartUpList: self ].
 	(Smalltalk hasClassNamed: #Preferences)
-		ifTrue: ["Pharo deprecates Preference in favor of pragma registration mechanism"
-			preferencesClass := Smalltalk at: #Preferences.
-			(preferencesClass respondsTo: #setWindowColorFor:to: )
-				ifTrue: ["Squeak"
-					preferencesClass 
-						setWindowColorFor: #CommandShell 
-						to: (Color colorFrom: self windowColorSpecification pastelColor)]
-				ifFalse: ["Pharo images use some other preferences protocol"]].
-	Smalltalk at: #TheWorldMenu ifPresent: [ :class |
-		class class methodDict at: #registerOpenCommand: ifPresent: [ :method |
-			(method hasLiteral: #deprecated:) "n.b.  use #hasLiteral: rather than #sendsSelector: for Squeak 3.8"
-				ifTrue: ["Pharo issues deprecation and tells you to do it their way. Ignore the warning."]
-				ifFalse: [ class unregisterOpenCommand: 'Squeak shell'. "if previously registered"
-					class registerOpenCommand: {'Squeak Shell'. {CommandShell . #open}}]]]
-
+		ifTrue:
+			[ preferencesClass := Smalltalk at: #Preferences.
+			(preferencesClass respondsTo: #setWindowColorFor:to:)
+				ifTrue:
+					[ preferencesClass
+						setWindowColorFor: #CommandShell
+						to: (Color colorFrom: self windowColorSpecification pastelColor) ]
+				ifFalse: [  ]	"Squeak"	"Pharo images use some other preferences protocol" ].	"Pharo deprecates Preference in favor of pragma registration mechanism"
+	Smalltalk
+		at: #TheWorldMenu
+		ifPresent:
+			[ :class | 
+			class class methodDict
+				at: #registerOpenCommand:
+				ifPresent:
+					[ :method | 
+					(method hasLiteral: #deprecated:)
+						ifTrue:
+							[  ]
+						ifFalse:
+							[ class unregisterOpenCommand: 'Squeak shell'.	"if previously registered"
+							class
+								registerOpenCommand:
+									{'Squeak Shell'.
+									{CommandShell.
+									#open}} ]	"n.b.  use #hasLiteral: rather than #sendsSelector: for Squeak 3.8"	"Pharo issues deprecation and tells you to do it their way. Ignore the warning." ] ]
 ]
 
 { #category : #'version testing' }
