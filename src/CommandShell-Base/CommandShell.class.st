@@ -466,7 +466,7 @@ CommandShell class >> initialize [
 	| preferencesClass |
 	(SystemVersion current perform: #highestUpdate) >= 50558
 		ifTrue:
-			[ (Smalltalk at: SessionManager) default
+			[ (Smalltalk at: #SessionManager) default
 				perform: #registerToolClassNamed:
 				with: ThisOSProcess ]
 		ifFalse: [ Smalltalk addToStartUpList: self ].
