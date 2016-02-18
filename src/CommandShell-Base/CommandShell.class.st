@@ -468,7 +468,7 @@ CommandShell class >> initialize [
 		ifTrue:
 			[ (Smalltalk at: #SessionManager) default
 				perform: #registerToolClassNamed:
-				with: ThisOSProcess ]
+				with: ThisOSProcess name ]
 		ifFalse: [ Smalltalk addToStartUpList: self ].
 	(Smalltalk hasClassNamed: #Preferences)
 		ifTrue:
