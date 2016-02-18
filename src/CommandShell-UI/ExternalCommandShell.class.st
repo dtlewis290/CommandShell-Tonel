@@ -43,7 +43,7 @@ ExternalCommandShell class >> initialize [
 			ExternalShell := nil ].
 	(SystemVersion current perform: #highestUpdate) >= 50558
 		ifTrue:
-			[ (Smalltalk at: #SessionManager) default perform: #registerToolClassNamed: with: self ]
+			[ (Smalltalk at: #SessionManager) default perform: #registerToolClassNamed: with: self name ]
 		ifFalse: [ Smalltalk addToStartUpList: self ]
 ]
 
