@@ -618,6 +618,21 @@ ShellSyntax >> isPharo3AndLater [
 
 ]
 
+{ #category : #'platform dependent' }
+ShellSyntax >> isPharo5Update50558AndLater [
+	"True if this image is a pharo of major version 5 at upldate 50558 or greater"
+	
+	"ShellSyntax isPharo5Update50558AndLater"
+
+	Smalltalk
+		at: #SystemVersion
+		ifPresent: [:cls | ((cls canUnderstand: #type) and: [ cls canUnderstand: #major ])
+			ifTrue: [ ^ (cls current type = 'Pharo' and: [ cls current major >= 5 ])
+						and: [ cls current  highestUpdate >= 50558]]].
+	^false
+
+]
+
 { #category : #'path name expansion' }
 ShellSyntax >> newDirPath: aPath from: initialPath [
 	"Answer a path string for a change directory command. Change from initialPath

@@ -464,12 +464,12 @@ CommandShell class >> initialize [
 	"CommandShell initialize"
 
 	| preferencesClass |
-	(SystemVersion current perform: #highestUpdate) >= 50558
+	ShellSyntax new isPharo5Update50558AndLater
+		ifFalse: [ Smalltalk addToStartUpList: self ]
 		ifTrue:
 			[ (Smalltalk at: #SessionManager) default
 				perform: #registerToolClassNamed:
-				with: ThisOSProcess name ]
-		ifFalse: [ Smalltalk addToStartUpList: self ].
+				with: ThisOSProcess name ].
 	(Smalltalk hasClassNamed: #Preferences)
 		ifTrue:
 			[ preferencesClass := Smalltalk at: #Preferences.
@@ -696,7 +696,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.15'
+	^'4.6.16'
 ]
 
 { #category : #'window color' }
