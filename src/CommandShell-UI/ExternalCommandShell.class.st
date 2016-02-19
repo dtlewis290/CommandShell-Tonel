@@ -41,10 +41,12 @@ ExternalCommandShell class >> initialize [
 	ExternalShell
 		ifNotNil: [ ExternalShell stop.
 			ExternalShell := nil ].
-	(SystemVersion current perform: #highestUpdate) >= 50558
+	ShellSyntax new isPharo5Update50558AndLater
+		ifFalse:
+			[ Smalltalk addToStartUpList: self ]
 		ifTrue:
 			[ (Smalltalk at: #SessionManager) default perform: #registerToolClassNamed: with: self name ]
-		ifFalse: [ Smalltalk addToStartUpList: self ]
+
 ]
 
 { #category : #'instance creation' }
