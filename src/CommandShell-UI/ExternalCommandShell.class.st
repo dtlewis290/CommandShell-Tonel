@@ -20,7 +20,7 @@ Class {
 	#classVars : [
 		'ExternalShell'
 	],
-	#category : #'CommandShell-UI'
+	#category : 'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -162,6 +162,12 @@ ExternalCommandShell >> confirmBeforeKilling: externalProxies [
 
 ]
 
+{ #category : #updating }
+ExternalCommandShell >> cr [
+
+	self cliShell outputStream lf; flush.
+]
+
 { #category : #defaults }
 ExternalCommandShell >> defaultBuiltinCommands [
 	"The commands which make sense in a headless tty environment"
@@ -229,6 +235,15 @@ ExternalCommandShell >> initialize [
 
 ]
 
+{ #category : #updating }
+ExternalCommandShell >> inputFrom: aStream [
+
+	| strm s |
+	strm := '' writeStream.
+	[ (s := aStream upToEnd) isEmpty not ] whileTrue: [ strm nextPutAll: s ].
+	^ strm contents.
+]
+
 { #category : #accessing }
 ExternalCommandShell >> inputStream [
 
@@ -284,7 +299,7 @@ ExternalCommandShell >> printOn: aStream [
 { #category : #'command prompt' }
 ExternalCommandShell >> prompt [
 
-	self cliShell outputStream nextPutAll: self cliShell promptString.
+	self cliShell outputStream nextPutAll: self cliShell promptString; flush.
 
 ]
 
@@ -299,7 +314,7 @@ ExternalCommandShell >> promptString [
 { #category : #'command prompt' }
 ExternalCommandShell >> promptTwo [
 
-	self cliShell outputStream nextPutAll: self cliShell promptStringTwo
+	self cliShell outputStream nextPutAll: self cliShell promptStringTwo; flush
 
 ]
 
@@ -336,6 +351,12 @@ ExternalCommandShell >> setStdioStreams [
 				asBufferedAsyncFileReadStream disableEventHandling.
 			self cliShell outputStream: osp thisOSProcess stdOut.
 			self cliShell errorStream: osp thisOSProcess stdErr]
+]
+
+{ #category : #updating }
+ExternalCommandShell >> show: something [
+
+	self cliShell outputStream nextPutAll: something asString.
 ]
 
 { #category : #'initialize-release' }
@@ -462,7 +483,7 @@ ExternalCommandShell >> stopHandlingInterruptSignal [
 ExternalCommandShell >> update: event [
 
 	event == self inputStream
-		ifTrue: [^ self handleInput: event upToEnd].
+		ifTrue: [^ self handleInput: (self inputFrom: event)].
 	event == #prompt	"display $PS1"
 		ifTrue: [^ self prompt].
 	event == #alternatePrompt	"display $PS2"
