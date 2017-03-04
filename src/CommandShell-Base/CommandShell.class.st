@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : #'CommandShell-Base'
+	#category : 'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
@@ -696,7 +696,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.16'
+	^'4.6.17'
 ]
 
 { #category : #'window color' }
