@@ -10,7 +10,7 @@ Class {
 		'closed',
 		'readSyncSemaphore'
 	],
-	#category : #'CommandShell-MVC'
+	#category : 'CommandShell-MVC'
 }
 
 { #category : #'menu messages' }

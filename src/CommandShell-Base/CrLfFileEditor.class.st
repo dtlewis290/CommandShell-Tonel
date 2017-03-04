@@ -14,7 +14,7 @@ Class {
 		'fileName',
 		'viewStyle'
 	],
-	#category : #'CommandShell-Commands'
+	#category : 'CommandShell-Commands'
 }
 
 { #category : #private }

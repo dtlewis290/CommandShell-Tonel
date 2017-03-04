@@ -24,7 +24,7 @@ Class {
 		'Serializer',
 		'SerializingStrategy'
 	],
-	#category : #'CommandShell-Piping'
+	#category : 'CommandShell-Piping'
 }
 
 { #category : #evaluating }

@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'procDir'
 	],
-	#category : #'CommandShell-Tests'
+	#category : 'CommandShell-Tests'
 }
 
 { #category : #private }
@@ -124,8 +124,10 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueakReadAndWriteReferenceStream [
 	| openFileCount child refStream inputStream result s anObject objectStreamToChild rs |
 	rs := Smalltalk at: #ReferenceStream.
 	openFileCount := self numberOfOpenFiles.
+	anObject := { 1 . 'two' . #three . { 4 } }.
 	self shouldnt:
-			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
+			[ | obj |
+				child := PipeableOSProcess forkSqueakAndDoThenQuit:
 				["First set standard input to blocking. This avoids a delay to wait for
 				data to be available, but note that it is dangerous to do this unless you
 				are certain that you know in advance that the correct number of characters
@@ -133,17 +135,17 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueakReadAndWriteReferenceStream [
 				on the read and lock up the child squeak process."
 				OSProcess thisOSProcess stdIn setBlocking.
 				inputStream := rs on: OSProcess thisOSProcess stdIn.
-				anObject := inputStream next. "read one object expected to have been sent by parent"
+				obj := inputStream next. "read one object expected to have been sent by parent"
 				refStream := rs on: OSProcess thisOSProcess stdOut.
-				refStream nextPut: anObject "echo the object back to the parent Squeak"]]
+				refStream nextPut: obj "echo the object back to the parent Squeak"]]
 		raise: Warning.
 	objectStreamToChild := rs on: child pipeToInput writer.
-	objectStreamToChild nextPut: Smalltalk; flush. "send a complex object to the child"
+	objectStreamToChild nextPut: anObject; flush. "send a complex object to the child"
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := rs on: s.
 	result := inputStream next.
-	self assert: result = Smalltalk. "another instance of the system dictionary same as original"
+	self assert: result = anObject. "another instance of the system dictionary same as original"
 	self should: [self isNumberOfOpenFiles: openFileCount]
 
 ]
@@ -156,18 +158,19 @@ PipeableOSProcessTestCase >> testForkHeadlessSqueakReferenceStream [
 
 	"(PipeableOSProcessTestCase selector: #testForkHeadlessSqueakReferenceStream) debug"
 
-	| openFileCount child refStream inputStream result s |
+	| openFileCount anObject child refStream inputStream result s |
 	openFileCount := self numberOfOpenFiles.
+	anObject := { 1 . 'two' . #three . { 4 } }.
 	self shouldnt:
 			[child := PipeableOSProcess forkHeadlessSqueakAndDoThenQuit:
 				[refStream := (Smalltalk at: #ReferenceStream) on: OSProcess thisOSProcess stdOut.
-				refStream nextPut: Smalltalk]]
+				refStream nextPut: anObject]]
 		raise: Warning.
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := (Smalltalk at: #ReferenceStream) on: s.
 	result := inputStream next.
-	self assert: result = Smalltalk.
+	self assert: result = anObject.
 	self should: [self isNumberOfOpenFiles: openFileCount]
 
 ]
@@ -204,8 +207,10 @@ PipeableOSProcessTestCase >> testForkSqueakReadAndWriteReferenceStream [
 	| openFileCount child refStream inputStream result s anObject objectStreamToChild rs |
 	rs := Smalltalk at: #ReferenceStream.
 	openFileCount := self numberOfOpenFiles.
+	anObject := { 1 . 'two' . #three . { 4 } }.
 	self shouldnt:
-			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
+			[ | obj |
+				child := PipeableOSProcess forkSqueakAndDoThenQuit:
 				["First set standard input to blocking. This avoids a delay to wait for
 				data to be available, but note that it is dangerous to do this unless you
 				are certain that you know in advance that the correct number of characters
@@ -213,17 +218,17 @@ PipeableOSProcessTestCase >> testForkSqueakReadAndWriteReferenceStream [
 				on the read and lock up the child squeak process."
 				OSProcess thisOSProcess stdIn setBlocking.
 				inputStream := rs on: OSProcess thisOSProcess stdIn.
-				anObject := inputStream next. "read one object expected to have been sent by parent"
+				obj := inputStream next. "read one object expected to have been sent by parent"
 				refStream := rs on: OSProcess thisOSProcess stdOut.
-				refStream nextPut: anObject "echo the object back to the parent Squeak"]]
+				refStream nextPut: obj "echo the object back to the parent Squeak"]]
 		raise: Warning.
 	objectStreamToChild := rs on: child pipeToInput writer.
-	objectStreamToChild nextPut: Smalltalk; flush. "send a complex object to the child"
+	objectStreamToChild nextPut: anObject; flush. "send a complex object to the child"
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := rs on: s.
 	result := inputStream next.
-	self assert: result = Smalltalk. "another instance of the system dictionary same as original"
+	self assert: result = anObject. "another instance of the system dictionary same as original"
 	self should: [self isNumberOfOpenFiles: openFileCount]
 
 ]
@@ -236,18 +241,19 @@ PipeableOSProcessTestCase >> testForkSqueakReferenceStream [
 
 	"(PipeableOSProcessTestCase selector: #testForkSqueakReferenceStream) debug"
 
-	| openFileCount child refStream inputStream result s |
+	| openFileCount anObject child refStream inputStream result s |
 	openFileCount := self numberOfOpenFiles.
+	anObject := { 1 . 'two' . #three . { 4 } }.
 	self shouldnt:
 			[child := PipeableOSProcess forkSqueakAndDoThenQuit:
 				[refStream := (Smalltalk at: #ReferenceStream) on: OSProcess thisOSProcess stdOut.
-				refStream nextPut: Smalltalk]]
+				refStream nextPut: anObject]]
 		raise: Warning.
 	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
 	s reset.
 	inputStream := (Smalltalk at: #ReferenceStream) on: s.
 	result := inputStream next.
-	self assert: result = Smalltalk.
+	self assert: result = anObject.
 	self should: [self isNumberOfOpenFiles: openFileCount]
 
 ]

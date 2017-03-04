@@ -4,7 +4,7 @@ I am a simple teletype shell session view, providing a view on an instance of Co
 Class {
 	#name : #ShellWindowView,
 	#superclass : #PluggableTextView,
-	#category : #'CommandShell-MVC'
+	#category : 'CommandShell-MVC'
 }
 
 { #category : #initialization }

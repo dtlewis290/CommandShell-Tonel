@@ -17,7 +17,7 @@ Class {
 		'keepInitialStdErrOpen',
 		'accessProtect'
 	],
-	#category : #'CommandShell-Piping'
+	#category : 'CommandShell-Piping'
 }
 
 { #category : #examples }

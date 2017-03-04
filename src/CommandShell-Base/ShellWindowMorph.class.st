@@ -4,7 +4,7 @@ I am a simple teletype shell session morph, providing a view on an instance of C
 Class {
 	#name : #ShellWindowMorph,
 	#superclass : #PluggableTextMorph,
-	#category : #'CommandShell-Morphic'
+	#category : 'CommandShell-Morphic'
 }
 
 { #category : #'instance creation' }

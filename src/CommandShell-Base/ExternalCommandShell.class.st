@@ -20,7 +20,7 @@ Class {
 	#classVars : [
 		'ExternalShell'
 	],
-	#category : #'CommandShell-UI'
+	#category : 'CommandShell-UI'
 }
 
 { #category : #'instance creation' }

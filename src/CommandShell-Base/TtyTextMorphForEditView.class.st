@@ -4,7 +4,7 @@ I add a keyboard hook to a TextMorphForEditView to allow filtering of keystrokes
 Class {
 	#name : #TtyTextMorphForEditView,
 	#superclass : #TextMorphForEditView,
-	#category : #'CommandShell-Morphic'
+	#category : 'CommandShell-Morphic'
 }
 
 { #category : #editing }

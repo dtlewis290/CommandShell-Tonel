@@ -13,7 +13,7 @@ Class {
 		'exitStatus',
 		'outputHasBeenRedirected'
 	],
-	#category : #'CommandShell-Piping'
+	#category : 'CommandShell-Piping'
 }
 
 { #category : #accessing }

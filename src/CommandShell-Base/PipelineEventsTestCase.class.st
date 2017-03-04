@@ -15,7 +15,7 @@ Class {
 	#classVars : [
 		'TempResult'
 	],
-	#category : #'CommandShell-Tests'
+	#category : 'CommandShell-Tests'
 }
 
 { #category : #accessing }

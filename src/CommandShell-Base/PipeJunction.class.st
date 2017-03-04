@@ -14,7 +14,7 @@ Class {
 		'pipeFromOutput',
 		'errorPipelineStream'
 	],
-	#category : #'CommandShell-Piping'
+	#category : 'CommandShell-Piping'
 }
 
 { #category : #defaults }
