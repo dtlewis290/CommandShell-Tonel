@@ -195,8 +195,10 @@ RemoteTask >> finalize [
 	be stopped. When evaluating a #do:whenComplete: a reference should
 	be maintained to the RemoteTask in order to avoid this finalization."
 
-	aioHandler ifNotNilDo: [:aio | aio close].
-	childProxy ifNotNilDo: [:child | child terminate]
+	aioHandler notNil
+		ifTrue: [ aioHandler close ].
+	childProxy notNil
+		ifTrue: [ childProxy terminate ]
 ]
 
 { #category : #serializing }
