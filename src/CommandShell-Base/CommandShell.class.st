@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : 'CommandShell-Base'
+	#category : #'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
@@ -126,12 +126,12 @@ CommandShell class >> deleteFileNamed: fileName inDirectory: directoryOrFileRefe
 	"Delete the file with the given name in the given directory."
 
 	^ self useFileSystem
-		ifTrue: [(directoryOrFileReference files
-						detect: [:e | e basename = fileName ]
-						ifNone: [ ])
-					ifNotNilDo: [:f | f delete ]]
+		ifTrue: [ | f |
+			(f := directoryOrFileReference files
+				detect: [ :e | e basename = fileName ]
+				ifNone: [  ]) notNil
+				ifTrue: [ f delete ] ]
 		ifFalse: [ directoryOrFileReference deleteFileNamed: fileName ]
-
 ]
 
 { #category : #'version dependent' }
@@ -233,12 +233,12 @@ CommandShell class >> fileNamed: fileName inDirectory: directoryOrFileReference 
 	"Open the file with the given name in this directory for writing."
 
 	^ self useFileSystem
-		ifTrue: [(directoryOrFileReference files
-						detect: [:e | e basename = fileName ]
-						ifNone: [ ])
-					ifNotNilDo: [:f | f writeStream ]]
+		ifTrue: [ | f |
+			(f := directoryOrFileReference files
+				detect: [ :e | e basename = fileName ]
+				ifNone: [  ]) notNil
+				ifTrue: [ f writeStream ] ]
 		ifFalse: [ directoryOrFileReference fileNamed: fileName ]
-
 ]
 
 { #category : #'version dependent' }
