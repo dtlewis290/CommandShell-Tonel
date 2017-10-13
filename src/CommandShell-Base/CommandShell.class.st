@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : #'CommandShell-Base'
+	#category : 'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
