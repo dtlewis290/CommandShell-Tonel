@@ -288,7 +288,7 @@ CrLfFileEditor >> controllerForAccept [
 { #category : #'model access' }
 CrLfFileEditor >> currentFilePathName [
 
-	^ (CommandShell dirPathFor: directory), CommandShell pathSeparator, fileName
+	^ (CommandShell dirPathFor: directory pathName), CommandShell pathSeparator, fileName
 ]
 
 { #category : #'initialize-release' }
@@ -465,7 +465,7 @@ CrLfFileEditor >> hexFormat: aString [
 
 { #category : #'model access' }
 CrLfFileEditor >> labelString [
-	"For views to use a labels"
+	"For views to use as labels"
 
 	^ self currentFilePathName
 ]
@@ -547,7 +547,7 @@ CrLfFileEditor >> put: aText [
 		ifFalse: [newFileName := (CommandShell pathNameForDirectory: directory),
 						CommandShell pathSeparator , fileName].
 	newFileName ifNil: [^ false].
-	fs := (Smalltalk at: #CrLfFileStream) fileNamed: newFileName.
+	fs := (Smalltalk at: #CrLfFileStream ifAbsent: [ FileStream ]) fileNamed: newFileName.
 	[fs isNil] whileTrue:
 		[self inform: 'cannot write file'.
 		newFileName := self getAnotherFileName: newFileName.
@@ -617,8 +617,14 @@ CrLfFileEditor >> selectedMessageCategoryName [
 { #category : #private }
 CrLfFileEditor >> updateFilePathWith: aPathString [
 
-	self fileName: (CommandShell localNameFor: aPathString).
-	self directory: (CommandShell directoryForPath: aPathString).
+	CommandShell useFileSystem
+		ifTrue: [
+			self fileName: (CommandShell localNameFor: aPathString).
+			self directory: (CommandShell directoryForPath: aPathString) ]
+		ifFalse: [ | fdClass | fdClass := Smalltalk at: #FileDirectory.
+			fdClass splitName: aPathString to: [ :dir :file |
+				self fileName: file.
+				self directory: (fdClass on: dir) ]].
 	self changed: #relabel
 
 ]
