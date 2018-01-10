@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : 'CommandShell-Base'
+	#category : #'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
@@ -461,24 +461,18 @@ The fourth command will generate an error.
 
 { #category : #'class initialization' }
 CommandShell class >> initialize [
+
 	"CommandShell initialize"
 
-	| preferencesClass |
+	| color |
+	color := Color colorFrom: self windowColorSpecification pastelColor.
+	self setWindowColorFor: self to: color.
 	ShellSyntax new isPharo5Update50558AndLater
 		ifFalse: [ Smalltalk addToStartUpList: self ]
 		ifTrue:
 			[ (Smalltalk at: #SessionManager) default
 				perform: #registerToolClassNamed:
 				with: ThisOSProcess name ].
-	(Smalltalk hasClassNamed: #Preferences)
-		ifTrue:
-			[ preferencesClass := Smalltalk at: #Preferences.
-			(preferencesClass respondsTo: #setWindowColorFor:to:)
-				ifTrue:
-					[ preferencesClass
-						setWindowColorFor: #CommandShell
-						to: (Color colorFrom: self windowColorSpecification pastelColor) ]
-				ifFalse: [  ]	"Squeak"	"Pharo images use some other preferences protocol" ].	"Pharo deprecates Preference in favor of pragma registration mechanism"
 	Smalltalk
 		at: #TheWorldMenu
 		ifPresent:
@@ -661,6 +655,22 @@ Here are things to try if a deadlock occurs:
 Squeak will be blocked and will not respond to the mouse or keyboard. Open a command shell outside of Squeak (perhaps an xterm, or log in to another virtual terminal on Linux or FreeBSD). Using the "ps" command, find the Squeak VM process and its subprocesses. Kill the subprocess. In many cases this will free up the deadlock, and Squeak will come back to life. If this does not work, then you will probably find that one of the processes which you just killed is now in a "zombie" state, which means that the Squeak VM is deadlocked in such a way that it cannot recognize that its child process exited (and therefore cannot properly close the associated file handles). In this case, if your operating system supports a /proc file system, you may be able to break things free by emptying the pipes. On Linux, go to /proc/<pidOfTheSqueakVMProcess>/fd/ and do "cat" commands on all the pipe files in this directory. If none of this works, you are just plain stuck, and you will need to kill your Squeak session and recover anything valuable from the changes log.'
 ]
 
+{ #category : #'class initialization' }
+CommandShell class >> setWindowColorFor: classSymbol to: color [
+
+	(Smalltalk hasClassNamed: #UserInterfaceTheme)
+		ifTrue: [ (Smalltalk at: #UserInterfaceTheme) current
+					set: #customWindowColor for: classSymbol to: color]
+		ifFalse: [ (Smalltalk hasClassNamed: #Preferences)
+			ifTrue: [ | preferencesClass |
+				preferencesClass := Smalltalk at: #Preferences.
+				(preferencesClass respondsTo: #setWindowColorFor:to:)
+					ifTrue: [ preferencesClass setWindowColorFor: classSymbol to: color ]
+					ifFalse: [ "Pharo deprecates Preference in favor of pragma registration mechanism" ] ] ].
+
+
+]
+
 { #category : #'system startup' }
 CommandShell class >> startUp: resuming [
 	"A CommandShell may be running external processes in background, and waiting
@@ -696,7 +706,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.20'
+	^'4.6.21'
 ]
 
 { #category : #'window color' }
