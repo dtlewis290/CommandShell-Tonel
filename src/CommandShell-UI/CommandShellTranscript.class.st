@@ -10,7 +10,7 @@ Class {
 		'activeController',
 		'labelStringBlock'
 	],
-	#category : 'CommandShell-UI'
+	#category : #'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -486,4 +486,13 @@ CommandShellTranscript >> update: event [
 	the command line in the view"
 	self show: event asString; cr.
 
+]
+
+{ #category : #preferences }
+CommandShellTranscript >> windowColorToUse [
+	"Recent Squeak images have user interface themes that are tied to preferences
+	in class Model. CommandShellTranscript is used as a model, but does not inherit	
+	from Model. Defer to the default window color for a model."
+
+	^ Model new windowColorToUse
 ]
