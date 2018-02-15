@@ -91,12 +91,14 @@ Three types of commands may be executed from a CommandShell:
 Internal and external commands can be freely mixed in a command pipeline, with results which should be familiar to users of Unix command shells. Pipes are implemented as instances of OSPipe or InternalPipe, and are capable of passing streams of characters from one process proxy to the next. All commands (internal or external) evaluate to strings, such that their results can either be passed through a pipe to the next command proxy in a pipeline, or displayed in the terminal window view if the proxy represents the last command in a command pipeline. Error messages (also strings) are written to an errorPipelineStream which is shared by all proxies in a command pipeline, such that any error messages are accumulated for the entire command pipeline.'
 ]
 
-{ #category : #'version dependent' }
+{ #category : #compatibility }
 CommandShell class >> defaultPathString [
 
-	^ self useFileSystem
-		ifTrue: [(((Smalltalk at: #Path) perform: #workingDirectory) perform: #asFileReference) pathString]
-		ifFalse: [(Smalltalk at: #FileDirectory) default pathName]
+	^ self useFileMan
+		ifTrue: [((Smalltalk at: #DirectoryEntry) perform: #currentDirectory) printString]
+		ifFalse: [self useFileSystem
+			ifTrue: [(((Smalltalk at: #Path) perform: #workingDirectory) perform: #asFileReference) pathString]
+			ifFalse: [(Smalltalk at: #FileDirectory) default pathName]]
 
 ]
 
@@ -106,19 +108,24 @@ CommandShell class >> defaultWindowName [
 	^ 'Squeak Shell'
 ]
 
-{ #category : #'version dependent' }
+{ #category : #compatibility }
 CommandShell class >> deleteFileNamed: fileName [
 	"Delete the file with the given name."
-
-	self useFileSystem
-		ifTrue: [ | file |
-			file := fileName perform: #asFileReference.
-			(file respondsTo: #ensureDeleted)
-				ifTrue: [ file perform: #ensureDeleted ]
-				ifFalse: [ file perform: #delete ] ]
-		ifFalse: [ (Smalltalk at: #FileDirectory) default
-				deleteFileNamed: fileName ]
-
+	
+	self useFileMan
+		ifTrue: [((Smalltalk at: #FileEntry) pathName: fileName) delete]
+		ifFalse: [self useFileSystem
+			ifTrue: [ | file sel |
+				file := fileName perform: #asFileReference.
+				(sel := {#ensureDelete . #ensureDeleted . #delete}
+					detect: [ :e | file respondsTo: e ]
+					ifNone: [ self error: 'do not know how to ensureDelete' ]) notNil
+						ifTrue: [ file perform: sel ].
+				(file respondsTo: #ensureDelete)
+					ifTrue: [ file perform: #ensureDelete ]
+					ifFalse: [ file perform: #ensureDeleted ] ]
+			ifFalse:
+				[ (Smalltalk at: #FileDirectory) default deleteFileNamed: fileName ] ]
 ]
 
 { #category : #'version dependent' }
@@ -153,14 +160,16 @@ CommandShell class >> directoryEntryNames: path [
 
 ]
 
-{ #category : #'version dependent' }
+{ #category : #compatibility }
 CommandShell class >> directoryExists: path [
 	"Answer true if a directory of the given name exists. The given name may
 	be either a full path name or a local directory within this directory."
 
-	^ self useFileSystem
-		ifTrue: [ (path perform: #asFileReference) exists ]
-		ifFalse: [ (Smalltalk at: #FileDirectory) default directoryExists: path ]
+	^ self useFileMan
+		ifTrue: [((Smalltalk at: #DirectoryEntry) pathName: path) exists]
+		ifFalse: [self useFileSystem
+			ifTrue: [ (path perform: #asFileReference) exists ]
+			ifFalse: [ (Smalltalk at: #FileDirectory) default directoryExists: path ]]
 
 ]
 
@@ -196,14 +205,16 @@ CommandShell class >> entryName: directoryEntry [
 
 ]
 
-{ #category : #'version dependent' }
+{ #category : #compatibility }
 CommandShell class >> fileExists: path [
 	"Answer true if a file of the given name exists. The given name may be
 	either a full path name or a local file within this directory."
 
-	^ self useFileSystem
-		ifTrue: [ (path perform: #asFileReference) exists ]
-		ifFalse: [ (Smalltalk at: #FileDirectory) default fileExists: path ]
+	^ self useFileMan
+		ifTrue: [((Smalltalk at: #FileEntry) pathName: path) exists]
+		ifFalse: [self useFileSystem
+			ifTrue: [ (path perform: #asFileReference) exists ]
+			ifFalse: [ (Smalltalk at: #FileDirectory) default fileExists: path ]]
 
 ]
 
@@ -591,12 +602,14 @@ CommandShell class >> pathNameForDirectory: directoryOrFileReference [
 
 ]
 
-{ #category : #'version dependent' }
+{ #category : #compatibility }
 CommandShell class >> pathSeparator [
 
-	^ self useFileSystem
-		ifTrue: [((Smalltalk at: #DiskStore) current perform: #delimiter) asString]
-		ifFalse: [(Smalltalk at: #FileDirectory) slash]
+	^ self useFileMan
+		ifTrue: [(Smalltalk at: #FileIOAccessor) default slash]
+		ifFalse: [self useFileSystem
+			ifTrue: [((Smalltalk at: #DiskStore) current perform: #delimiter) asString]
+			ifFalse: [(Smalltalk at: #FileDirectory) slash]]
 
 ]
 
@@ -706,7 +719,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.21'
+	^'4.6.22'
 ]
 
 { #category : #'window color' }
