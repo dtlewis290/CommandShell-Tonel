@@ -707,6 +707,14 @@ CommandShell class >> unload [
 ]
 
 { #category : #'version dependent' }
+CommandShell class >> useFileMan [
+	"If true use FileMan for directory and file access. See senders for methods with file
+	system dependencies."
+
+	^ Smalltalk hasClassNamed: #FileIOAccessor
+]
+
+{ #category : #'version dependent' }
 CommandShell class >> useFileSystem [
 	"If true use FileSystem, otherwise use traditional FileDirectory. See senders
 	for methods with file system dependencies."
