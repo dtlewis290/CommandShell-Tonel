@@ -997,6 +997,13 @@ PipeableOSProcess >> requiresNonBlockingInput [
 	^ false
 ]
 
+{ #category : #evaluating }
+PipeableOSProcess >> runState [
+	processProxy
+		ifNotNil: [ :p | ^ p runState ]
+		ifNil: [ ^ #unknownRunState ]
+]
+
 { #category : #private }
 PipeableOSProcess >> setBlockingOutput [
 	"Set the pipe from the child stdout to blocking mode. This is the normal
