@@ -14,6 +14,7 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'task',
+		'taskIdentifier',
 		'childProxy',
 		'completionBlock',
 		'aioHandler'
@@ -34,7 +35,7 @@ RemoteTask class >> do: aBlock [
 
 	"RemoteTask do: [2 + 2]"
 
-	^(self new task: aBlock) value
+	^(self task: aBlock) value
 ]
 
 { #category : #evaluating }
@@ -53,6 +54,24 @@ RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock [
 	"(RemoteTask do: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect ]) inspect"
 
 	^ self new task: taskBlock whenComplete: aOneArgumentBlock
+]
+
+{ #category : #evaluating }
+RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: anObject [
+	"Evaluate taskBlock in an image running in a separate OS process.
+	Set the completion block, a block that takes result object as its single argument.
+	Start remote processing with an AIO event notifier. Completion of the remote task
+	will result in a changed notification from the event notifier, which will activate the
+	completion block. The completion block is expected to do something useful with
+	the result of the remote task."
+
+	"n.b. Inspect the RemoteTask to prevent it being garbage collected and finalized
+	before processing is complete"
+
+	"(RemoteTask do: [2 + 2] whenComplete: [ :result | result inspect ] taskIdentifier: 'my task 1') inspect"
+	"(RemoteTask do: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect ] taskIdentifier: 'my task 2') inspect"
+
+	^ self new task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: anObject
 ]
 
 { #category : #finalization }
@@ -135,6 +154,39 @@ RemoteTask class >> parallelPerformance [
 ]
 
 { #category : #examples }
+RemoteTask class >> searchForPrimes [
+	"RemoteTask searchForPrimes"
+
+	| poolCount range tasks results start sema proc |
+	start := 100000000000000000000000000000.
+	range := 20000.
+	poolCount := 7.
+	tasks := OrderedCollection new.
+	results := OrderedCollection new. "FIXME make thread safe"
+
+	sema := Semaphore new.
+	poolCount timesRepeat: [ sema signal ]. "limit task count"
+	proc := [ [ | end task osp |
+		end := start + range - 1.
+		task := [ (start to: end) select: [ :f | f isPrime]].
+		osp := RemoteTask do: task
+			whenComplete: [ :result | results add: result. sema signal ].
+		tasks add: osp. "Do not allow the task to be GCed"
+		start := start + range.
+		sema wait.
+	] repeat ] fork.
+	^ { proc . tasks . results }.
+]
+
+{ #category : #'instance creation' }
+RemoteTask class >> task: valuableObject [
+	"Create an instance to evaluate a block or other valuable. Do not start evaluation."
+
+	^ self new task: valuableObject
+
+]
+
+{ #category : #examples }
 RemoteTask class >> threeParallelTasks [
 	"Find all primes in a range of large integers. Divide the problem into
 	three tasks running the three child images, and return the results to
@@ -204,7 +256,10 @@ RemoteTask >> getResult [
 	"Materialize the result, reading serialized data from standard input"
 
 	SerializingStrategy = #referenceStream
-		ifTrue: [^(Materializer on: childProxy pipeFromOutput reader) next].
+		ifTrue: [ | bytes | "Must read from a positionable stream"
+				childProxy pipeFromOutput reader binary.
+				bytes := childProxy upToEndOfFile.
+				^(Materializer on: bytes readStream) next].
 
 	SerializingStrategy = #fuel
 		ifTrue: [^(Materializer materializeFrom: childProxy pipeFromOutput reader binary) root].
@@ -216,12 +271,28 @@ RemoteTask >> getResult [
 
 ]
 
+{ #category : #printing }
+RemoteTask >> printOn: aStream [
+	super printOn: aStream.
+	aStream
+		nextPutAll: ' ('.
+	taskIdentifier ifNotNil: [ aStream
+		nextPutAll: taskIdentifier printString;
+		nextPutAll: ' - ' ].
+	aStream
+		nextPutAll: self runState;
+		nextPut: $)
+]
+
 { #category : #serializing }
 RemoteTask >> put: result [
 	"Serialize the result and write to standard output"
 
 	SerializingStrategy = #referenceStream
-		ifTrue: [ ^ (Serializer on: OSProcess thisOSProcess stdOut) nextPut: result].
+		ifTrue: [ | ws | "Must write to a positionable stream"
+				ws := ByteArray new writeStream.
+				(Serializer on: ws) nextPut: result.
+				^ OSProcess thisOSProcess stdOut nextPutAll: ws contents; flush].
 
 	SerializingStrategy = #fuel
 		ifTrue: [ ^ Serializer serialize: result on: OSProcess thisOSProcess stdOut binary].
@@ -247,7 +318,28 @@ RemoteTask >> result [
 	"Answer the result of a previously started task. The child Squeak sends one
 	result object back to its parent Squeak before exiting."
 
-	^self getResult
+	| result |
+	result := self getResult.
+	childProxy pipeFromOutput close.
+	^ result
+
+]
+
+{ #category : #evaluating }
+RemoteTask >> runState [
+	childProxy
+		ifNotNil: [ :p | ^ p runState ]
+		ifNil: [ ^ #notYetRunning ]
+]
+
+{ #category : #evaluating }
+RemoteTask >> setCompletionBlock: aOneArgumentBlock [
+
+	aioHandler := AioEventHandler new.
+	aioHandler addDependent: self.
+	completionBlock := [ :arg |
+		aOneArgumentBlock value: arg.
+		aioHandler ifNotNil: [aioHandler close]].
 
 ]
 
@@ -265,11 +357,16 @@ RemoteTask >> start [
 		are certain that you know in advance that the correct number of characters
 		will be available on the input. If this is not the case, then the VM will block
 		on the read and lock up the child squeak process."
-		result := [self task value]
+
+		HeadlessChild
+			ifTrue: [result := [self task value]
 					on: Exception
-					do: [:e |
-						HeadlessChild ifFalse: [ e halt; resume ].
-						result := 'remote task execution failed: ', e printString].
+					do: [:e | | strm |
+						strm := '' writeStream.
+						strm nextPutAll:  'remote task execution failed: '.
+						e printVerboseOn: strm.
+						result := strm contents]]
+			ifFalse: [result := self task value].
 		OSProcess thisOSProcess stdIn setBlocking.
 		self put: result.
 		OSProcess thisOSProcess stdOut flush; close].
@@ -285,16 +382,14 @@ RemoteTask >> start [
 
 { #category : #accessing }
 RemoteTask >> task [
-	"Answer the value of task"
-
 	^ task
 ]
 
 { #category : #accessing }
-RemoteTask >> task: anObject [
-	"Set the value of task"
+RemoteTask >> task: valuableObject [
+	"A block or other object responding to #value"
 
-	task := anObject
+	task := valuableObject
 ]
 
 { #category : #evaluating }
@@ -312,13 +407,30 @@ RemoteTask >> task: taskBlock whenComplete: aOneArgumentBlock [
 	"(RemoteTask new task: [2 + 2] whenComplete: [ :result | result inspect]) inspect"
 	"(RemoteTask new task: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect]) inspect"
 
+	^ self task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: nil
+
+]
+
+{ #category : #evaluating }
+RemoteTask >> task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: anObject [
+	"Evaluate taskBlock in an image running in a separate OS process.
+	Set the completion block, a block that takes result object as its single argument.
+	Start remote processing with an AIO event notifier. Completion of the remote task
+	will result in a changed notification from the event notifier, which will activate the
+	completion block. The completion block is expected to do something useful with
+	the result of the remote task. Provide a task identifier to uniquely identify the
+	remote task."
+
 	task := taskBlock.
-	completionBlock := aOneArgumentBlock.
-	aioHandler ifNotNil: [aioHandler close].
-	aioHandler := AioEventHandler new.
-	aioHandler addDependent: self.
+	taskIdentifier := anObject.
+	self setCompletionBlock: aOneArgumentBlock.
 	self start
 
+]
+
+{ #category : #accessing }
+RemoteTask >> taskIdentifier [
+	^ taskIdentifier
 ]
 
 { #category : #updating }
@@ -342,7 +454,10 @@ RemoteTask >> value [
 
 	"(RemoteTask new task: [2 + 2]) value"
 
+	| result |
 	self start.
-	^self result
+	result := self result.
+	childProxy closePipes.
+	^ result
 
 ]
