@@ -1,11 +1,21 @@
 "
-RemoteTask do: [2 + 2]
-
-A RemoteTask represents a block to be evaluated in a headless Squeak child process. The results of evaluating the block are returned to the sender through a reference stream on an OS pipe. Asynchronous event notification may be used to signal completion of remote processing.
+A RemoteTask represents a block (or any object responding to #value) to be evaluated in a headless Squeak child process. The results of evaluating the block are returned to the sender through a reference stream on an OS pipe. Asynchronous event notification may be used to signal completion of remote processing.
 
 The block is evaluated in a remote headless image beginning with a clone of the sender image at the time of the message send. All side effects of evaluating the task block are localized to the remote image, and have no effect on the sending image. The result object may be an object of any complexity, such as a dictionary or array of result values.
 
 On a unix system, the creation of child Squeak images is a relatively light weight operation, so tasks of varying degrees of complexity can be assigned to remote tasks with only moderate overhead.
+
+Examples:
+
+        "" RemoteTask do: [2 + 2] ""
+
+        "" (RemoteTask
+                do: [ | oc |
+                        oc := OrderedCollection new.
+                        (1 to: 5000000) do: [ :e | e isPrime ifTrue: [oc add: e]].
+                        oc ]
+                whenComplete: [ :result | result inspect ]
+                taskIdentifier: 'A forked Squeak image finding primes') inspect ""
 
 
 "
@@ -34,6 +44,7 @@ RemoteTask class >> do: aBlock [
 	on read until completion of the remote task."
 
 	"RemoteTask do: [2 + 2]"
+	"RemoteTask do: [(Delay forSeconds: 3) wait. 2 + 2]"
 
 	^(self task: aBlock) value
 ]
@@ -47,11 +58,12 @@ RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock [
 	completion block. The completion block is expected to do something useful with
 	the result of the remote task."
 
-	"n.b. Inspect the RemoteTask to prevent it being garbage collected and finalized
-	before processing is complete"
-
-	"(RemoteTask do: [2 + 2] whenComplete: [ :result | result inspect ]) inspect"
-	"(RemoteTask do: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect ]) inspect"
+	"RemoteTask
+		do: [ | oc |
+			oc := OrderedCollection new.
+			(1 to: 5000000) do: [ :e | e isPrime ifTrue: [oc add: e]].
+			oc ]
+		whenComplete: [ :result | result inspect ]"
 
 	^ self new task: taskBlock whenComplete: aOneArgumentBlock
 ]
@@ -65,11 +77,13 @@ RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock taskIdentifier
 	completion block. The completion block is expected to do something useful with
 	the result of the remote task."
 
-	"n.b. Inspect the RemoteTask to prevent it being garbage collected and finalized
-	before processing is complete"
-
-	"(RemoteTask do: [2 + 2] whenComplete: [ :result | result inspect ] taskIdentifier: 'my task 1') inspect"
-	"(RemoteTask do: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect ] taskIdentifier: 'my task 2') inspect"
+	"RemoteTask
+		do: [ | oc |
+			oc := OrderedCollection new.
+			(1 to: 5000000) do: [ :e | e isPrime ifTrue: [oc add: e]].
+			oc ]
+		whenComplete: [ :result | result inspect ]
+		taskIdentifier: 'A forked Squeak image finding primes'"
 
 	^ self new task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: anObject
 ]
@@ -431,6 +445,16 @@ RemoteTask >> task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: an
 { #category : #accessing }
 RemoteTask >> taskIdentifier [
 	^ taskIdentifier
+]
+
+{ #category : #evaluating }
+RemoteTask >> terminate [
+	"Convenience method for terminating the child image process if it
+	is otherwise unresponsive"
+
+	self runState = #running
+		ifTrue: [ childProxy processProxy terminate ]
+
 ]
 
 { #category : #updating }
