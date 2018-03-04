@@ -147,7 +147,7 @@ ConfigurationOfCommandShell >> baseline10: spec [
 ConfigurationOfCommandShell >> development: spec [
 	<symbolicVersion: #'development'>
 
-	spec for: #'common' version: '4.6.15'.
+	spec for: #'common' version: '4.6.20'.
 
 ]
 
@@ -168,7 +168,7 @@ ConfigurationOfCommandShell >> project [
 ConfigurationOfCommandShell >> stable: spec [
 	<symbolicVersion: #'stable'>
 
-	spec for: #'common' version: '4.6.15'.
+	spec for: #'common' version: '4.6.20'.
 	spec for: #'pharo1.4.x' version: '1.0'.
 ]
 
@@ -314,6 +314,92 @@ Use CrLfFileStream only if the preferred MultiByteFileStream is not present in t
 				package: 'CommandShell-UI' with: 'CommandShell-UI-dtl.13' ].
 	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
 	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version4619: spec [
+	<version: '4.6.19' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ 
+			spec blessing: #release.
+			spec description: 'CommandShell 4.6.19
+
+By Thierry Goubier: Handle Pharo deprecation of #ifNotNilDo:.'.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '7/27/2017 22:51'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.9' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-ThierryGoubier.52';
+				package: 'CommandShell-Commands' with: 'CommandShell-Commands-dtl.18';
+				package: 'CommandShell-Morphic' with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping' with: 'CommandShell-Piping-ThierryGoubier.20';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.13';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-dtl.13' ].
+	spec for: #pharo do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec for: #squeak do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version4620: spec [
+	<version: '4.6.20' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ spec blessing: #release.
+			spec
+				description:
+					'CommandShell 4.6.20
+
+Fix bug in file path name for CrLfFileEditor file save.'.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '10/16/2017 20:57'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.9' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.53';
+				package: 'CommandShell-Commands'
+					with: 'CommandShell-Commands-dtl.19';
+				package: 'CommandShell-Morphic'
+					with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping'
+					with: 'CommandShell-Piping-ThierryGoubier.20';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.14';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-dtl.18' ].
+	spec
+		for: #pharo
+		do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec
+		for: #squeak
+		do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
+]
+
+{ #category : #versions }
+ConfigurationOfCommandShell >> version4624: spec [
+	<version: '4.6.24' imports: #('1.0-baseline')>
+	spec
+		for: #common
+		do: [ spec blessing: #release.
+			spec
+				description:
+					'CommandShell 4.6.24'.
+			spec author: 'ThierryGoubier'.
+			spec timestamp: '3/4/2018 10:18'.
+			spec project: 'OSProcess' with: [ spec version: '4.6.12' ].
+			spec
+				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.53';
+				package: 'CommandShell-Commands'
+					with: 'CommandShell-Commands-ThierryGoubier.20';
+				package: 'CommandShell-Morphic'
+					with: 'CommandShell-Morphic-dtl.2';
+				package: 'CommandShell-Piping'
+					with: 'CommandShell-Piping-dtl.22';
+				package: 'CommandShell-Tests' with: 'CommandShell-Tests-dtl.14';
+				package: 'CommandShell-UI' with: 'CommandShell-UI-dtl.19' ].
+	spec
+		for: #pharo
+		do: [ spec package: 'CommandShellPharo' with: 'CommandShellPharo-dtl.2' ].
+	spec
+		for: #squeak
+		do: [ spec package: 'CommandShell-MVC' with: 'CommandShell-MVC-dtl.3' ]
 ]
 
 { #category : #versions }
