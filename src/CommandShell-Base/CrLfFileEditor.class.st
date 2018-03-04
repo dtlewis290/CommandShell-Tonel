@@ -129,13 +129,12 @@ CrLfFileEditor class >> fileNamed: pathName withLabel: windowLabel [
 
 { #category : #'class initialization' }
 CrLfFileEditor class >> initialize [
-
 	"CrLfFileEditor initialize"
 
-	| color |
-	color := Color colorFrom: self windowColorSpecification pastelColor.
-	CommandShell setWindowColorFor: self to: color.
-
+	(Smalltalk hasClassNamed: #WindowColorSpec)
+		ifTrue: [ | color |
+			color := Color colorFrom: self windowColorSpecification pastelColor.
+			CommandShell setWindowColorFor: self to: color ]
 ]
 
 { #category : #'instance creation' }
