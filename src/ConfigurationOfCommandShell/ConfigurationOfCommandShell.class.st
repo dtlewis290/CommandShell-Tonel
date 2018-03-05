@@ -417,7 +417,7 @@ ConfigurationOfCommandShell >> version4625: spec [
 			spec
 				package: 'CommandShell-Base' with: 'CommandShell-Base-ThierryGoubier.54';
 				package: 'CommandShell-Commands'
-					with: 'CommandShell-Commands-ThierryGoubier.20';
+					with: 'CommandShell-Commands-dtl.21';
 				package: 'CommandShell-Morphic'
 					with: 'CommandShell-Morphic-dtl.2';
 				package: 'CommandShell-Piping'
