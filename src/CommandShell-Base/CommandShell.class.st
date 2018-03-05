@@ -476,8 +476,10 @@ CommandShell class >> initialize [
 	"CommandShell initialize"
 
 	| color |
-	color := Color colorFrom: self windowColorSpecification pastelColor.
-	self setWindowColorFor: self to: color.
+	(Smalltalk hasClassNamed: #WindowColorSpec)
+		ifTrue:
+			[ color := Color colorFrom: self windowColorSpecification pastelColor.
+			self setWindowColorFor: self to: color].
 	ShellSyntax new isPharo5Update50558AndLater
 		ifFalse: [ Smalltalk addToStartUpList: self ]
 		ifTrue:
