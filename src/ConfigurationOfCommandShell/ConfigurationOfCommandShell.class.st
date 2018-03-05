@@ -415,7 +415,7 @@ ConfigurationOfCommandShell >> version4625: spec [
 			spec timestamp: '3/4/2018 19:26'.
 			spec project: 'OSProcess' with: [ spec version: '4.6.13' ].
 			spec
-				package: 'CommandShell-Base' with: 'CommandShell-Base-dtl.59';
+				package: 'CommandShell-Base' with: 'CommandShell-Base-ThierryGoubier.60';
 				package: 'CommandShell-Commands'
 					with: 'CommandShell-Commands-dtl.21';
 				package: 'CommandShell-Morphic'
