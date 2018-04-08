@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : #'CommandShell-Base'
+	#category : 'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
@@ -729,7 +729,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.25'
+	^'4.6.26'
 ]
 
 { #category : #'window color' }
@@ -1014,6 +1014,32 @@ CommandShell >> commandLineProcesses: anObject [
 	"Set the value of commandLineProcesses"
 
 	commandLineProcesses := anObject
+]
+
+{ #category : #evaluation }
+CommandShell >> copy: aCommandString withoutEscapedLineEnds: lineEndCharacter [
+	"Copy replacing escaped lineEndCharacter with space. Use $\ as the escape token,
+	and if the following character is lineEndCharacter, then replace the sequence with
+	a space. Assume that lines are delimited by a single character, not by e.g. <cr><lf>
+	as in Windows line conventions."
+
+	"CommandShell new copy:
+		'abc\	d\
+ef\ghi\' withoutEscapedLineEnds: Character cr
+	"
+
+	| rs ws |
+	rs := aCommandString readStream.
+	ws := '' writeStream.
+	[rs atEnd] whileFalse: [ | c |
+		c := rs next.
+		(c = $\ and: [
+			rs atEnd not
+				and: [rs peek = lineEndCharacter]])
+		ifFalse: [ ws nextPut: c ]
+		ifTrue: [ rs next. ws nextPut: Character space]].
+	^ws contents.
+
 ]
 
 { #category : #'event handling' }
@@ -1599,6 +1625,13 @@ CommandShell >> notifyAlternatePrompt [
 ]
 
 { #category : #'command prompt' }
+CommandShell >> notifyNewline [
+	"The view should do o a carriage return and line feed with no new prompt display"
+
+	self changed: #newLine
+]
+
+{ #category : #'command prompt' }
 CommandShell >> notifyPrompt [
 	"Display $PS1"
 
@@ -1769,8 +1802,14 @@ CommandShell >> processCommand: aCommandString echo: showCommand [
 	user interface to remain responsive. If showCommand is true, update dependent
 	views in order to display the command."
 
+	| line |
+	aCommandString last = $\
+		ifTrue: [ "excaped line end, more to follow"
+			^self notifyNewline].
+
+	line := self copy: aCommandString withoutEscapedLineEnds: Character cr.
 	self commandLineProcesses add:
-		([self command: aCommandString echo: showCommand.
+		([self command: line echo: showCommand.
 		self commandLineProcesses
 				remove: Processor activeProcess
 				ifAbsent: []] forkAt: Processor userBackgroundPriority)
