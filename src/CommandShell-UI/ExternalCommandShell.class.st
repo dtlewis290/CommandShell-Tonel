@@ -20,7 +20,7 @@ Class {
 	#classVars : [
 		'ExternalShell'
 	],
-	#category : #'CommandShell-UI'
+	#category : 'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -212,13 +212,20 @@ ExternalCommandShell >> enableInputProcessing [
 ExternalCommandShell >> handleInput: str [ 
 
 	| rs line |
-	self lineBuffer nextPutAll: str.
-	[self lineBuffer contents includes: Character lf]
-		whileTrue: [rs := ReadStream on: lineBuffer contents.
-			self lineBuffer: nil.
-			line := rs upTo: Character lf.
-			self cliShell command: line echo: false.
-			self lineBuffer nextPutAll: rs upToEnd]
+	(str size > 1 and: [ (str last: 2) first = $\ ])
+		ifTrue: [ "escaped end of line, more to follow"
+			self lineBuffer
+				nextPutAll: (str allButLast: 2);
+				nextPut: Character space.
+			self cliShell notifyNewline "no-op, for consistency with CommandShellTranscript"]
+		ifFalse: [
+			self lineBuffer nextPutAll: str.
+			[self lineBuffer contents includes: Character lf]
+				whileTrue: [rs := ReadStream on: lineBuffer contents.
+					self lineBuffer: nil.
+					line := rs upTo: Character lf.
+					self cliShell command: line echo: false.
+					self lineBuffer nextPutAll: rs upToEnd]]
 ]
 
 { #category : #'initialize-release' }
@@ -286,6 +293,14 @@ ExternalCommandShell >> lineBuffer: anObject [
 	"Set the value of lineBuffer"
 
 	lineBuffer := anObject
+]
+
+{ #category : #'command prompt' }
+ExternalCommandShell >> newLine [
+	"User has entered a carriage return, and the model is noitfying us to display
+	new line without a prompt string. Nothing to do here because imput came from
+	a real terminal, an the newline is already visible to the user."
+
 ]
 
 { #category : #printing }
@@ -490,6 +505,8 @@ ExternalCommandShell >> update: event [
 		ifTrue: [^ self promptTwo].
 	event == #restorePrompt	"restore last prompt display"
 		ifTrue: [self flag: #FIXME. ^ self prompt].
+	event == #newLine
+		ifTrue: [^ self newLine].
 	event == #exit
 		ifTrue: [^ self close].
 	event == #clearText

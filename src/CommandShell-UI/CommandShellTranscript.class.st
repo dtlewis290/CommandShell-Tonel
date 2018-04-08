@@ -10,7 +10,7 @@ Class {
 		'activeController',
 		'labelStringBlock'
 	],
-	#category : #'CommandShell-UI'
+	#category : 'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -289,6 +289,14 @@ CommandShellTranscript >> lastPromptString: anObject [
 	lastPromptString := anObject
 ]
 
+{ #category : #'command prompt' }
+CommandShellTranscript >> newLine [
+
+	self scheduleToEvaluate:
+		[self show: ''.
+		self restoreSelectionMarker]
+]
+
 { #category : #'stream extensions' }
 CommandShellTranscript >> nextPut: anObject [ 
 
@@ -421,8 +429,9 @@ CommandShellTranscript >> promptString [
 { #category : #'command prompt' }
 CommandShellTranscript >> promptTwo [
 
-	self show: self cliShell promptStringTwo.
-	self restoreSelectionMarker
+	self scheduleToEvaluate:
+		[self show: self cliShell promptStringTwo.
+		self restoreSelectionMarker]
 ]
 
 { #category : #'command prompt' }
@@ -474,6 +483,8 @@ CommandShellTranscript >> update: event [
 		ifTrue: [^ self promptTwo].
 	event == #restorePrompt	"restore last prompt display"
 		ifTrue: [self flag: #FIXME. ^ self prompt].
+	event == #newLine
+		ifTrue: [^ self newLine].
 	event == #exit
 		ifTrue: [^ self close].
 	event == #clearText
