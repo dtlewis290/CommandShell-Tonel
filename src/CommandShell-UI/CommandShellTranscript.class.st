@@ -27,7 +27,7 @@ CommandShellTranscript class >> commandShell: cliShell [
 { #category : #defaults }
 CommandShellTranscript class >> defaultWindowName [
 
-	^ 'Squeak Shell'
+	^ 'Command Shell'
 ]
 
 { #category : #'instance creation' }
@@ -62,7 +62,7 @@ CommandShellTranscript class >> windowColorSpecification [
 				ifAbsent: [^ self error: 'this image does not support WindowColorSpec'].
 	^ windowColorSpec
 		classSymbol: self name
-		wording: 'Squeak Shell'
+		wording: 'Command Shell'
 		brightColor: (Color lightGray lighter paler)
 		pastelColor: (Color lightGray lighter lighter paler paler)
 		helpMessage: 'CommandShell window for evaluating Smalltalk and OS commands'
