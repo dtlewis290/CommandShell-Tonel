@@ -105,7 +105,7 @@ CommandShell class >> defaultPathString [
 { #category : #defaults }
 CommandShell class >> defaultWindowName [
 
-	^ 'Squeak Shell'
+	^ 'Command Shell'
 ]
 
 { #category : #compatibility }
@@ -279,7 +279,7 @@ CommandShell class >> htmlOverview [
 
 <h3>How to use CommandShell</h3>
   Evaluate "CommandShell open" or, if you have loaded the change set to put CommandShell
-  in your world menu, just select "Squeak Shell" from the "open..." menu entry.
+  in your world menu, just select "Command Shell" from the "open..." menu entry.
   To use the command shell window, enter commands on the command line (after
   the "$ " command prompt, followed by cr to accept the command. The "help" command
   gives some clues as to what can be done. In general, just try any command which
@@ -498,10 +498,11 @@ CommandShell class >> initialize [
 						ifTrue:
 							[  ]
 						ifFalse:
-							[ class unregisterOpenCommand: 'Squeak shell'.	"if previously registered"
-							class
+							[ class
+								unregisterOpenCommand: 'Squeak Shell';	"if previously registered"
+								unregisterOpenCommand: 'Command Shell';	"if previously registered"
 								registerOpenCommand:
-									{'Squeak Shell'.
+									{'Command Shell'.
 									{CommandShell.
 									#open}} ]	"n.b.  use #hasLiteral: rather than #sendsSelector: for Squeak 3.8"	"Pharo issues deprecation and tells you to do it their way. Ignore the warning." ] ]
 ]
@@ -729,7 +730,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.6.26'
+	^'4.7.1'
 ]
 
 { #category : #'window color' }
@@ -742,7 +743,7 @@ CommandShell class >> windowColorSpecification [
 				ifAbsent: [^ self error: 'this image does not support WindowColorSpec'].
 	^ windowColorSpec
 		classSymbol: self name
-		wording: 'Squeak Shell'
+		wording: 'Command Shell'
 		brightColor: (Color lightGray lighter paler)
 		pastelColor: (Color lightGray lighter lighter paler paler)
 		helpMessage: 'CommandShell window for evaluating Smalltalk and OS commands'
