@@ -14,7 +14,7 @@ Class {
 		'fileName',
 		'viewStyle'
 	],
-	#category : #'CommandShell-Commands'
+	#category : 'CommandShell-Commands'
 }
 
 { #category : #private }
@@ -207,7 +207,7 @@ CrLfFileEditor class >> windowColorSpecification [
 				ifAbsent: [^self error: 'this image does not support WindowColorSpec'].
 	^ windowColorSpec
 		classSymbol: self name
-		wording: 'Squeak Shell File Editor'
+		wording: 'Command Shell File Editor'
 		brightColor: Color lightOrange
 		pastelColor: Color lightOrange paler paler
 		helpMessage: 'CrLfFileEditor window for CommandShell ''edit'' comand'
