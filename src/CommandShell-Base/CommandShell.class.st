@@ -50,7 +50,7 @@ Class {
 		'safeToExit',
 		'readSyncSemaphore'
 	],
-	#category : 'CommandShell-Base'
+	#category : #'CommandShell-Base'
 }
 
 { #category : #'instance creation' }
@@ -113,7 +113,7 @@ CommandShell class >> deleteFileNamed: fileName [
 	"Delete the file with the given name."
 	
 	self useFileMan
-		ifTrue: [((Smalltalk at: #FileEntry) pathName: fileName) delete]
+		ifTrue: [((Smalltalk at: #FileEntry) perform: #withPathName: with: fileName) delete]
 		ifFalse: [self useFileSystem
 			ifTrue: [ | file sel |
 				file := fileName perform: #asFileReference.
@@ -166,7 +166,7 @@ CommandShell class >> directoryExists: path [
 	be either a full path name or a local directory within this directory."
 
 	^ self useFileMan
-		ifTrue: [((Smalltalk at: #DirectoryEntry) pathName: path) exists]
+		ifTrue: [((Smalltalk at: #DirectoryEntry) perform: #withPathName: with: path) exists]
 		ifFalse: [self useFileSystem
 			ifTrue: [ (path perform: #asFileReference) exists ]
 			ifFalse: [ (Smalltalk at: #FileDirectory) default directoryExists: path ]]
@@ -211,7 +211,7 @@ CommandShell class >> fileExists: path [
 	either a full path name or a local file within this directory."
 
 	^ self useFileMan
-		ifTrue: [((Smalltalk at: #FileEntry) pathName: path) exists]
+		ifTrue: [((Smalltalk at: #FileEntry) perform: #withPathName: with: path) exists]
 		ifFalse: [self useFileSystem
 			ifTrue: [ (path perform: #asFileReference) exists ]
 			ifFalse: [ (Smalltalk at: #FileDirectory) default fileExists: path ]]

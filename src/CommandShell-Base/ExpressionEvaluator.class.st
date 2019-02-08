@@ -8,7 +8,7 @@ Class {
 		'expression',
 		'evaluationBlock'
 	],
-	#category : 'CommandShell-Piping'
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #'instance creation' }

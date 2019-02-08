@@ -14,7 +14,7 @@ Class {
 		'completionSemaphore',
 		'completionWatcher'
 	],
-	#category : 'CommandShell-Piping'
+	#category : #'CommandShell-Piping'
 }
 
 { #category : #'command processing' }

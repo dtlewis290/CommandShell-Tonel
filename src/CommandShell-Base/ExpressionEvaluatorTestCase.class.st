@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'pipeJunction'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #Running }

@@ -15,7 +15,7 @@ Class {
 		'CheckFileHandleCount',
 		'TempResult'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #'class initialization' }

@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'shellSyntax'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #running }
