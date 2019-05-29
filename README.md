@@ -9,7 +9,7 @@ To load (the in-development version) in Pharo 7 and later:
 
 ```smalltalk
 Metacello new
-	repository: 'github://akgrant43/CommandShell:akgmerge/src';
+	repository: 'github://akgrant43/CommandShell/src';
 	baseline: 'CommandShell';
 	load.
 ```
