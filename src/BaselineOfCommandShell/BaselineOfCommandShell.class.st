@@ -11,7 +11,7 @@ BaselineOfCommandShell >> baseline: spec [
 	spec for: #common do: [ 
 		spec 
 			baseline: 'OSProcess' with: [ 
-				spec repository: 'github://akgrant43/OSProcess:akgmerge/src' ].
+				spec repository: 'github://akgrant43/OSProcess/src' ].
 
 		"There is a circular dependency between Base, Commands, Piping and UI.
 		Just declare all packages and ensure that Core loads them all."
