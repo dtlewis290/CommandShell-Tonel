@@ -15,7 +15,7 @@ Class {
 		'CheckFileHandleCount',
 		'TempResult'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #'class initialization' }
@@ -202,21 +202,21 @@ CommandShellTestCase >> testBangExpression [
 
 	| pipelines procs openFileCount p o |
 	openFileCount := self numberOfOpenFiles.
-	self should: [shell outputStream contents isEmpty].
-	self should: shell outputStream isEmpty.
-	pipelines := shell evaluateOrMakePipelinesFrom: 'Smalltalk name!'.
-	self assert: pipelines size = 1.
+	self assert: shell outputStream contents isEmpty.
+	self assert: shell outputStream isEmpty.
+	pipelines := shell evaluateOrMakePipelinesFrom: 'Object new printString!'.
+	self assert: 1 equals: pipelines size.
 	procs := pipelines last.
 	p := procs last.
-	self should: [p class == ExpressionEvaluator].
+	self assert: p class == ExpressionEvaluator.
 	o := procs output.
-	self should: [o isKindOf: String].
-	self should: [o isEmpty].
+	self assert: (o isKindOf: String).
+	self assert: o isEmpty.
 	procs value.
 	o := procs output.
-	self shouldnt: [o isEmpty].
-	self should: shell outputStream isEmpty.
-	self should: [self isNumberOfOpenFiles: openFileCount]
+	self deny: o isEmpty.
+	self assert: shell outputStream isEmpty.
+	self assert: (self isNumberOfOpenFiles: openFileCount)
 
 ]
 
@@ -229,21 +229,21 @@ CommandShellTestCase >> testBangExpressionInPipeline [
 
 	| pipelines procs openFileCount p o |
 	openFileCount := self numberOfOpenFiles.
-	self should: [shell outputStream contents isEmpty].
-	self should: shell outputStream isEmpty.
-	pipelines := shell evaluateOrMakePipelinesFrom: 'who | Smalltalk name!'.
-	self assert: pipelines size = 1.
+	self assert: shell outputStream contents isEmpty.
+	self assert: shell outputStream isEmpty.
+	pipelines := shell evaluateOrMakePipelinesFrom: 'who | Object new printString!'.
+	self assert: 1 equals: pipelines size.
 	procs := pipelines last.
 	p := procs last.
-	self should: [p class == ExpressionEvaluator].
+	self assert: p class == ExpressionEvaluator.
 	o := procs output.
-	self should: [o isKindOf: String].
-	self should: [o isEmpty].
+	self assert: (o isKindOf: String).
+	self assert: o isEmpty.
 	procs value.
 	o := procs output.
-	self shouldnt: [o isEmpty].
-	self should: shell outputStream isEmpty.
-	self should: [self isNumberOfOpenFiles: openFileCount]
+	self deny: o isEmpty.
+	self assert: shell outputStream isEmpty.
+	self assert: (self isNumberOfOpenFiles: openFileCount)
 
 ]
 
@@ -1837,11 +1837,11 @@ CommandShellTestCase >> testSimpleExpression [
 
 	| procs openFileCount |
 	openFileCount := self numberOfOpenFiles.
-	self should: [shell outputStream contents isEmpty].
-	procs := shell evaluateOrMakePipelinesFrom: 'Smalltalk name'.
-	self should: [procs = #()].
-	self shouldnt: [shell outputStream contents isEmpty].
-	self should: [self isNumberOfOpenFiles: openFileCount]
+	self assert: shell outputStream contents isEmpty.
+	procs := shell evaluateOrMakePipelinesFrom: 'Object new printString'.
+	self assert: #() equals: procs.
+	self deny: shell outputStream contents isEmpty.
+	self assert: (self isNumberOfOpenFiles: openFileCount)
 
 ]
 

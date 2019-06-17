@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'pipe'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #private }

@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'procDir'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #private }

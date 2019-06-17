@@ -84,18 +84,18 @@ ExpressionEvaluator >> blockString [
 	number of parameters based on scanning expression for use of #args, #stderr, #stdout,
 	and #stdin tokens."
 
-	"PipeableEvaluator new expression: 'stdout nextPutAll: (args at: 4)'; blockString"
-	"PipeableEvaluator new expression: 'stderr nextPutAll: stdin contents'; blockString"
-	"PipeableEvaluator new expression: 'stdout nextPutAll: stdin contents'; blockString"
-	"PipeableEvaluator new expression: 'stdin contents'; blockString"
-	"PipeableEvaluator new expression: '#HelloWorld'; blockString"
+	"ExpressionEvaluator new expression: 'stdout nextPutAll: (args at: 4)'; blockString"
+	"ExpressionEvaluator new expression: 'stderr nextPutAll: stdin contents'; blockString"
+	"ExpressionEvaluator new expression: 'stdout nextPutAll: stdin contents'; blockString"
+	"ExpressionEvaluator new expression: 'stdin contents'; blockString"
+	"ExpressionEvaluator new expression: '#HelloWorld'; blockString"
 
 	| tokens prefix |
 	self expression isNil
 		ifTrue:
 			[^ '[]']
 		ifFalse:
-			[tokens := self addTreeLeaves: (Scanner new scanTokens: expression) to: OrderedCollection new.
+			[tokens := self addTreeLeaves: (self tokensFrom: expression) to: OrderedCollection new.
 			(tokens includes: #args)
 				ifTrue:
 					[prefix := '[:stdin :stdout :stderr :args | ']
@@ -183,7 +183,7 @@ ExpressionEvaluator >> compile [
 
 	evaluationBlock ifNil:
 		[evaluationBlock :=
-			[Compiler evaluate: self blockString
+			[self compilerClass evaluate: self blockString
 					for: self
 					notifying: self
 					logged: false]
@@ -194,6 +194,19 @@ ExpressionEvaluator >> compile [
 						nextPut: Character lf.
 					self fail.
 					nil]]
+
+]
+
+{ #category : #evaluating }
+ExpressionEvaluator >> compilerClass [
+
+	(Smalltalk hasClassNamed: #Compiler)
+		ifTrue: [ ^ Smalltalk at: #Compiler ].
+
+	(Smalltalk hasClassNamed: #OpalCompiler)
+		ifTrue: [ ^ Smalltalk at: #OpalCompiler ].
+
+	self error: 'no system compiler'
 
 ]
 
@@ -241,6 +254,20 @@ ExpressionEvaluator >> printOn: aStream [
 			[aStream nextPutAll: ' for '.
 			self expression printOn: aStream]
 
+]
+
+{ #category : #evaluating }
+ExpressionEvaluator >> tokensFrom: expressionString [
+
+	(Smalltalk hasClassNamed: #Scanner)
+		ifTrue: [ ^(Smalltalk at: #Scanner) new scanTokens: expressionString ].
+
+	(expression respondsTo: #parseLiterals) "Pharo has different compiler"
+		ifTrue: [ [ ^ expressionString perform: #parseLiterals ]
+			on: Notification
+			do: [ :ex | ^ #() ] ].
+
+	self error: 'no system parser'
 ]
 
 { #category : #evaluating }

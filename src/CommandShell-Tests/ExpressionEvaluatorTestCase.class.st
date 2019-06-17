@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'pipeJunction'
 	],
-	#category : 'CommandShell-Tests'
+	#category : #'CommandShell-Tests'
 }
 
 { #category : #Running }
@@ -237,22 +237,23 @@ ExpressionEvaluatorTestCase >> testCommand06 [
 
 	"(self selector: #testCommand06) run"
 
+	| errorString |
 	pipeJunction := ExpressionEvaluator command: 'Smalltalk | | bogusSyntax'.
-	self should: [pipeJunction runState == #notYetRunning].
-	self shouldnt: [pipeJunction isComplete].
-	self should: [pipeJunction pipeToInput isNil].
-	self should: [pipeJunction pipeFromOutput isKindOf: InternalPipe].
-	self should: [pipeJunction errorPipelineStream isKindOf: InternalPipe].
-	self should: [pipeJunction exitStatus isNil].
-	self should: [pipeJunction output isEmpty].
-	self should: [pipeJunction errorUpToEnd isEmpty].
+	self assert: [pipeJunction runState == #notYetRunning].
+	self deny: [pipeJunction isComplete].
+	self assert: [pipeJunction pipeToInput isNil].
+	self assert: [pipeJunction pipeFromOutput isKindOf: InternalPipe].
+	self assert: [pipeJunction errorPipelineStream isKindOf: InternalPipe].
+	self assert: [pipeJunction exitStatus isNil].
+	self assert: [pipeJunction output isEmpty].
+	self assert: [pipeJunction errorUpToEnd isEmpty].
 	pipeJunction value.
-	self should: [pipeJunction runState == #complete].
-	self should: [pipeJunction isComplete].
-	self should: [pipeJunction exitStatus == #fail].
-	self shouldnt: [pipeJunction succeeded].
-	self should: [pipeJunction upToEnd isEmpty].
-	self should: [pipeJunction errorUpToEnd = '[Smalltalk | Argument expected ->| bogusSyntax]
-'].
-
+	self assert: [pipeJunction runState == #complete].
+	self assert: [pipeJunction isComplete].
+	self assert: [pipeJunction exitStatus == #fail].
+	self deny: [pipeJunction succeeded].
+	self assert: [pipeJunction upToEnd isEmpty].
+	"Compiler and OpalCompiler yield similar but different error messages"
+	errorString := pipeJunction errorUpToEnd.
+	self assert: ( '*[Smalltalk | * expected ->| bogusSyntax]*' match: errorString)
 ]
