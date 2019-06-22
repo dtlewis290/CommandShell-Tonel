@@ -61,46 +61,6 @@ PipeableOSProcessTestCase >> procDir [
 
 ]
 
-{ #category : #'testing-fork squeak' }
-PipeableOSProcessTestCase >> testCheckStdinWorksCorrectlyForReferenceStreams [
-	"Some virtual machines improperly assume that standard input is attached
-	to a tty device, and are hard coded to answerr at most one character when
-	reading from stdin into a string or byte array. This behavior is incorrect in the
-	general case of Unix processes that are expected to communicate through
-	OS pipes. In particular, it breaks the ability to read seiralized objects from the
-	standard input of a virtual machine process.
-
-	The problem can be demonstrated by serialzing a single string. More complex
-	object structures will fail outright when deserializing in the child process."
-
-	"(PipeableOSProcessTestCase selector: #testCheckStdinWorksCorrectlyForReferenceStreams) debug"
-
-	| openFileCount child refStream inputStream result s anObject objectStreamToChild rs |
-	rs := Smalltalk at: #ReferenceStream.
-	openFileCount := self numberOfOpenFiles.
-	anObject := 'ABCDEFG'.
-	self shouldnt:
-			[ | obj |
-				child := PipeableOSProcess forkSqueakAndDoThenQuit:
-					[OSProcess thisOSProcess stdIn setBlocking.
-					inputStream := rs on: OSProcess thisOSProcess stdIn.
-					[ obj := inputStream next. "read one object expected to have been sent by parent" ]
-						on: Error
-						do: [ :ex | obj := ex printString "copy back to parent process for debugging" ].
-					refStream := rs on: OSProcess thisOSProcess stdOut.
-					refStream nextPut: obj "echo the object back to the parent Squeak"] ]
-		raise: Warning.
-	objectStreamToChild := rs on: child pipeToInput writer.
-	objectStreamToChild nextPut: anObject; flush. "send a complex object to the child"
-	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
-	s reset.
-	inputStream := rs on: s.
-	result := inputStream next.
-	self assert: anObject equals: result. "see comment above, may fail with all but first character set to null"
-	self assert: (self isNumberOfOpenFiles: openFileCount).
-
-]
-
 { #category : #'testing-process proxy' }
 PipeableOSProcessTestCase >> testCommandEcho [
 
@@ -298,6 +258,75 @@ PipeableOSProcessTestCase >> testForkSqueakReferenceStream [
 	inputStream := (Smalltalk at: #ReferenceStream) on: s.
 	result := inputStream next.
 	self assert: anObject equals: result.
+	self assert: (self isNumberOfOpenFiles: openFileCount).
+
+]
+
+{ #category : #'testing-fork squeak' }
+PipeableOSProcessTestCase >> testStdinReadingReferenceStream [
+	"Some virtual machines improperly assume that standard input is attached
+	to a tty device, and are hard coded to answer at most one character when
+	reading from stdin into a string or byte array. This behavior is incorrect in the
+	general case of Unix processes that are expected to communicate through
+	OS pipes. In particular, it breaks the ability to read seiralized objects from the
+	standard input of a virtual machine process.
+
+	The problem can be demonstrated by serialzing a single string. More complex
+	object structures will fail outright when deserializing in the child process."
+
+	"(PipeableOSProcessTestCase selector: #testStdinReadingReferenceStream) debug"
+
+	| openFileCount child refStream inputStream result s anObject objectStreamToChild rs |
+	rs := Smalltalk at: #ReferenceStream.
+	openFileCount := self numberOfOpenFiles.
+	anObject := 'ABCDEFG'.
+	self shouldnt:
+			[ | obj |
+				child := PipeableOSProcess forkSqueakAndDoThenQuit:
+					[OSProcess thisOSProcess stdIn setBlocking.
+					inputStream := rs on: OSProcess thisOSProcess stdIn.
+					[ obj := inputStream next. "read one object expected to have been sent by parent" ]
+						on: Error
+						do: [ :ex | obj := ex printString "copy back to parent process for debugging" ].
+					refStream := rs on: OSProcess thisOSProcess stdOut.
+					refStream nextPut: obj "echo the object back to the parent Squeak"] ]
+		raise: Warning.
+	objectStreamToChild := rs on: child pipeToInput writer.
+	objectStreamToChild nextPut: anObject; flush. "send a complex object to the child"
+	s := RWBinaryOrTextStream with: child pipeFromOutput upToEndOfFile.
+	s reset.
+	inputStream := rs on: s.
+	result := inputStream next.
+	self assert: anObject equals: result. "see comment above, may fail with all but first character set to null"
+	self assert: (self isNumberOfOpenFiles: openFileCount).
+
+]
+
+{ #category : #'testing-fork squeak' }
+PipeableOSProcessTestCase >> testStdinReadingString [
+	"Some virtual machines improperly assume that standard input is attached
+	to a tty device, and are hard coded to answer at most one character when
+	reading from stdin into a string or byte array. This behavior is incorrect in the
+	general case of Unix processes that are expected to communicate through
+	OS pipes."
+
+	"(PipeableOSProcessTestCase selector: #testStdinReadingString) debug"
+
+	| openFileCount child result aString|
+	openFileCount := self numberOfOpenFiles.
+	aString := 'ABCDEFG'.
+	self shouldnt:
+			[ | obj |
+				child := PipeableOSProcess forkSqueakAndDoThenQuit:
+					[ OSProcess thisOSProcess stdIn setBlocking.
+					[ obj := OSProcess thisOSProcess stdIn next: aString size ]
+						on: Error
+						do: [ :ex | obj := ex printString "copy back to parent process for debugging" ].
+					OSProcess thisOSProcess stdOut nextPutAll: obj asString "echo back to the parent Squeak"] ]
+		raise: Warning.
+	child pipeToInput writer nextPutAll: aString; flush.
+	result := child pipeFromOutput upToEndOfFile.
+	self assert: aString equals: result. "see comment above, may fail with truncated string"
 	self assert: (self isNumberOfOpenFiles: openFileCount).
 
 ]
