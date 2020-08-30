@@ -879,7 +879,7 @@ PipeableOSProcess >> nextFromError: count [
 { #category : #'shell support' }
 PipeableOSProcess >> nullStream [
 
-	^ FileStream oldFileNamed: '/dev/null'
+	^ CommandShell oldFileNamed: '/dev/null'
 
 ]
 
@@ -1000,7 +1000,7 @@ PipeableOSProcess >> requiresNonBlockingInput [
 { #category : #evaluating }
 PipeableOSProcess >> runState [
 	processProxy
-		ifNotNil: [ :p | ^ p runState ]
+		ifNotNil: [ ^processProxy runState ]
 		ifNil: [ ^ #unknownRunState ]
 ]
 

@@ -261,8 +261,8 @@ RemoteTask >> finalize [
 	be stopped. When evaluating a #do:whenComplete: a reference should
 	be maintained to the RemoteTask in order to avoid this finalization."
 
-	aioHandler ifNotNilDo: [:aio | aio close].
-	childProxy ifNotNilDo: [:child | child terminate]
+	aioHandler ifNotNil: [aioHandler close].
+	childProxy ifNotNil: [childProxy terminate]
 ]
 
 { #category : #serializing }
@@ -342,7 +342,7 @@ RemoteTask >> result [
 { #category : #evaluating }
 RemoteTask >> runState [
 	childProxy
-		ifNotNil: [ :p | ^ p runState ]
+		ifNotNil: [ ^ childProxy runState ]
 		ifNil: [ ^ #notYetRunning ]
 ]
 

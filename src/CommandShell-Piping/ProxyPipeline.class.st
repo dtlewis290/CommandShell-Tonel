@@ -63,7 +63,7 @@ ProxyPipeline class >> fromString: aCommandString shell: aCommandShell [
 { #category : #testing }
 ProxyPipeline >> atEnd [
 
-	^ self last atEnd
+	^ self isEmpty or: [self last atEnd]
 
 ]
 
@@ -147,16 +147,18 @@ ProxyPipeline >> completionWatcher: anObject [
 ProxyPipeline >> errorPipelineStream [
 	"Accumulates the error output of commands in a command pipeline."
 
-	self isEmpty
-		ifTrue: [^ nil]
-		ifFalse: [^ self last errorPipelineStream]
+	^ self isEmpty
+		ifTrue: []
+		ifFalse: [self last errorPipelineStream]
 ]
 
 { #category : #streaming }
 ProxyPipeline >> errorUpToEnd [
 	"Answer all available characters from the error stream shared by my proxies."
 
-	^ self last errorUpToEnd
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [ self last errorUpToEnd ]
 
 ]
 
@@ -165,7 +167,10 @@ ProxyPipeline >> errorUpToEndOfFile [
 	"Answer all available characters from the error stream. Block and
 	continue reading until end of file is detected."
 
-	^ self last errorUpToEndOfFile
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [ self last errorUpToEndOfFile ]
+
 
 ]
 
@@ -210,22 +215,19 @@ ProxyPipeline >> handleCompletionWhenSignaled: aSemaphore [
 	"Answer a process that will complete processing the the last proxy has
 	signaled its completion."
 
-	| lastProxy proc |
-	proc := [aSemaphore wait.
+	^ [aSemaphore wait.
 		self waitForAllToComplete.
-		(lastProxy := self last)
-			ifNotNil: [lastProxy closeErrorPipeline.
-					self triggerEvent: #complete]] newProcess.
-	^ proc resume
+		self isEmpty
+			ifFalse: [ self last closeErrorPipeline.
+				self triggerEvent: #complete ] ] fork
+
 ]
 
 { #category : #'event handling' }
 ProxyPipeline >> handleRunstateChange [
 
-	| lastProxy |
-	(lastProxy := self last)
-		ifNotNil: [lastProxy isComplete
-					ifTrue: [self completionSemaphore signal]]
+	(self isEmpty not and: [self last isComplete])
+		ifTrue: [self completionSemaphore signal]
 ]
 
 { #category : #testing }
@@ -248,20 +250,24 @@ ProxyPipeline >> isExternalProcess [
 { #category : #testing }
 ProxyPipeline >> needsPrompt [
 
-	^ self last needsPrompt
+	^ self isEmpty or: [self last needsPrompt]
 ]
 
 { #category : #streaming }
 ProxyPipeline >> next [
 
-	^ self last next
+	^ self isEmpty
+		ifTrue: []
+		ifFalse: [self last next]
 
 ]
 
 { #category : #streaming }
 ProxyPipeline >> next: count [
 
-	^ self last next: count
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [self last next: count]
 
 ]
 
@@ -271,7 +277,9 @@ ProxyPipeline >> nextFromError: count [
 	if no data is available. All characters are routed through the errorPipelineStream,
 	which is shared by all my proxies."
 
-	^ self last next: count
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [self last errorPipelineStream next: count]
 
 ]
 
@@ -292,16 +300,18 @@ ProxyPipeline >> nextPutAll: characters [
 { #category : #streaming }
 ProxyPipeline >> output [
 
-	^ self last output
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [self last output]
 ]
 
 { #category : #accessing }
 ProxyPipeline >> pipeFromOutput [
 	"The output from the last proxy in the pipeline, if any"
 
-	self isEmpty
-		ifTrue: [^ nil]
-		ifFalse: [^ self last pipeFromOutput]
+	^ self isEmpty
+		ifTrue: []
+		ifFalse: [self last pipeFromOutput]
 ]
 
 { #category : #accessing }
@@ -318,7 +328,7 @@ ProxyPipeline >> pipesAreEmpty [
 	"True after processing is complete and all available data has been read from
 	the output pipe and the errorPipelineStream pipe."
 
-	^ self isComplete and: [self last pipesAreEmpty]
+	^ self isComplete and: [self isEmpty or: [self last pipesAreEmpty]]
 
 ]
 
@@ -358,7 +368,9 @@ ProxyPipeline >> unregisterEvents [
 ProxyPipeline >> upToEnd [
 	"Answer all available characters from the output stream."
 
-	^ self last upToEnd
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [self last upToEnd]
 
 ]
 
@@ -367,7 +379,9 @@ ProxyPipeline >> upToEndOfFile [
 	"Answer all available characters from the output stream. Block and
 	continue reading until end of file is detected."
 
-	^ self last upToEndOfFile
+	^ self isEmpty
+		ifTrue: [ '' ]
+		ifFalse: [self last upToEndOfFile]
 
 ]
 

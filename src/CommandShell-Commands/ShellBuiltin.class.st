@@ -33,7 +33,7 @@ Class {
 		'helpSelector',
 		'needsPrompt'
 	],
-	#category : 'CommandShell-Commands'
+	#category : #'CommandShell-Commands'
 }
 
 { #category : #'instance creation' }
@@ -355,7 +355,7 @@ ShellBuiltin >> copyToErrorCommand: myProxy shell: commandShell input: stdin out
 				[:file |
 				(CommandShell fileExists: file)
 					ifTrue:
-						[fs := FileStream readOnlyFileNamed: file.
+						[fs := CommandShell readOnlyFileNamed: file.
 						fs ifNotNil:
 							[self copyUntilDoneFrom: fs to: stderr.
 							fs close]]]]
@@ -377,7 +377,7 @@ ShellBuiltin >> copyToOutputCommand: myProxy shell: commandShell input: stdin ou
 				[:file |
 				(CommandShell fileExists: file)
 					ifTrue:
-						[fs := FileStream readOnlyFileNamed: file.
+						[fs := CommandShell readOnlyFileNamed: file.
 						fs ifNotNil:
 							[self copyUntilDoneFrom: fs to: stdout.
 							fs close]]]]
@@ -400,7 +400,7 @@ ShellBuiltin >> copyUntilDoneFrom: aPipe to: aStream [
 		sema wait. "Wait for data available"
 		[(s := aPipe next: 10000) isEmpty] whileFalse:
 			[aStream nextPutAll: s; flush]].
-	aPipe release.
+	aPipe close.
 	^ aStream
 
 ]
@@ -651,7 +651,7 @@ ShellBuiltin >> inspectCommand: myProxy shell: commandShell input: stdin output:
 							firstExpandedArgument: e
 							inDirectoryPath: commandShell shellSyntax workingDirectory.
 						fs := (CommandShell fileExists: pathName)
-							ifTrue: [FileStream readOnlyFileNamed: pathName]
+							ifTrue: [CommandShell readOnlyFileNamed: pathName]
 							ifFalse: [nil].
 						fs isNil
 							ifTrue:

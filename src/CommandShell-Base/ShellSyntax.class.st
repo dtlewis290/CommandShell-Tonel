@@ -235,7 +235,6 @@ ShellSyntax >> expandPathParts: pathParts beginningAt: root [
 								ifFalse: [^ names collect: [:n | root, CommandShell pathSeparator, n]]]
 						ifFalse:
 							["Continue recursion until no more elements"
-							CommandShell directoryNamesInPath: root.
 							dirNames := self glob: firstPart
 											names: (CommandShell directoryNamesInPath: root).
 							(('*', CommandShell pathSeparator) match: root)
@@ -568,11 +567,7 @@ ShellSyntax >> isDirectoryPath: aPathString [
 	^ (('*', CommandShell pathSeparator) match: aPathString) or:
 		[fullPath := CommandShell fullNameFor: aPathString.
 		localName := CommandShell localNameFor: fullPath.
-		[entry := CommandShell useFileSystem
-			ifTrue: [entry := ((CommandShell dirPathFor: fullPath) perform: #asFileReference) entries
-						detect: [:e | e basename = localName] ifNone: [nil]]
-			ifFalse: [entry := ((Smalltalk at: #FileDirectory) on: (CommandShell dirPathFor: fullPath)) entries
-						detect: [:e | e name = localName] ifNone: [nil]]]
+		[entry := CommandShell dirEntryInPath: fullPath name: localName]
 					on: Error
 					do: [: ex | ^false].
 		entry notNil and: [entry isDirectory]]
@@ -857,7 +852,7 @@ ShellSyntax >> redirectIOFor: commandString inDirectoryPath: dirPathString [
 					target := self firstExpandedArgument: tokenStream next
 								inDirectoryPath: dirPathString.
 					"Use StandardFileStream to prevent multi-byte interpretation."
-					input := StandardFileStream readOnlyFileNamed: target.
+					input := CommandShell readOnlyFileNamed: target.
 					input
 						ifNil: [self inform: 'Cannot open ' , target , ', using default stdin']]
 				ifFalse: [tok == #outputRedirect
@@ -1110,11 +1105,13 @@ ShellSyntax >> truncatedOutputFile: fileName [
 	"ShellSyntax new truncatedOutputFile: '/tmp/delete.me'"
 	"ShellSyntax new truncatedOutputFile: '/dev/null'"
 
-	| strm |
-	[strm := FileStream concreteStream forceNewFileNamed: fileName]
-		on: Error
-		do: [:ex | ^ FileStream fileNamed: fileName].
-	^ strm
+	^ CommandShell useFileMan
+		ifTrue: [ [ :entry | entry exists
+			ifTrue: [entry delete; writeStream]
+			ifFalse: [entry perform: #appendStream] ] value: ('/tmp/delete.me' perform: #asFileEntry)]
+		ifFalse: [ [ FileStream concreteStream forceNewFileNamed: fileName]
+			on: Error
+			do: [:ex | FileStream fileNamed: fileName]].
 
 ]
 

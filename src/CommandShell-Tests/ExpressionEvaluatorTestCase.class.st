@@ -239,21 +239,21 @@ ExpressionEvaluatorTestCase >> testCommand06 [
 
 	| errorString |
 	pipeJunction := ExpressionEvaluator command: 'Smalltalk | | bogusSyntax'.
-	self assert: [pipeJunction runState == #notYetRunning].
-	self deny: [pipeJunction isComplete].
-	self assert: [pipeJunction pipeToInput isNil].
-	self assert: [pipeJunction pipeFromOutput isKindOf: InternalPipe].
-	self assert: [pipeJunction errorPipelineStream isKindOf: InternalPipe].
-	self assert: [pipeJunction exitStatus isNil].
-	self assert: [pipeJunction output isEmpty].
-	self assert: [pipeJunction errorUpToEnd isEmpty].
+	self assert: pipeJunction runState == #notYetRunning.
+	self deny: pipeJunction isComplete.
+	self assert: pipeJunction pipeToInput isNil.
+	self assert: (pipeJunction pipeFromOutput isKindOf: InternalPipe).
+	self assert: (pipeJunction errorPipelineStream isKindOf: InternalPipe).
+	self assert: pipeJunction exitStatus isNil.
+	self assert: pipeJunction output isEmpty.
+	self assert: (pipeJunction errorUpToEnd isEmpty).
 	pipeJunction value.
-	self assert: [pipeJunction runState == #complete].
-	self assert: [pipeJunction isComplete].
-	self assert: [pipeJunction exitStatus == #fail].
-	self deny: [pipeJunction succeeded].
-	self assert: [pipeJunction upToEnd isEmpty].
+	self assert: pipeJunction runState == #complete.
+	self assert: pipeJunction isComplete.
+	self assert: pipeJunction exitStatus == #fail.
+	self deny: pipeJunction succeeded.
+	self assert: pipeJunction upToEnd isEmpty.
 	"Compiler and OpalCompiler yield similar but different error messages"
 	errorString := pipeJunction errorUpToEnd.
-	self assert: ( '*[Smalltalk | * expected ->| bogusSyntax]*' match: errorString)
+	self assert: ( '*[Smalltalk | * expected ->*| bogusSyntax]*' match: errorString)
 ]

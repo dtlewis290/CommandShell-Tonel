@@ -14,7 +14,7 @@ Class {
 		'fileName',
 		'viewStyle'
 	],
-	#category : 'CommandShell-Commands'
+	#category : #'CommandShell-Commands'
 }
 
 { #category : #private }
@@ -288,6 +288,12 @@ CrLfFileEditor >> defaultFont [
 	"A fixed width font suitable for displaying output of shell command lines"
 
 	^ StrikeFont familyName: 'Atlanta' size: 11 emphasized: 0
+]
+
+{ #category : #'model access' }
+CrLfFileEditor >> defaultWindowColor [
+	^ Color lightOrange
+
 ]
 
 { #category : #accessing }

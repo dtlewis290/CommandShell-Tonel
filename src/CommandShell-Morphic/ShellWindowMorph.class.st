@@ -98,7 +98,7 @@ ShellWindowMorph >> update: something [
 			[^ self accept].
 	(something == #exit)
 		ifTrue:
-			[^ self owner release; delete].
+			[^ self owner delete].
 	^ super update: something
 
 ]

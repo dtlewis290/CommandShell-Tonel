@@ -1038,7 +1038,7 @@ CommandShellTestCase >> testPipeline40 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self should: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1059,7 +1059,7 @@ CommandShellTestCase >> testPipeline41 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self shouldnt: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1259,7 +1259,7 @@ CommandShellTestCase >> testPipeline50 [
 	procs finalize.
 	procs := CommandShell new pipeline: 'cat /tmp/delete.me'.
 	self shouldnt: [procs last output isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1280,7 +1280,7 @@ CommandShellTestCase >> testPipeline51 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self should: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1301,7 +1301,7 @@ CommandShellTestCase >> testPipeline52 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self should: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1360,7 +1360,7 @@ CommandShellTestCase >> testPipeline61 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self should: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1381,7 +1381,7 @@ CommandShellTestCase >> testPipeline62 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self should: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]
@@ -1419,7 +1419,7 @@ CommandShellTestCase >> testPipeline64 [
 	o := procs output.
 	self should: [o isKindOf: String].
 	self should: [o isEmpty].
-	fs := FileStream fileNamed: '/tmp/delete.me'.
+	fs := CommandShell fileNamed: '/tmp/delete.me'.
 	self should: [fs upToEnd isEmpty not].
 	fs close.
 	self should: [self isNumberOfOpenFiles: openFileCount]

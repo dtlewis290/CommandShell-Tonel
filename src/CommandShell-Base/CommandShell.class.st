@@ -142,6 +142,22 @@ CommandShell class >> deleteFileNamed: fileName inDirectory: directoryOrFileRefe
 ]
 
 { #category : #'version dependent' }
+CommandShell class >> dirEntryInPath: fullPath name: localName [
+	"Answer an object corresponding to localName in fullPath that responds to #isDirectory"
+
+	self useFileMan
+		ifTrue: [ [ :dirEntry | (dirEntry exists and: [ dirEntry pathComponents last = localName ])
+					ifTrue: [^ dirEntry]
+					ifFalse: [^ nil] ]
+						value: ((Smalltalk at: #DirectoryEntry) perform: #withPathName: with: fullPath) ]
+		ifFalse: [ self useFileSystem
+			ifTrue: [^ ((self dirPathFor: fullPath) perform: #asFileReference) entries
+							detect: [:e | e basename = localName] ifNone: [nil]]
+			ifFalse: [^ ((Smalltalk at: #FileDirectory) on: (CommandShell dirPathFor: fullPath)) entries
+							detect: [:e | e name = localName] ifNone: [nil]] ]
+]
+
+{ #category : #'version dependent' }
 CommandShell class >> dirPathFor: path [
 	"Return the directory part the given name."
 
@@ -154,9 +170,12 @@ CommandShell class >> dirPathFor: path [
 { #category : #'version dependent' }
 CommandShell class >> directoryEntryNames: path [
 
-	^ self useFileSystem
-		ifTrue: [ (path perform: #asFileReference) children collect: [:e | e perform: #basename] ]
-		ifFalse: [ ((Smalltalk at: #FileDirectory) on: path) entries collect: [:e | e name] ]
+	^  self useFileMan
+		ifTrue: [ ((Smalltalk at: #DirectoryEntry) perform: #withPathName:  with: path) children collect: [ :e | e name] ]
+		ifFalse: [ self useFileSystem
+			ifTrue: [ (path perform: #asFileReference) children collect: [:e | e perform: #basename] ]
+			ifFalse: [ ((Smalltalk at: #FileDirectory) on: path) entries collect: [:e | e name] ] ]
+
 
 ]
 
@@ -185,13 +204,15 @@ CommandShell class >> directoryForPath: path [
 { #category : #'version dependent' }
 CommandShell class >> directoryNamesInPath: path [
 
-	^ self useFileSystem
-		ifTrue: [ (path perform: #asFileReference) children	
-					select: [:e | e isDirectory ]
-					thenCollect: [:e | e perform: #basename] ]
-		ifFalse: [ ((Smalltalk at: #FileDirectory) on: path) entries
-					select: [:e | e isDirectory ]
-					thenCollect: [:e | e name] ]
+	^ self useFileMan
+			ifTrue: [((Smalltalk at: #DirectoryEntry) perform: #withPathName:  with: path) directoryNames]
+			ifFalse: [ self useFileSystem
+				ifTrue: [ (path perform: #asFileReference) children	
+							select: [:e | e isDirectory ]
+							thenCollect: [:e | e perform: #basename] ]
+				ifFalse: [ ((Smalltalk at: #FileDirectory) on: path) entries
+							select: [:e | e isDirectory ]
+							thenCollect: [:e | e name] ] ]
 
 ]
 
@@ -222,10 +243,12 @@ CommandShell class >> fileExists: path [
 CommandShell class >> fileExists: fileName inDirectory: directoryOrFileReference [
 	"Answer true if a file of the given name exists in this directory."
 
-	^ self useFileSystem
-		ifTrue: [ (directoryOrFileReference entries
-					detect: [:e | e basename = fileName] ifNone: []) notNil ]
-		ifFalse: [ directoryOrFileReference fileExists: fileName ]
+	^ self useFileMan
+		ifTrue: [ directoryOrFileReference pathName asDirectoryEntry fileNames includes: fileName ]
+		ifFalse: [ self useFileSystem
+			ifTrue: [ (directoryOrFileReference entries
+						detect: [:e | e basename = fileName] ifNone: []) notNil ]
+			ifFalse: [ directoryOrFileReference fileExists: fileName ] ]
 
 ]
 
@@ -236,6 +259,16 @@ CommandShell class >> fileExists: fileName inPath: path [
 	^ self useFileSystem
 		ifTrue: [ self fileExists: fileName inDirectory: (path perform: #asFileReference) ]
 		ifFalse: [ self fileExists: fileName inDirectory: ((Smalltalk at: #FileDirectory) on: path) ]
+
+]
+
+{ #category : #compatibility }
+CommandShell class >> fileNamed: path [
+	^ self useFileMan
+		ifTrue: [ | entry |
+			entry := ((Smalltalk at: #FileEntry) perform: #withPathName: with: path) assureExistence.
+			entry fileAccessor privateWriteableFile: entry]
+		ifFalse: [ FileStream fileNamed: path ]
 
 ]
 
@@ -545,6 +578,16 @@ CommandShell class >> makeVmIn: buildDirectoryPathName [
 
 ]
 
+{ #category : #compatibility }
+CommandShell class >> oldFileNamed: path [
+	^ self useFileMan
+		ifTrue: [ | entry |
+			entry := (Smalltalk at: #FileEntry) perform: #withPathName: with: path.
+			entry fileAccessor privateWriteableFile: entry]
+		ifFalse: [ FileStream fileNamed: path ]
+
+]
+
 { #category : #'instance creation' }
 CommandShell class >> open [
 	"CommandShell open"
@@ -671,17 +714,30 @@ Here are things to try if a deadlock occurs:
 Squeak will be blocked and will not respond to the mouse or keyboard. Open a command shell outside of Squeak (perhaps an xterm, or log in to another virtual terminal on Linux or FreeBSD). Using the "ps" command, find the Squeak VM process and its subprocesses. Kill the subprocess. In many cases this will free up the deadlock, and Squeak will come back to life. If this does not work, then you will probably find that one of the processes which you just killed is now in a "zombie" state, which means that the Squeak VM is deadlocked in such a way that it cannot recognize that its child process exited (and therefore cannot properly close the associated file handles). In this case, if your operating system supports a /proc file system, you may be able to break things free by emptying the pipes. On Linux, go to /proc/<pidOfTheSqueakVMProcess>/fd/ and do "cat" commands on all the pipe files in this directory. If none of this works, you are just plain stuck, and you will need to kill your Squeak session and recover anything valuable from the changes log.'
 ]
 
+{ #category : #compatibility }
+CommandShell class >> readOnlyFileNamed: path [
+	^ self useFileMan
+		ifTrue: [ (path perform: #asFileEntry) readStream ]
+		ifFalse: [ FileStream readOnlyFileNamed: path ]
+
+]
+
 { #category : #'class initialization' }
-CommandShell class >> setWindowColorFor: classSymbol to: color [
+CommandShell class >> setWindowColorFor: aClass to: color [
 
 	(Smalltalk hasClassNamed: #UserInterfaceTheme)
 		ifTrue: [ (Smalltalk at: #UserInterfaceTheme) current
-					set: #customWindowColor for: classSymbol to: color]
+					set: #customWindowColor for: aClass to: color]
 		ifFalse: [ (Smalltalk hasClassNamed: #Preferences)
 			ifTrue: [ | preferencesClass |
 				preferencesClass := Smalltalk at: #Preferences.
 				(preferencesClass respondsTo: #setWindowColorFor:to:)
-					ifTrue: [ preferencesClass setWindowColorFor: classSymbol to: color ]
+					ifTrue: [ (Smalltalk hasClassNamed: #WindowColorRegistry)
+						ifTrue: [ (Smalltalk at: #WindowColorRegistry)
+									perform: #registerColorSpecification:toClassNamed:
+									with: aClass windowColorSpecification
+									with: aClass name.
+								 preferencesClass setWindowColorFor: aClass name to: color ] ]
 					ifFalse: [ "Pharo deprecates Preference in favor of pragma registration mechanism" ] ] ].
 
 
@@ -730,7 +786,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^'4.7.3'
+	^ '4.7.10'
 ]
 
 { #category : #'window color' }
@@ -798,7 +854,7 @@ CommandShell >> backgroundPipelineComplete: aPipeline commandIndex: index [
 	to completely empty the pipes prior to cleaning things up."
 
 	self waitUntilPipesAreEmpty: aPipeline.
-	aPipeline closePipes; release.
+	aPipeline closePipes.
 	self backgroundMessageQueue addLast:
 		((WriteStream on: String new)
 			nextPutAll: '[', index asString, ']+ Done                     ';
@@ -1206,7 +1262,7 @@ CommandShell >> environment [
 
 	^ environment ifNil:
 		[environment := (Smalltalk at: #OSProcess ifPresent:
-			[:osp | osp thisOSProcess environment deepCopy]) ifNil: [Dictionary new]].
+			[:osp | osp thisOSProcess environment copy]) ifNil: [Dictionary new]].
 
 ]
 
@@ -1370,7 +1426,7 @@ CommandShell >> foregroundPipelineComplete: aPipeline [
 	to completely empty the pipes prior to cleaning things up."
 
 	self waitUntilPipesAreEmpty: aPipeline.
-	aPipeline closePipes; release.
+	aPipeline closePipes.
 	self keyboardConnector: nil.
 	[self foregroundProxies removeAll: aPipeline]
 		on: Error

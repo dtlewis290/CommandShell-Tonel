@@ -1,1 +1,1 @@
-Package { #name : #'CommandShell-tests' }
+Package { #name : #'CommandShell-Tests' }
