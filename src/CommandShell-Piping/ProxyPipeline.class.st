@@ -341,13 +341,6 @@ ProxyPipeline >> printOn: aStream [
 	aStream nextPutAll: self class name, ' for "', self commandLine asString, '"'
 ]
 
-{ #category : #'initialize - release' }
-ProxyPipeline >> release [
-
-	self do: [:proxy | proxy release].
-	^ super release
-]
-
 { #category : #testing }
 ProxyPipeline >> succeeded [
 	"Answer true if all proxies succeeded, otherwise false"

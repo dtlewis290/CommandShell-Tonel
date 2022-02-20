@@ -10,7 +10,7 @@ Class {
 		'activeController',
 		'labelStringBlock'
 	],
-	#category : 'CommandShell-UI'
+	#category : #'CommandShell-UI'
 }
 
 { #category : #'instance creation' }

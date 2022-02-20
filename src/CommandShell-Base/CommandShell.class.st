@@ -786,7 +786,7 @@ CommandShell class >> versionString [
 
 	"CommandShell versionString"
 
-	^ '4.7.10'
+	^ '4.7.12'
 ]
 
 { #category : #'window color' }
@@ -2099,13 +2099,6 @@ CommandShell >> registerPromptEventFor: aPipeline [
 		to: self
 		with: aPipeline
 
-]
-
-{ #category : #'initialize-release' }
-CommandShell >> release [
-
-	self startUpInNewSession.
-	^ super release
 ]
 
 { #category : #evaluation }

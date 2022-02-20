@@ -7,13 +7,11 @@ On a unix system, the creation of child Squeak images is a relatively light weig
 
 Examples:
 
-        "" RemoteTask do: [2 + 2] ""
+        "" RemoteTask do: [ 3 + 4 ] ""
 
         "" (RemoteTask
-                do: [ | oc |
-                        oc := OrderedCollection new.
-                        (1 to: 5000000) do: [ :e | e isPrime ifTrue: [oc add: e]].
-                        oc ]
+		    do: [ OrderedCollection streamContents: [ :strm |
+                    (1 to: 10000000) do: [ :e | e isPrime ifTrue: [strm nextPut: e]]]. ]
                 whenComplete: [ :result | result inspect ]
                 taskIdentifier: 'A forked Squeak image finding primes') inspect ""
 
@@ -35,7 +33,7 @@ Class {
 		'Serializer',
 		'SerializingStrategy'
 	],
-	#category : #'CommandShell-Piping'
+	#category : #'CommandShell-RemoteTask'
 }
 
 { #category : #evaluating }
@@ -59,13 +57,11 @@ RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock [
 	the result of the remote task."
 
 	"RemoteTask
-		do: [ | oc |
-			oc := OrderedCollection new.
-			(1 to: 5000000) do: [ :e | e isPrime ifTrue: [oc add: e]].
-			oc ]
+		do: [ OrderedCollection streamContents: [ :strm |
+			(1 to: 10000000) do: [ :e | e isPrime ifTrue: [strm nextPut: e]]]. ]
 		whenComplete: [ :result | result inspect ]"
 
-	^ self new task: taskBlock whenComplete: aOneArgumentBlock
+	^ (self new task: taskBlock whenComplete: aOneArgumentBlock) start
 ]
 
 { #category : #evaluating }
@@ -78,14 +74,12 @@ RemoteTask class >> do: taskBlock whenComplete: aOneArgumentBlock taskIdentifier
 	the result of the remote task."
 
 	"RemoteTask
-		do: [ | oc |
-			oc := OrderedCollection new.
-			(1 to: 5000000) do: [ :e | e isPrime ifTrue: [oc add: e]].
-			oc ]
+		do: [ OrderedCollection streamContents: [ :strm |
+			(1 to: 10000000) do: [ :e | e isPrime ifTrue: [strm nextPut: e]]]. ]
 		whenComplete: [ :result | result inspect ]
 		taskIdentifier: 'A forked Squeak image finding primes'"
 
-	^ self new task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: anObject
+	^ (self new task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: anObject) start
 ]
 
 { #category : #finalization }
@@ -285,6 +279,19 @@ RemoteTask >> getResult [
 
 ]
 
+{ #category : #updating }
+RemoteTask >> handleOutputFor: anAioHandler [
+	"anAioHandler has signaled that task output may now be handled.
+	Do the output processing in a separate process in order to return
+	quickly from the event trigger."
+
+	"[ [completionBlock ifNotNil: [completionBlock value: self result]]
+		ensure: [anAioHandler close] ] fork"
+
+	[completionBlock ifNotNil: [completionBlock value: self result]]
+		ensure: [anAioHandler close]
+]
+
 { #category : #printing }
 RemoteTask >> printOn: aStream [
 	super printOn: aStream.
@@ -418,8 +425,8 @@ RemoteTask >> task: taskBlock whenComplete: aOneArgumentBlock [
 	"n.b. Inspect the RemoteTask to prevent it being garbage collected and finalized
 	before processing is complete"
 
-	"(RemoteTask new task: [2 + 2] whenComplete: [ :result | result inspect]) inspect"
-	"(RemoteTask new task: [(Delay forSeconds: 3) wait. 2 + 2] whenComplete: [ :result | result inspect]) inspect"
+	"(RemoteTask new task: [3 + 4 ] whenComplete: [ :result | result inspect]) inspect"
+	"(RemoteTask new task: [(Delay forSeconds: 3) wait. 3 + 4 ] whenComplete: [ :result | result inspect]) inspect"
 
 	^ self task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: nil
 
@@ -438,7 +445,6 @@ RemoteTask >> task: taskBlock whenComplete: aOneArgumentBlock taskIdentifier: an
 	task := taskBlock.
 	taskIdentifier := anObject.
 	self setCompletionBlock: aOneArgumentBlock.
-	self start
 
 ]
 
@@ -466,9 +472,7 @@ RemoteTask >> update: anObject [
 	until the pipe has been serviced."
 
 	(anObject isKindOf: AioEventHandler)
-		ifTrue: [[completionBlock
-						ifNotNil: [completionBlock value: self result]]
-					ensure: [anObject close]]
+		ifTrue: [self handleOutputFor: anObject]
 ]
 
 { #category : #evaluating }

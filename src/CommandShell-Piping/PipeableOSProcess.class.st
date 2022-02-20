@@ -723,6 +723,12 @@ PipeableOSProcess >> exec: aString [
 
 ]
 
+{ #category : #evaluating }
+PipeableOSProcess >> exitCode [
+	". Exit status in the POSIX format . "
+	^ self processProxy exitCode 
+]
+
 { #category : #streaming }
 PipeableOSProcess >> flush [
 	"Flush output to the standard input stream of my external process."
@@ -955,14 +961,6 @@ PipeableOSProcess >> processProxy: aProxy [
 
 	aProxy addDependent: self.
 	processProxy := aProxy
-]
-
-{ #category : #'initialize - release' }
-PipeableOSProcess >> release [
-
-	self processProxy release.
-	self pipeFromError release.
-	^ super release
 ]
 
 { #category : #'command pipelines' }

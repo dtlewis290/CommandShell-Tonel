@@ -434,15 +434,6 @@ PipeJunction >> prepareOutputForPipe [
 				ifTrue: [self enableErrorStreamTriggers]]
 ]
 
-{ #category : #'initialize - release' }
-PipeJunction >> release [
-	"The input pipe may be released, but the output and error pipes may
-	still be in use."
-
-	self pipeToInput release.
-	^ super release
-]
-
 { #category : #'command pipelines' }
 PipeJunction >> replaceOutputStreamWith: anotherStream [
 	"Sender is not happy with the kind of output stream we are using. Replace

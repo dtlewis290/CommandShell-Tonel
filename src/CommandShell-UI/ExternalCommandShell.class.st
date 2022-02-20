@@ -20,7 +20,7 @@ Class {
 	#classVars : [
 		'ExternalShell'
 	],
-	#category : 'CommandShell-UI'
+	#category : #'CommandShell-UI'
 }
 
 { #category : #'instance creation' }
@@ -330,14 +330,6 @@ ExternalCommandShell >> promptString [
 ExternalCommandShell >> promptTwo [
 
 	self cliShell outputStream nextPutAll: self cliShell promptStringTwo; flush
-
-]
-
-{ #category : #'initialize-release' }
-ExternalCommandShell >> release [
-
-	cliShell ifNotNil: [cliShell removeDependent: self].
-	super release
 
 ]
 
